@@ -126,18 +126,18 @@ private struct AboutLink: Identifiable {
             url: URL(string: "https://abue-ammar.github.io/tinycast/")!),
         AboutLink(
             id: "github", glyph: .brand("BrandGitHub"), title: "GitHub",
-            detail: "github.com/arthur-fontaine/tinycast",
-            url: URL(string: "https://github.com/arthur-fontaine/tinycast")!),
+            detail: "github.com/arthur-fontaine/smallcast",
+            url: URL(string: "https://github.com/arthur-fontaine/smallcast")!),
         AboutLink(
             id: "discord", glyph: .brand("BrandDiscord"), title: "Discord",
             detail: "Join the Tinycast community",
             url: URL(string: "https://discord.gg/v2Eeb4QQy3")!),
         AboutLink(
-            id: "x", glyph: .brand("BrandX"), title: "X", detail: "@abue_ammar",
-            url: URL(string: "https://x.com/abue_ammar")!),
+            id: "x", glyph: .brand("BrandX"), title: "X", detail: "@voithure",
+            url: URL(string: "https://x.com/voithure")!),
         AboutLink(
             id: "email", glyph: .symbol("envelope"), title: "Email",
-            detail: "iabueammar@gmail.com", url: URL(string: "mailto:iabueammar@gmail.com")!),
+            detail: "me@arthurfontaine.fr", url: URL(string: "mailto:me@arthurfontaine.fr")!),
     ]
 }
 

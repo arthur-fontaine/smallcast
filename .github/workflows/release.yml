@@ -131,12 +131,9 @@ jobs:
           **Bundle ID:** \`${{ steps.meta.outputs.bundle_id }}\`
           Built from ${{ github.sha }}.
 
-          **Recommended:** install via Homebrew — it clears the quarantine flag automatically on every install and update, so there's nothing to run by hand:
-          \`\`\`sh
-          brew trust --tap arthur-fontaine/smallcast
-          brew install --cask arthur-fontaine/smallcast/${{ steps.meta.outputs.cask_name }}
-          \`\`\`
-          This build is self-signed. If you download the DMG directly instead of using Homebrew, macOS will refuse to open it until you clear the quarantine flag once:
+          Download the DMG below and drag the app to /Applications.
+
+          This build is self-signed, so macOS will refuse to open it until you clear the quarantine flag once:
           \`\`\`sh
           xattr -dr com.apple.quarantine \"/Applications/${{ steps.meta.outputs.display_name }}.app\"
           \`\`\`" \
