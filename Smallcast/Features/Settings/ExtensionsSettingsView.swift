@@ -5,8 +5,7 @@ import SwiftUI
 struct ExtensionsSettingsView: View {
     @ObservedObject private var extensions = AppCore.shared.extensions
     @State private var selected: String?
-    @State private var importable: [InstalledExtension] = []
-    @State private var showImportSheet = false
+    @State private var importCandidates: ImportCandidates?
     @State private var error: String?
 
     var body: some View {
@@ -28,8 +27,8 @@ struct ExtensionsSettingsView: View {
                     systemImage: "arrow.down.doc", tint: .purple
                 ) {
                     Button("Choose…") {
-                        importable = ExtensionCatalog.importableFromRaycast()
-                        showImportSheet = true
+                        importCandidates = ImportCandidates(
+                            extensions: ExtensionCatalog.importableFromRaycast())
                     }
                     .disabled(!raycastAvailable)
                 }
@@ -70,14 +69,17 @@ struct ExtensionsSettingsView: View {
                 }
             }
         }
-        .sheet(isPresented: $showImportSheet) {
+        // Presented by item, not by a bare flag: with `isPresented` SwiftUI builds the sheet from the
+        // body snapshot that precedes the button's state write, so the freshly scanned candidates
+        // arrived as an empty list.
+        .sheet(item: $importCandidates) { candidates in
             ExtensionImportSheet(
-                candidates: importable,
+                candidates: candidates.extensions,
                 onImport: { chosen in
-                    showImportSheet = false
+                    importCandidates = nil
                     Task { await install(chosen.map(\.directory)) }
                 },
-                onCancel: { showImportSheet = false })
+                onCancel: { importCandidates = nil })
         }
         .onReceive(NotificationCenter.default.publisher(for: .smallcastSelectExtension)) { note in
             if let name = note.object as? String { selected = name }
@@ -290,6 +292,12 @@ private struct ExtensionPreferenceField: View {
     }
 }
 
+/// One scan of the local Raycast install, carried as the import sheet's presentation item.
+private struct ImportCandidates: Identifiable {
+    let id = UUID()
+    let extensions: [InstalledExtension]
+}
+
 /// Picker over the extensions a locally installed Raycast has already built.
 private struct ExtensionImportSheet: View {
     let candidates: [InstalledExtension]
@@ -308,30 +316,26 @@ private struct ExtensionImportSheet: View {
             ScrollView {
                 VStack(spacing: 0) {
                     ForEach(candidates) { candidate in
-                        Toggle(
-                            isOn: Binding(
-                                get: { chosen.contains(candidate.manifest.name) },
-                                set: { isOn in
-                                    if isOn { chosen.insert(candidate.manifest.name) } else {
-                                        chosen.remove(candidate.manifest.name)
-                                    }
-                                })
-                        ) {
-                            HStack(spacing: Theme.Spacing.md) {
-                                ExtensionIconView(
-                                    resolved: candidate.iconPath.map {
-                                        ExtensionImage.Resolved(source: .file($0))
-                                    }, size: 20)
-                                VStack(alignment: .leading, spacing: 0) {
-                                    Text(candidate.title).font(.body)
-                                    Text("\(candidate.manifest.commands.count) commands")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
+                        // The checkbox sits outside the Toggle's label: an AppKit checkbox aligns to
+                        // its label's first baseline, which reads off-centre next to a two-line row.
+                        HStack(spacing: Theme.Spacing.md) {
+                            Toggle("", isOn: binding(for: candidate))
+                                .labelsHidden()
+                            ExtensionIconView(
+                                resolved: candidate.iconPath.map {
+                                    ExtensionImage.Resolved(source: .file($0))
+                                }, size: 20)
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text(candidate.title).font(.body)
+                                Text("\(candidate.manifest.commands.count) commands")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                         .padding(.vertical, Theme.Spacing.xs)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(.rect)
+                        .onTapGesture { binding(for: candidate).wrappedValue.toggle() }
                     }
                 }
                 .overlayScroller()
@@ -357,5 +361,17 @@ private struct ExtensionImportSheet: View {
         }
         .padding(Theme.Spacing.xxl)
         .frame(width: 480)
+    }
+
+    private func binding(for candidate: InstalledExtension) -> Binding<Bool> {
+        Binding(
+            get: { chosen.contains(candidate.manifest.name) },
+            set: { isOn in
+                if isOn {
+                    chosen.insert(candidate.manifest.name)
+                } else {
+                    chosen.remove(candidate.manifest.name)
+                }
+            })
     }
 }
