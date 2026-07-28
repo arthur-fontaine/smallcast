@@ -485,7 +485,9 @@ struct ExtensionTests {
         let actions = ExtensionScreen.actions(in: screen.actionPanel(forItemAt: 0))
         check("action is dispatchable", actions.first?.handler != nil)
         if let handler = actions.first?.handler {
-            await runtime.dispatch(session: "s1", handler: handler, arguments: [])
+            await runtime.dispatch(
+                session: "s1", handler: handler,
+                payload: ExtensionRuntime.jsonString(from: []))
             await settle()
             screen = ExtensionScreen(tree: recorder.trees.last!, query: "")
             check(

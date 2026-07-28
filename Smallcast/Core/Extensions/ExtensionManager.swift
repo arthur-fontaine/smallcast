@@ -238,7 +238,8 @@ final class ExtensionManager: ObservableObject, ExtensionRuntimeDelegate, Extens
 
     func dispatch(handler: String, arguments: [Any] = []) {
         guard let sessionID else { return }
-        Task { await runtime.dispatch(session: sessionID, handler: handler, arguments: arguments) }
+        let payload = ExtensionRuntime.jsonString(from: arguments)
+        Task { await runtime.dispatch(session: sessionID, handler: handler, payload: payload) }
     }
 
     /// Escape inside a pushed screen pops the extension's stack; returns false when there's nothing to

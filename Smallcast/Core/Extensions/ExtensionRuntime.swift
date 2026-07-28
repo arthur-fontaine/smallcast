@@ -130,8 +130,9 @@ final class ExtensionRuntime: @unchecked Sendable {
         }
     }
 
-    func dispatch(session: String, handler: String, arguments: [Any]) async {
-        let payload = Self.jsonString(from: arguments)
+    /// Takes an already-encoded payload: `[Any]` arguments aren't Sendable, so callers serialize in
+    /// their own isolation domain and only the JSON string crosses onto the queue.
+    func dispatch(session: String, handler: String, payload: String) async {
         await onQueue { context in
             _ = context.objectForKeyedSubscript("__smallcast")?
                 .invokeMethod("dispatch", withArguments: [session, handler, payload])
