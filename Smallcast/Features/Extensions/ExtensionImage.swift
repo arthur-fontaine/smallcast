@@ -25,6 +25,14 @@ enum ExtensionImage {
             guard let source = source(from: text, assetsPath: assetsPath) else { return nil }
             return Resolved(source: source)
         case .object(let fields):
+            // `{ value, tooltip }` is Raycast's icon-with-tooltip form: the real `ImageLike` is one
+            // level down. Only unwrap when it looks like one, so a themed `{ value: {light, dark} }`
+            // still falls through to the flat path below.
+            if let wrapped = fields["value"]?.objectValue,
+                wrapped["source"] != nil || wrapped["value"] != nil
+            {
+                return resolve(.object(wrapped), assetsPath: assetsPath)
+            }
             let raw = fields["source"] ?? fields["value"]
             let text = string(from: raw)
             guard let text, let source = source(from: text, assetsPath: assetsPath) else {
@@ -52,7 +60,10 @@ enum ExtensionImage {
     private static func source(from text: String, assetsPath: String?) -> Source? {
         guard !text.isEmpty else { return nil }
         // Icon enum values all carry the `-16` suffix Raycast's generated enum uses.
-        if text.hasSuffix("-16"), let symbol = symbolName(forIcon: text) { return .symbol(symbol) }
+        if text.hasSuffix("-16") {
+            if let digits = numberGlyph(forIcon: text) { return .glyph(digits) }
+            if let symbol = symbolName(forIcon: text) { return .symbol(symbol) }
+        }
         if let url = URL(string: text), let scheme = url.scheme, scheme.hasPrefix("http") {
             return .remote(url)
         }
@@ -109,6 +120,15 @@ enum ExtensionImage {
         let blue = Double((value >> (hasAlpha ? 8 : 0)) & 0xff) / 255
         let alpha = hasAlpha ? Double(value & 0xff) / 255 : 1
         return Color(red: red, green: green, blue: blue, opacity: alpha)
+    }
+
+    /// `Icon.Number00`…`Icon.Number99` are digits, and SF only enumerates 0…50 — draw them as a glyph
+    /// so all hundred look alike.
+    private static func numberGlyph(forIcon icon: String) -> String? {
+        guard icon.hasPrefix("number-") else { return nil }
+        let digits = icon.dropFirst("number-".count).dropLast(3)
+        guard digits.count == 2, let value = Int(digits) else { return nil }
+        return String(value)
     }
 
     /// Raycast icon → SF Symbol. Only the icons that carry meaning in a list get a hand-picked mapping;
@@ -181,6 +201,86 @@ enum ExtensionImage {
         "window": "macwindow", "wrench-screwdriver": "wrench.and.screwdriver", "xmark": "xmark",
         "xmark-circle": "xmark.circle", "xmark-circle-filled": "xmark.circle.fill",
         "xmark-top-right-square": "xmark.square",
+        // Names with no plausible SF Symbol transform. Every value here was checked against
+        // `NSImage(systemSymbolName:)` — an unknown name draws the placeholder tile instead.
+        "airplane-filled": "airplane", "airplane-landing": "airplane.arrival",
+        "airplane-takeoff": "airplane.departure",
+        "alarm-ringing": "bell.and.waves.left.and.right.fill", "align-centre": "text.aligncenter",
+        "align-left": "text.alignleft", "align-right": "text.alignright", "anchor": "water.waves",
+        "app-window-grid-2x2": "square.grid.2x2", "app-window-grid-3x3": "square.grid.3x3",
+        "app-window-sidebar-left": "sidebar.left", "app-window-sidebar-right": "sidebar.right",
+        "arrow-down-circle-filled": "arrow.down.circle.fill",
+        "arrow-left-circle-filled": "arrow.left.circle.fill",
+        "arrow-right-circle-filled": "arrow.right.circle.fill",
+        "arrow-up-circle-filled": "arrow.up.circle.fill",
+        "arrows-contract": "arrow.down.right.and.arrow.up.left", "band-aid": "bandage.fill",
+        "bank-note": "banknote.fill", "bar-code": "barcode", "bath-tub": "bathtub.fill",
+        "battery": "battery.100percent", "battery-charging": "battery.100percent.bolt",
+        "battery-disabled": "battery.0percent", "bike": "bicycle", "blank-document": "doc",
+        "bluetooth": "dot.radiowaves.right", "boat": "sailboat.fill",
+        "bolt-disabled": "bolt.slash", "bullet-points": "list.bullet", "bulls-eye": "target",
+        "bulls-eye-missed": "scope", "buoy": "lifepreserver",
+        "center": "rectangle.center.inset.filled", "chess-piece": "crown.fill",
+        "chevron-down-small": "chevron.down", "chevron-left-small": "chevron.left",
+        "chevron-right-small": "chevron.right", "chevron-up-down": "chevron.up.chevron.down",
+        "chevron-up-small": "chevron.up", "circle-disabled": "circle.slash",
+        "circle-ellipsis": "ellipsis.circle", "circle-progress": "circle.dotted",
+        "circle-progress-25": "progress.indicator", "circle-progress-50": "progress.indicator",
+        "circle-progress-75": "progress.indicator",
+        "clear-formatting": "textformat.abc.dottedunderline", "cloud-lightning": "cloud.bolt.fill",
+        "coins": "dollarsign.circle.fill", "command-symbol": "command",
+        "compass": "location.north.circle", "computer-chip": "cpu",
+        "contrast": "circle.lefthalf.filled", "credit-card": "creditcard",
+        "crypto": "bitcoinsign.circle", "delete-document": "trash",
+        "devices": "laptopcomputer.and.iphone", "dna": "atom", "droplets": "drop.fill",
+        "edit-shape": "pencil.and.outline", "ellipsis-vertical": "ellipsis",
+        "emoji": "face.smiling", "emoji-sad": "face.dashed", "female": "figure.stand.dress",
+        "film-strip": "film", "filter": "line.3.horizontal.decrease.circle",
+        "fingerprint": "touchid", "footprints": "shoeprints.fill",
+        "forward-filled": "forward.fill", "fountain-tip": "pencil.tip",
+        "full-signal": "cellularbars", "game-controller": "gamecontroller",
+        "geopin": "mappin.and.ellipse", "germ": "microbe.fill", "glasses": "eyeglasses",
+        "globe-01": "globe", "goal": "target", "heading": "textformat.size",
+        "heartbeat": "waveform.path.ecg", "highlight": "highlighter",
+        "important-01": "exclamationmark.circle", "info-01": "info.circle", "italics": "italic",
+        "leaderboard": "list.number", "light-bulb-off": "lightbulb.slash",
+        "livestream-01": "dot.radiowaves.left.and.right",
+        "livestream-disabled-01": "antenna.radiowaves.left.and.right.slash",
+        "logout": "rectangle.portrait.and.arrow.right", "lorry": "truck.box.fill",
+        "lowercase": "textformat.abc", "male": "figure.stand", "mask": "theatermasks.fill",
+        "medical-support": "cross.case.fill", "memory-stick": "memorychip",
+        "microphone-disabled": "mic.slash", "minus-circle-filled": "minus.circle.fill",
+        "monitor": "display", "moon-down": "moonset.fill", "moon-up": "moonrise.fill",
+        "mountain": "mountain.2.fill", "mouse": "computermouse.fill",
+        "move": "arrow.up.and.down.and.arrow.left.and.right", "new-document": "doc.badge.plus",
+        "new-folder": "folder.badge.plus", "patch": "bandage.fill", "pause-filled": "pause.fill",
+        "phone-ringing": "phone.badge.waveform.fill", "plus-circle-filled": "plus.circle.fill",
+        "plus-minus-divide-multiply": "plusminus",
+        "plus-top-right-square": "plus.square.on.square", "print": "printer",
+        "quicklink": "arrow.up.right.square", "quote-block": "text.quote",
+        "racket": "figure.tennis", "raycast-logo-neg": "macwindow.on.rectangle",
+        "raycast-logo-pos": "macwindow.on.rectangle", "remove-person": "person.badge.minus",
+        "replace": "rectangle.2.swap", "replace-one": "arrow.triangle.2.circlepath",
+        "rewind-filled": "backward.fill", "rss": "dot.radiowaves.up.forward",
+        "shield-01": "shield", "short-paragraph": "text.alignleft", "signal-0": "cellularbars",
+        "signal-1": "cellularbars", "signal-2": "cellularbars", "signal-3": "cellularbars",
+        "soccer-ball": "soccerball", "speaker-down": "speaker.wave.1.fill",
+        "speaker-low": "speaker.wave.1.fill", "speaker-on": "speaker.wave.2.fill",
+        "speaker-up": "speaker.wave.3.fill", "speech-bubble": "bubble.left",
+        "speech-bubble-active": "bubble.left.fill",
+        "speech-bubble-important": "exclamationmark.bubble",
+        "square-ellipsis": "ellipsis.rectangle", "stacked-bars-1": "chart.bar.fill",
+        "stacked-bars-2": "chart.bar.fill", "stacked-bars-3": "chart.bar.fill",
+        "stacked-bars-4": "chart.bar.fill", "stop-filled": "stop.fill", "store": "storefront.fill",
+        "strike-through": "strikethrough", "swatch": "swatchpalette.fill", "tack": "pin.fill",
+        "tack-disabled": "pin.slash", "temperature": "thermometer.medium",
+        "tennis-ball": "tennisball.fill", "text-selection": "selection.pin.in.out",
+        "thumbs-down-filled": "hand.thumbsdown.fill", "thumbs-up-filled": "hand.thumbsup.fill",
+        "torch": "flashlight.on.fill", "train": "train.side.front.car", "two-people": "person.2",
+        "uppercase": "textformat", "video-disabled": "video.slash", "windsock": "wind",
+        "wrist-watch": "applewatch", "x-mark-circle": "xmark.circle",
+        "x-mark-circle-filled": "xmark.circle.fill", "x-mark-circle-half-dash": "xmark.circle",
+        "x-mark-top-right-square": "xmark.square",
     ]
 }
 

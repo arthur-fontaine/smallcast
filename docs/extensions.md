@@ -183,6 +183,12 @@ JavaScript toolchain and a dependency installer, which would dwarf the app.
 `getSelectedText`, `getSelectedFinderItems`, `launchCommand`, `openExtensionPreferences`,
 `useNavigation`, `Icon`, `Color`, `Image.Mask`, `Keyboard.Shortcut.Common`, `LaunchType`.
 
+**`raycast://` URLs** — extensions address Raycast by scheme; the most common is a bare
+`open("raycast://")` to bring the window back after something stole focus (1Password's auth flow does
+this). `ExtensionHostBridge` keeps those inside Smallcast: `raycast://extensions/<author>/<extension>/<command>`
+runs that command when it's installed, anything else reopens the palette. Handing them to the workspace
+would launch Raycast itself.
+
 **Node built-ins** — `path`, `fs` (+ `fs/promises`), `os`, `child_process` (`exec`, `execFile`,
 `execSync`, `execFileSync`, `spawnSync`, and a buffered `spawn`), `crypto` (hashes, HMAC, random,
 UUID), `zlib` (gzip/zlib/raw deflate, both directions), `util`, `events`, `buffer`, `url`,
@@ -205,7 +211,8 @@ extensions / 114 of 147 view commands** boot and render. `Tools/raycast-runtime/
 | **`AI`, `BrowserExtension`, `WindowManagement`** | Raycast services with no local equivalent. Importing them works; calling one throws with a clear reason. |
 | **WebSocket** | No polyfill yet; `URLSessionWebSocketTask` could back one. |
 | **Streaming `child_process.spawn`** | `spawn` runs the child to completion and emits its output as one chunk (async-iterable, which is what `get-stream`/`execa` consume). True duplex streaming would need a bidirectional channel across the bridge. Extensions built on `execa`'s deeper stream API can still fail. |
-| **`http` / `https` / `net` / `tls` / `stream`** | Resolve but throw on use. `fetch` is the supported path; `axios`'s Node adapter is not. |
+| **`http` / `https` / `net` / `tls`** | Resolve but throw on use. `fetch` is the supported path; `axios`'s Node adapter is not. |
+| **`stream`** | Only `PassThrough` and `pipeline` are real — enough for `@raycast/utils`' `useExec`, which pipes a child's stdout through them. The rest of the module still throws. |
 | **Tool/AI-extension entry points (`tools/`)** | Not surfaced. |
 
 ## Working on the runtime
@@ -236,7 +243,10 @@ swiftc -parse-as-library -swift-version 6 \
 ```
 
 `ext-test` compiles the real engine sources — there is no copy to keep in sync. `EXT_TEST_VERBOSE=1`
-prints the extension's own console output; `EXT_TEST_SETTLE_MS=8000` gives a slow command longer.
+prints the extension's own console output; `EXT_TEST_SETTLE_MS=8000` gives a slow command longer;
+`EXT_TEST_PREFS='{"version":"v8"}'` stands in for preferences the user set in Settings, which is the
+only way to reach a code path an extension gates on a preference with no manifest default. Both
+harnesses read the same three variables.
 
 ### Debugging a failing extension
 

@@ -890,6 +890,80 @@ function runAsync(spec, options, callback, label) {
   return handle;
 }
 
+// ─── stream ─────────────────────────────────────────────────────────
+
+// Only what `@raycast/utils`' `useExec` needs: it pipes a child's stdout into a `PassThrough` and
+// reads back the buffered value, so `stream` cannot stay a stub or every `useExec` extension fails.
+// Worse, it fails opaquely — the thrown "not supported" never reaches the extension, which reports
+// the TypeError that follows from an undefined stdout instead. Everything else on the module still
+// refuses to run.
+class PassThrough extends EventEmitter {
+  constructor() {
+    super();
+    this.readable = true;
+    this.writable = true;
+    this.writableEnded = false;
+    this.encoding = null;
+  }
+
+  setEncoding(encoding) {
+    this.encoding = encoding;
+    return this;
+  }
+
+  write(chunk) {
+    const decode = this.encoding && typeof chunk !== "string";
+    this.emit("data", decode ? Buffer.from(chunk).toString(this.encoding) : chunk);
+    return true;
+  }
+
+  end(chunk) {
+    if (chunk !== undefined && chunk !== null) this.write(chunk);
+    this.writableEnded = true;
+    this.emit("end");
+    this.emit("finish");
+    this.emit("close");
+  }
+
+  pipe(destination) {
+    this.on("data", (chunk) => destination.write?.(chunk));
+    this.on("end", () => destination.end?.());
+    return destination;
+  }
+
+  resume() {
+    return this;
+  }
+
+  pause() {
+    return this;
+  }
+
+  destroy() {
+    return this;
+  }
+}
+
+/// Callback form, so `util.promisify(stream.pipeline)` works. Completion comes from the last stage:
+/// a source ends its destination when it ends, which is what `BufferedStream.pipe` wires up.
+function pipeline(...stages) {
+  const callback = typeof stages[stages.length - 1] === "function" ? stages.pop() : null;
+  let settled = false;
+  const finish = (error) => {
+    if (settled) return;
+    settled = true;
+    callback?.(error ?? null);
+  };
+  const last = stages.reduce((from, to) => {
+    from.on?.("error", finish);
+    return from.pipe(to);
+  });
+  last.on("error", finish);
+  last.on("finish", () => finish());
+  last.on("end", () => finish());
+  return last;
+}
+
 // ─── util ───────────────────────────────────────────────────────────
 
 function inspect(value, depth = 2) {
@@ -1066,7 +1140,7 @@ function makeUnsupported(label) {
 const httpLike = (name) =>
   unsupportedModule(name, { globalAgent: {}, STATUS_CODES: {}, METHODS: [] });
 
-const streamStub = unsupportedModule("stream");
+const streamStub = unsupportedModule("stream", { PassThrough, pipeline });
 
 // ─── Registry ───────────────────────────────────────────────────────
 

@@ -12,6 +12,8 @@ protocol ExtensionHostContext: AnyObject {
     var pasteTarget: NSRunningApplication? { get }
 
     func closeMainWindow(clearRootSearch: Bool)
+    /// Bring the palette back after a command hid it — what `raycast://` means to an extension.
+    func reopenPalette()
     func popToRoot()
     func clearSearchBar()
     func openPreferences(scope: String)
@@ -362,6 +364,13 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         let url =
             URL(string: target).flatMap { $0.scheme == nil ? nil : $0 }
             ?? URL(fileURLWithPath: (target as NSString).expandingTildeInPath)
+        // Extensions address Raycast by scheme — 1Password's `open("raycast://")` to bring the window
+        // back after a password prompt is the common case. Handing that to the workspace would launch
+        // Raycast; keep it inside Smallcast.
+        if let scheme = url.scheme, scheme == "raycast" || scheme == "raycastinternal" {
+            openRaycastURL(url)
+            return
+        }
         guard let appIdentifier = application else {
             NSWorkspace.shared.open(url)
             return
@@ -377,6 +386,19 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         NSWorkspace.shared.open(
             [url], withApplicationAt: appURL, configuration: NSWorkspace.OpenConfiguration(),
             completionHandler: nil)
+    }
+
+    /// `raycast://extensions/<author>/<extension>/<command>` runs that command when it is installed;
+    /// every other Raycast URL just brings the palette back, which is what extensions use the bare
+    /// scheme for.
+    private func openRaycastURL(_ url: URL) {
+        let path = url.pathComponents.filter { $0 != "/" }
+        if url.host == "extensions", path.count >= 3,
+            (try? context?.launch(command: path[2], extensionName: path[1], arguments: [:])) != nil
+        {
+            return
+        }
+        context?.reopenPalette()
     }
 
     private func applications(forPath path: String?) -> [[String: Any]] {

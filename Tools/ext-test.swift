@@ -139,6 +139,18 @@ struct ExtensionTests {
         return arguments
     }
 
+    /// `EXT_TEST_PREFS` as JSON — strings and bools only, which is what a manifest preference holds.
+    static func environmentPreferences() -> [String: ExtensionPreferenceValue] {
+        guard let raw = ProcessInfo.processInfo.environment["EXT_TEST_PREFS"],
+            let json = try? JSONSerialization.jsonObject(with: Data(raw.utf8)) as? [String: Any]
+        else { return [:] }
+        return json.compactMapValues { value in
+            if let flag = value as? Bool { return .bool(flag) }
+            if let text = value as? String { return .string(text) }
+            return nil
+        }
+    }
+
     /// Let the JS event loop and the main-actor host hops settle.
     static func settle(_ milliseconds: UInt64 = 250) async {
         try? await Task.sleep(nanoseconds: milliseconds * 1_000_000)
@@ -671,6 +683,9 @@ struct ExtensionTests {
         for schema in manifest.preferences + target.preferences {
             preferences[schema.name] = schema.effectiveDefault
         }
+        // `EXT_TEST_PREFS={"version":"v8"}` stands in for what the user set in Settings — plenty of
+        // extensions branch on a preference that has no manifest default.
+        for (key, value) in environmentPreferences() { preferences[key] = value }
         let context = launchContext(
             extensionName: manifest.name, command: target.name, mode: target.mode,
             assets: directory.appendingPathComponent("assets").path, preferences: preferences,

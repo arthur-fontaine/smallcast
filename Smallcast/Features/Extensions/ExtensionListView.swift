@@ -274,13 +274,10 @@ private struct ExtensionGridCell: View {
     let assetsPath: String?
     @State private var hovered = false
 
-    /// `content` is an `ImageLike`, or `{value, tooltip}` wrapping one, or `{color}`.
+    /// `content` is an `ImageLike`, or `{value, tooltip}` wrapping one, or `{color}` — all three are
+    /// `ExtensionImage.resolve`'s job.
     private var resolved: ExtensionImage.Resolved? {
-        let content = node.props["content"]
-        if let fields = content?.objectValue, let inner = fields["value"] {
-            return ExtensionImage.resolve(inner, assetsPath: assetsPath)
-        }
-        return ExtensionImage.resolve(content, assetsPath: assetsPath)
+        ExtensionImage.resolve(node.props["content"], assetsPath: assetsPath)
     }
 
     var body: some View {
