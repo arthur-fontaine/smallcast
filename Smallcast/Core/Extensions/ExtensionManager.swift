@@ -292,6 +292,10 @@ final class ExtensionManager: ObservableObject, ExtensionRuntimeDelegate, Extens
         core?.hidePalette(restoreFocus: false)
     }
 
+    func reopenPalette() {
+        core?.showPalette(mode: running == nil ? .launcher : .extensionCommand, restoreAnyMode: true)
+    }
+
     func popToRoot() {
         core?.popExtensionToRoot()
     }

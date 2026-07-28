@@ -343,12 +343,17 @@ async function runExtension(dir, commandName) {
         commandMode: target.mode,
         assetsPath: join(dir, "assets"),
       },
-      preferences: Object.fromEntries(
-        [...(manifest.preferences ?? []), ...(target.preferences ?? [])].map((pref) => [
-          pref.name,
-          preferenceDefault(pref),
-        ]),
-      ),
+      preferences: {
+        ...Object.fromEntries(
+          [...(manifest.preferences ?? []), ...(target.preferences ?? [])].map((pref) => [
+            pref.name,
+            preferenceDefault(pref),
+          ]),
+        ),
+        // `EXT_TEST_PREFS={"version":"v8"}` stands in for what the user set in Settings — plenty of
+        // extensions branch on a preference that has no manifest default. Same knob as ext-test.
+        ...JSON.parse(process.env.EXT_TEST_PREFS ?? "{}"),
+      },
     }),
   );
   harness.start("s1", readFileSync(file, "utf8"), file, dir, target.mode === "view" ? "view" : "no-view", {});
