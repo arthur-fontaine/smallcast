@@ -28,8 +28,9 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         }
     }
 
-    /// The global-hotkey action that opens this entry, or `nil` when it has no bundle ID to key the binding on.
+    /// The global-hotkey action that opens this entry, or `nil` when there's nothing to key a binding on.
     var hotKeyAction: HotKeyAction? {
+        if let action = WindowAction(entryID: id) { return .window(action) }
         guard let bundleID else { return nil }
         switch kind {
         case .application: return .app(bundleID: bundleID)
@@ -43,6 +44,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     var isSymbolIcon: Bool { kind == .command || (kind == .extensionCommand && imageIconPath == nil) }
     var symbolIconName: String {
         if kind == .extensionCommand { return "puzzlepiece.extension" }
+        if let action = WindowAction(entryID: id) { return action.sfSymbol }
         return CommandRegistry.command(for: self)?.sfSymbol ?? "questionmark"
     }
 

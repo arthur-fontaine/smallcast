@@ -6,6 +6,7 @@ final class HotKeyManager: ObservableObject {
     var onTogglePalette: (() -> Void)?
     var onToggleClipboard: (() -> Void)?
     var onToggleEmoji: (() -> Void)?
+    var onWindowAction: ((WindowAction) -> Void)?
 
     /// The recorder currently capturing keystrokes, or `nil`; keeping this as plain app state makes recorders glitch-free, and any active recorder pauses Carbon so the typed combo can't fire a hotkey.
     @Published var recordingAction: HotKeyAction? {
@@ -22,6 +23,20 @@ final class HotKeyManager: ObservableObject {
         register(.toggleEmoji)
         for bundleID in boundBundleIDs { register(.app(bundleID: bundleID)) }
         for bundleID in boundPaneBundleIDs { register(.settingsPane(bundleID: bundleID)) }
+        setWindowActionsEnabled(
+            UserDefaults.standard.bool(forKey: SettingsKey.windowManagementEnabled))
+    }
+
+    /// Window shortcuts exist only while the feature is on; `register` no-ops for an unbound action, so
+    /// the whole set can be swept without tracking which ones carry a binding.
+    func setWindowActionsEnabled(_ enabled: Bool) {
+        for action in WindowAction.allCases {
+            if enabled {
+                register(.window(action))
+            } else {
+                center.unregister(id: action.defaultsKey)
+            }
+        }
     }
 
     /// Bundle IDs that currently have a per-app hotkey — lets `start()` know which records to load and lets launcher rows show keycaps.
@@ -65,7 +80,7 @@ final class HotKeyManager: ObservableObject {
             var set = Set(boundPaneBundleIDs)
             if shortcut == nil { set.remove(bundleID) } else { set.insert(bundleID) }
             UserDefaults.standard.set(Array(set), forKey: boundPaneKey)
-        case .togglePalette, .toggleClipboard, .toggleEmoji:
+        case .togglePalette, .toggleClipboard, .toggleEmoji, .window:
             break
         }
     }
@@ -75,6 +90,7 @@ final class HotKeyManager: ObservableObject {
         var candidates: [HotKeyAction] = [.togglePalette, .toggleClipboard, .toggleEmoji]
         candidates += boundBundleIDs.map { .app(bundleID: $0) }
         candidates += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
+        candidates += WindowAction.allCases.map { .window($0) }
         for candidate in candidates
         where candidate != action && self.shortcut(for: candidate) == shortcut {
             return displayName(of: candidate)
@@ -98,10 +114,17 @@ final class HotKeyManager: ObservableObject {
             let apps = AppCore.shared.appIndex.apps
             return apps.first { $0.kind == .systemSettings && $0.bundleID == bundleID }?.name
                 ?? bundleID
+        case .window(let action):
+            return action.title
         }
     }
 
     private func register(_ action: HotKeyAction) {
+        // A window binding can be stored while the feature is off (a settings import carries them); it
+        // must stay dormant until the feature is turned on.
+        if case .window = action,
+            !UserDefaults.standard.bool(forKey: SettingsKey.windowManagementEnabled)
+        { return }
         guard let shortcut = shortcut(for: action) else { return }
         center.register(id: action.defaultsKey, shortcut: shortcut) { [weak self] in
             self?.perform(action)
@@ -115,6 +138,7 @@ final class HotKeyManager: ObservableObject {
         case .toggleEmoji: onToggleEmoji?()
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
+        case .window(let action): onWindowAction?(action)
         }
     }
 }

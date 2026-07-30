@@ -42,17 +42,29 @@ enum CommandID: String, CaseIterable, Sendable {
 }
 
 enum CommandRegistry {
-    /// Sorted by name to keep the AppIndex sort invariant; the URL is a placeholder since commands are never launched from disk.
-    nonisolated static let all: [AppEntry] =
-        CommandID.allCases
-        .map { id in
-            AppEntry(
-                id: id.rawValue, name: id.name,
-                url: URL(
-                    string: "smallcast://" + id.rawValue.replacingOccurrences(of: ":", with: "/"))!,
-                bundleID: nil, kind: .command)
+    /// Sorted by name to keep the AppIndex sort invariant; the URL is a placeholder since commands are never launched from disk. The window-arrangement commands only exist while the feature is on — read straight from UserDefaults because this is built off the main actor, on the scan queue.
+    nonisolated static var all: [AppEntry] {
+        var entries = CommandID.allCases.map { id in
+            entry(id: id.rawValue, name: id.name)
         }
-        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        if UserDefaults.standard.bool(forKey: SettingsKey.windowManagementEnabled) {
+            entries += WindowAction.allCases.map { action in
+                var entry = entry(id: action.entryID, name: action.title)
+                entry.kindLabelOverride = "Window Management"
+                return entry
+            }
+        }
+        return entries.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+    }
+
+    nonisolated private static func entry(id: String, name: String) -> AppEntry {
+        AppEntry(
+            id: id, name: name,
+            url: URL(string: "smallcast://" + id.replacingOccurrences(of: ":", with: "/"))!,
+            bundleID: nil, kind: .command)
+    }
 
     static func command(for entry: AppEntry) -> CommandID? {
         CommandID(rawValue: entry.id)

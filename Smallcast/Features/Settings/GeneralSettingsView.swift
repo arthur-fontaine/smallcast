@@ -33,6 +33,14 @@ struct GeneralSettingsView: View {
         return text
     }
 
+    private static let gapChoices = [0, 4, 8, 12, 16, 24]
+
+    /// Orange while the commands are on but Accessibility isn't granted — they'd all no-op silently.
+    private var windowStatusDot: Color? {
+        guard settings.windowManagementEnabled else { return nil }
+        return Permissions.isAccessibilityTrusted() ? .green : .orange
+    }
+
     var body: some View {
         SettingsPane(
             title: "General",
@@ -147,6 +155,44 @@ struct GeneralSettingsView: View {
                         .disabled(!settings.compactMode)
                 }
                 .opacity(settings.compactMode ? 1 : 0.5)
+            }
+
+            SettingsCard(header: "Window Management") {
+                SettingsRow(
+                    title: "Window commands",
+                    subtitle:
+                        "Add \(WindowAction.allCases.count) window arrangement commands — Left Half, Almost Maximize, Reasonable Size, thirds, quarters, sixths — to the launcher. Assign shortcuts to them in Shortcuts › Commands.",
+                    systemImage: "macwindow.on.rectangle",
+                    tint: .blue,
+                    statusDot: windowStatusDot
+                ) {
+                    Toggle("", isOn: $settings.windowManagementEnabled)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .onChange(of: settings.windowManagementEnabled) { _, enabled in
+                            if enabled { Permissions.ensureAccessibility() }
+                            AppCore.shared.windowManagementDidChange(enabled)
+                        }
+                }
+                if settings.windowManagementEnabled {
+                    SettingsDivider()
+                    SettingsRow(
+                        title: "Gap between windows",
+                        subtitle:
+                            "Spacing a tiled window keeps to the screen edges and to the window beside it.",
+                        systemImage: "square.split.2x1",
+                        tint: .gray
+                    ) {
+                        Picker("", selection: $settings.windowGap) {
+                            ForEach(Self.gapChoices, id: \.self) { gap in
+                                Text(gap == 0 ? "None" : "\(gap) px").tag(gap)
+                            }
+                        }
+                        .labelsHidden()
+                        .fixedSize()
+                    }
+                }
             }
 
             SettingsCard(header: "General") {

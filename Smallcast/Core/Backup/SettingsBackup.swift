@@ -23,6 +23,8 @@ struct SettingsBackup: Codable {
         var popToRootSeconds: Int?
         var compactMode: Bool?
         var showFavoritesInCompactMode: Bool?
+        var windowManagementEnabled: Bool?
+        var windowGap: Int?
     }
 
     struct HotkeyBackup: Codable {
@@ -31,6 +33,8 @@ struct SettingsBackup: Codable {
         var toggleEmoji: KeyShortcut?
         var apps: [String: KeyShortcut]?
         var panes: [String: KeyShortcut]?
+        /// Keyed by `WindowAction.rawValue`; an unknown key is skipped on import.
+        var windowActions: [String: KeyShortcut]?
     }
 
     /// A tally of what an import touched, for user-facing confirmation.
@@ -62,7 +66,9 @@ extension SettingsBackup {
                 ?? true,
             popToRootSeconds: s.popToRootTimeout.rawValue,
             compactMode: s.compactMode,
-            showFavoritesInCompactMode: s.showFavoritesInCompactMode)
+            showFavoritesInCompactMode: s.showFavoritesInCompactMode,
+            windowManagementEnabled: s.windowManagementEnabled,
+            windowGap: s.windowGap)
 
         let hk = core.hotKeys
         var hotkeys = HotkeyBackup()
@@ -76,6 +82,10 @@ extension SettingsBackup {
         hotkeys.panes = Dictionary(
             uniqueKeysWithValues: hk.boundPaneBundleIDs.compactMap { id in
                 hk.shortcut(for: .settingsPane(bundleID: id)).map { (id, $0) }
+            })
+        hotkeys.windowActions = Dictionary(
+            uniqueKeysWithValues: WindowAction.allCases.compactMap { action in
+                hk.shortcut(for: .window(action)).map { (action.rawValue, $0) }
             })
         backup.hotkeys = hotkeys
 
@@ -156,6 +166,15 @@ extension SettingsBackup {
             settings.showFavoritesInCompactMode = flag
             count += 1
         }
+        if let flag = s.windowManagementEnabled {
+            settings.windowManagementEnabled = flag
+            core.windowManagementDidChange(flag)
+            count += 1
+        }
+        if let gap = s.windowGap {
+            settings.windowGap = gap
+            count += 1
+        }
         return count
     }
 
@@ -173,6 +192,10 @@ extension SettingsBackup {
         if let s = hotkeys.toggleEmoji { apply(s, .toggleEmoji) }
         for (id, s) in hotkeys.apps ?? [:] { apply(s, .app(bundleID: id)) }
         for (id, s) in hotkeys.panes ?? [:] { apply(s, .settingsPane(bundleID: id)) }
+        for (raw, s) in hotkeys.windowActions ?? [:] {
+            guard let action = WindowAction(rawValue: raw) else { continue }
+            apply(s, .window(action))
+        }
         return count
     }
 }

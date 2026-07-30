@@ -20,6 +20,8 @@ JavaScriptCore ships with macOS, so that costs no extra binary size.
 - **Clipboard history** — text and images, searchable, pasted back into the app you were using.
 - **Global hotkey** — one shortcut summons the palette from anywhere.
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
+- **Window management** — optional Raycast-style commands: halves, thirds, quarters, sixths, Almost
+  Maximize, Reasonable Size, move between displays.
 - **Raycast extensions** — import the ones you already have and run them natively.
 
 ## Install
@@ -41,9 +43,9 @@ directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine
 
 ## Permissions
 
-**Accessibility** — needed only so Smallcast can paste a clipboard item back into the app you
-came from. You're prompted the first time you paste; grant it in **System Settings → Privacy &
-Security → Accessibility**.
+**Accessibility** — needed so Smallcast can paste a clipboard item back into the app you came from,
+and to move other apps' windows. You're prompted the first time you paste; grant it in **System
+Settings → Privacy & Security → Accessibility**.
 
 ## Using it
 
@@ -52,6 +54,8 @@ Security → Accessibility**.
 3. **Tab** switches between Apps and Clipboard; **↑/↓** move, **Esc** dismisses.
 4. **Settings → App Hotkeys** — search an app and record a shortcut to toggle it.
 5. **Settings → Extensions** — import Raycast extensions, then run their commands from the palette.
+6. **Settings → General → Window Management** — turn on the window commands, then bind shortcuts to
+   them in **Settings → Shortcuts → Commands**. See **[docs/windows.md](docs/windows.md)**.
 
 ### Raycast extensions
 
@@ -62,7 +66,8 @@ you've run `ray build` in. Their commands then appear in the launcher under *Ext
 included.
 
 Most extensions work as-is. The notable exceptions are ones that sign in through Raycast's OAuth
-redirect service, `menu-bar` commands, and Raycast's own cloud features (AI, window management).
+redirect service, `menu-bar` commands, and Raycast's own cloud features (AI). Raycast's built-in window
+management is replaced by Smallcast's own commands (above).
 See **[docs/extensions.md](docs/extensions.md)** for the full picture.
 
 ## Building from source
