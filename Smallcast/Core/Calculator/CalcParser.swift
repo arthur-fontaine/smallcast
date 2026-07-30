@@ -111,14 +111,42 @@ enum CalcTokenizer {
     }
 }
 
+/// A dimensional value: `si` is the magnitude in SI base units, `unit` how the user wrote it (and so how it renders back). Producing one is the whole point of `evaluateQuantity`.
+struct CalcQuantityValue: Equatable, Sendable {
+    let si: Double
+    let unit: CompoundUnit
+
+    /// The number to print in front of `unit.symbol`.
+    var magnitude: Double { si / unit.siFactor }
+}
+
 /// Precedence-climbing evaluator over the token stream (evaluates while parsing, no AST), returning nil for anything malformed or non-finite.
 enum CalcParser {
+    /// What a unit-carrying expression evaluated to. `.mismatch` is reported instead of a silent nil so the card can name both sides ("Cannot add Length and Weight.").
+    enum QuantityResult: Equatable {
+        case value(CalcQuantityValue)
+        case mismatch(CalcDimension, CalcDimension)
+        case none
+    }
+
+    /// Scalar entry point: an expression that ends up carrying units is *not* a plain number, so it reads as nil here exactly like any other unparseable input.
     static func evaluate(_ tokens: [CalcToken]) -> Double? {
         var parser = Parser(tokens: tokens)
-        guard let result = parser.parseExpression(minBP: 0), parser.isAtEnd,
+        guard let result = parser.parseExpression(minBP: 0), parser.isAtEnd, result.unit == nil,
             result.effective.isFinite
         else { return nil }
         return result.effective
+    }
+
+    /// Dimensional entry point: `1 km + 1 m`, `100 km / 2 h`, `60 mph * 2 hr`. Returns `.none` for a scalar or unparseable expression, leaving the caller's other paths to handle it.
+    static func evaluateQuantity(_ tokens: [CalcToken]) -> QuantityResult {
+        var parser = Parser(tokens: tokens)
+        let result = parser.parseExpression(minBP: 0)
+        if let (lhs, rhs) = parser.mismatch { return .mismatch(lhs, rhs) }
+        guard let result, parser.isAtEnd, let unit = result.unit, result.value.isFinite else {
+            return .none
+        }
+        return .value(CalcQuantityValue(si: result.value, unit: unit))
     }
 
     // Capture-free closures (not bare C function references) so every entry infers `@Sendable` under both language modes — the harness compiles this in Swift 5.
@@ -132,15 +160,18 @@ enum CalcParser {
 }
 
 private struct Parser {
-    /// A value that may still be a "percent" (`20%`): additive ops treat it as a relative change, everything else as value/100.
+    /// A value that may still be a "percent" (`20%`): additive ops treat it as a relative change, everything else as value/100. With a `unit`, `value` is the magnitude in SI base units — that's what makes `1 km + 1 m` a single addition.
     struct Value {
         var value: Double
+        var unit: CompoundUnit? = nil
         var isPercent = false
         var effective: Double { isPercent ? value / 100 : value }
     }
 
     let tokens: [CalcToken]
     var pos = 0
+    /// Set when `+`/`-` (or a conversion) meets two different dimensions; the parse then fails, but the caller can still say what didn't line up.
+    var mismatch: (CalcDimension, CalcDimension)?
 
     init(tokens: [CalcToken]) { self.tokens = tokens }
 
@@ -148,17 +179,35 @@ private struct Parser {
     private var current: CalcToken? { pos < tokens.count ? tokens[pos] : nil }
 
     // Binding powers: additive 10, multiplicative (incl. "of") 20, unary minus 25, power 30 (right-assoc), postfix ! % deg tightest.
+    private static let additiveBP = 10
     private static let unaryBP = 25
 
     mutating func parseExpression(minBP: Int) -> Value? {
         guard var lhs = parseOperand() else { return nil }
-        while let (op, bp, rightBP) = peekBinary(), bp >= minBP {
-            pos += 1
-            guard let rhs = parseExpression(minBP: rightBP) else { return nil }
-            guard let combined = apply(op, lhs, rhs) else { return nil }
+        while true {
+            if let (op, bp, rightBP) = peekBinary(), bp >= minBP {
+                pos += 1
+                guard let rhs = parseExpression(minBP: rightBP) else { return nil }
+                guard let combined = apply(op, lhs, rhs) else { return nil }
+                lhs = combined
+                continue
+            }
+            // Two quantities of the same dimension written side by side add up: `5 ft 10 in`, `1 hr 30 min`.
+            guard minBP <= Self.additiveBP, let combined = parseImplicitSum(lhs) else { break }
             lhs = combined
         }
         return lhs
+    }
+
+    /// Speculative: the parser is a value type, so a lookahead that doesn't pan out is discarded by simply not writing `self` back.
+    private mutating func parseImplicitSum(_ lhs: Value) -> Value? {
+        guard let unit = lhs.unit, !lhs.isPercent else { return nil }
+        var lookahead = self
+        guard let rhs = lookahead.parseOperand(), let rhsUnit = rhs.unit, !rhs.isPercent,
+            rhsUnit.dimension == unit.dimension
+        else { return nil }
+        self = lookahead
+        return Value(value: lhs.value + rhs.value, unit: unit)
     }
 
     /// (operator, its binding power, minimum bp for its right operand).
@@ -172,46 +221,91 @@ private struct Parser {
         }
     }
 
-    private func apply(_ op: Character, _ lhs: Value, _ rhs: Value) -> Value? {
-        let result: Double
+    private mutating func apply(_ op: Character, _ lhs: Value, _ rhs: Value) -> Value? {
         switch op {
-        // `450 + 20%` reads as a relative change: 450 * 1.2. With a plain rhs it's ordinary math.
-        case "+":
-            result =
-                rhs.isPercent
-                ? lhs.effective * (1 + rhs.value / 100) : lhs.effective + rhs.effective
-        case "-":
-            result =
-                rhs.isPercent
-                ? lhs.effective * (1 - rhs.value / 100) : lhs.effective - rhs.effective
-        case "*": result = lhs.effective * rhs.effective
-        case "/": result = lhs.effective / rhs.effective
-        case "^": result = pow(lhs.effective, rhs.effective)
+        // `450 + 20%` reads as a relative change: 450 * 1.2 — and `1 km + 10%` keeps the unit.
+        case "+", "-":
+            let sign: Double = op == "+" ? 1 : -1
+            if rhs.isPercent {
+                return Value(value: lhs.effective * (1 + sign * rhs.value / 100), unit: lhs.unit)
+            }
+            // Adding across units is the one place two different dimensions is an error worth naming.
+            if let lhsUnit = lhs.unit, let rhsUnit = rhs.unit {
+                guard lhsUnit.dimension == rhsUnit.dimension else {
+                    mismatch = (lhsUnit.dimension, rhsUnit.dimension)
+                    return nil
+                }
+                return Value(value: lhs.value + sign * rhs.value, unit: lhsUnit)
+            }
+            // A quantity and a bare number don't add up ("2 m + 3"); that's a half-typed expression, not
+            // a dimension clash, so it fails quietly rather than as an error card.
+            guard lhs.unit == nil, rhs.unit == nil else { return nil }
+            return Value(value: lhs.effective + sign * rhs.effective)
+
+        // Multiplying and dividing compose units: `km / h` is a speed even with no such table entry.
+        case "*":
+            return dimensional(lhs.effective * rhs.effective, lhs, rhs, dividing: false)
+        case "/":
+            return dimensional(lhs.effective / rhs.effective, lhs, rhs, dividing: true)
+
+        // Only an integer power keeps a unit meaningful: `(2 m)^2` is 4 m², `2^0.5 m` is not.
+        case "^":
+            let result = pow(lhs.effective, rhs.effective)
+            guard let lhsUnit = lhs.unit else {
+                return rhs.unit == nil ? Value(value: result) : nil
+            }
+            guard rhs.unit == nil, rhs.effective.rounded() == rhs.effective,
+                abs(rhs.effective) <= 3, let unit = lhsUnit.raised(to: Int(rhs.effective))
+            else { return nil }
+            return Value(value: result, unit: unit)
+
         default: return nil
         }
-        return Value(value: result)
     }
 
-    /// One prefix item plus all its postfixes (`!`, `%`, `deg`) — postfixes bind tightest.
+    /// Combines the two operands' units, dropping to a plain number when everything cancels (`10 km / 2 km`).
+    private func dimensional(_ value: Double, _ lhs: Value, _ rhs: Value, dividing: Bool) -> Value? {
+        guard lhs.unit != nil || rhs.unit != nil else { return Value(value: value) }
+        // A percent is a ratio, not a unit — it scales the other side and contributes nothing.
+        let lhsUnit = lhs.isPercent ? nil : lhs.unit
+        let rhsUnit = rhs.isPercent ? nil : rhs.unit
+        return Value(value: value, unit: CompoundUnit.combine(lhsUnit, rhsUnit, dividing: dividing))
+    }
+
+    /// One prefix item plus all its postfixes (`!`, `%`, `deg`, a unit) — postfixes bind tightest.
     private mutating func parseOperand() -> Value? {
         guard var value = parsePrefix() else { return nil }
         loop: while true {
             switch current {
             case .op("!"):
-                guard !value.isPercent, let fact = factorial(value.value) else { return nil }
+                guard !value.isPercent, value.unit == nil, let fact = factorial(value.value) else {
+                    return nil
+                }
                 value = Value(value: fact)
             case .op("%"):
-                guard !value.isPercent else { return nil }
+                guard !value.isPercent, value.unit == nil else { return nil }
                 value.isPercent = true
+            // `deg` stays the trig postfix (`sin 30deg`) rather than the angle unit — that's what every
+            // expression using it means, and `30 deg to rad` is handled by the conversion path.
             case .ident("deg"):
-                guard !value.isPercent else { return nil }
+                guard !value.isPercent, value.unit == nil else { return nil }
                 value = Value(value: value.value * .pi / 180)
+            case .ident(let name):
+                guard let unit = Self.attachableUnit(name), !value.isPercent, value.unit == nil
+                else { break loop }
+                value = Value(value: value.value * unit.siFactor, unit: CompoundUnit(unit))
             default:
                 break loop
             }
             pos += 1
         }
         return value
+    }
+
+    /// A unit a number can be written against. Temperatures are excluded because they're affine: `20°C + 5°C` has no meaning, while `20 K + 5 K` (a ratio scale, no offset) does.
+    private static func attachableUnit(_ name: String) -> UnitDef? {
+        guard let unit = CalcUnits.byName[name], unit.offset == 0 else { return nil }
+        return unit
     }
 
     private mutating func parsePrefix() -> Value? {
@@ -225,7 +319,7 @@ private struct Parser {
         case .op("-"):
             pos += 1
             guard let operand = parseExpression(minBP: Self.unaryBP) else { return nil }
-            return Value(value: -operand.effective)
+            return Value(value: -operand.effective, unit: operand.unit)
         case .op("+"):
             pos += 1
             return parseExpression(minBP: Self.unaryBP)
@@ -251,8 +345,15 @@ private struct Parser {
                     // Bare application: `sqrt 64`, `sin 30deg` — the argument is one operand, so `sqrt 64 + 36` is sqrt(64) + 36.
                     argument = parseOperand()
                 }
-                guard let argument else { return nil }
+                // A dimensional argument has no meaning here — `sqrt 4 m` isn't 2 of anything.
+                guard let argument, argument.unit == nil else { return nil }
                 return Value(value: fn(argument.effective))
+            }
+            // A unit with no number in front is one of it — the same default `parseConversion` applies
+            // to `day to s`, and what makes the "h" in `km/h` parse.
+            if let unit = Self.attachableUnit(name) {
+                pos += 1
+                return Value(value: unit.siFactor, unit: CompoundUnit(unit))
             }
             return nil
         default:

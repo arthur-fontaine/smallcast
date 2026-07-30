@@ -153,9 +153,17 @@ enum CalcUnits {
     ]
 
     /// Lookup by lowercased, `²`-folded name (the tokenizer's ident form).
-    static let byName: [String: UnitDef] = {
+    static let byName: [String: UnitDef] = catalog.byName
+
+    /// Every unit once, in declaration order — the deterministic search order
+    /// `CompoundUnit.namedEquivalent` needs (hPa and mbar are the same size, so the order decides).
+    static let ordered: [UnitDef] = catalog.ordered
+
+    private static let catalog: (byName: [String: UnitDef], ordered: [UnitDef]) = {
         var table: [String: UnitDef] = [:]
+        var ordered: [UnitDef] = []
         func add(_ def: UnitDef, _ names: [String]) {
+            ordered.append(def)
             for name in names { table[name] = def }
         }
 
@@ -282,6 +290,6 @@ enum CalcUnits {
         add(UnitDef("Gbps", "Gigabits per Second", .dataRate, 1e9), ["gbps"])
         add(UnitDef("Tbps", "Terabits per Second", .dataRate, 1e12), ["tbps"])
 
-        return table
+        return (table, ordered)
     }()
 }
