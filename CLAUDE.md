@@ -99,6 +99,10 @@ Never break these without an explicit task to do so.
 - **Window geometry is computed in Accessibility space** (origin top-left, y downward), and
   `WindowManager.axRect` is the only place Cocoa's y-up screen coordinates are converted. See
   [windows.md](docs/windows.md).
+- **`SymbolCatalog` reads a system bundle, not API.** The SF Symbol list comes from
+  `CoreGlyphs.bundle` at runtime; every read stays optional and falls back to
+  `SymbolCatalog.suggested`, and Apple's restricted marks are never offered. See
+  [extensions.md](docs/extensions.md).
 - **Clipboard writes stamp a private `internalType` marker** so the poller skips Smallcast's own writes.
 - **Hotkeys persist under legacy `KeyboardShortcuts_<name>` UserDefaults keys** (from the removed
   KeyboardShortcuts package) so old bindings survive. See [hotkeys.md](docs/hotkeys.md).

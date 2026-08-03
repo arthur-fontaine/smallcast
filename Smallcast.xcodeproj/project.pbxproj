@@ -58,6 +58,7 @@
 		710D18E5F7600FEBF205D3BF /* smallcast.icon in Resources */ = {isa = PBXBuildFile; fileRef = 8DEEF28DF17DFDC611EC391E /* smallcast.icon */; };
 		73F39D3E5AF7ED6F5EF61972 /* UsageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B95C0599BFFDF8DEC7F9D129 /* UsageStore.swift */; };
 		7487FD3415D8AC6239D3BFB7 /* VisibilityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E9B1C46F3B190CE9DECADAE /* VisibilityStore.swift */; };
+		762F759630879BDDB3A49286 /* SymbolCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8872E608B67FED62B775E73B /* SymbolCatalog.swift */; };
 		7AEDBBBB07771CAF98F274F3 /* WindowAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48349B9C1A9A3F023C267ABA /* WindowAction.swift */; };
 		7B53ACC1E7AAB88252002B01 /* AppIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 844989309BC17EA990ADF4F8 /* AppIndex.swift */; };
 		7BF5A9C767D786D2E2F1D685 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F4BF0D2B82AA86EAA30AAD3 /* AppSettings.swift */; };
@@ -167,6 +168,7 @@
 		80DF5A1755266ECAD68CBEFF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		844989309BC17EA990ADF4F8 /* AppIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIndex.swift; sourceTree = "<group>"; };
 		84D29B9784FC0508678495E0 /* ExtensionImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionImage.swift; sourceTree = "<group>"; };
+		8872E608B67FED62B775E73B /* SymbolCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymbolCatalog.swift; sourceTree = "<group>"; };
 		8C80D47FD72F82A59AA181B4 /* HistoryFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryFeed.swift; sourceTree = "<group>"; };
 		8DEEF28DF17DFDC611EC391E /* smallcast.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = smallcast.icon; sourceTree = "<group>"; };
 		8F599EA7814B119641818658 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -426,6 +428,7 @@
 				E207FE495FD75F0AC656009F /* ExtensionScreen.swift */,
 				D4ABF35A438E278FEDDC62C4 /* ExtensionStorage.swift */,
 				F8E24D8786E0B0986DE8F774 /* RenderNode.swift */,
+				8872E608B67FED62B775E73B /* SymbolCatalog.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -670,6 +673,7 @@
 				8C90880DBD7E1DA81703770F /* ShortcutRecorder.swift in Sources */,
 				FCF04F7E98063331E208A345 /* ShortcutsSettingsView.swift in Sources */,
 				32365BD1F00CD1C347571992 /* SmallcastApp.swift in Sources */,
+				762F759630879BDDB3A49286 /* SymbolCatalog.swift in Sources */,
 				07C7CAF0AEC29062EC6D1A77 /* Theme.swift in Sources */,
 				451DCA421C19D494EFC50BDA /* ThinScrollbar.swift in Sources */,
 				73F39D3E5AF7ED6F5EF61972 /* UsageStore.swift in Sources */,

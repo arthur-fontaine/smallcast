@@ -98,6 +98,8 @@ swiftc Smallcast/Core/Emoji/{EmojiCatalog,EmojiGridGeometry,EmojiData.generated}
     Tools/emoji-test.swift -o /tmp/emoji-test && /tmp/emoji-test    # emoji catalog + grid geometry
 swiftc Smallcast/Core/WindowManagement/{WindowAction,WindowGeometry}.swift \
     Tools/window-test.swift -o /tmp/window-test && /tmp/window-test # window arrangement geometry
+swiftc Smallcast/Core/Extensions/SymbolCatalog.swift Tools/symbols-test.swift \
+    -o /tmp/symbols-test && /tmp/symbols-test                       # SF Symbol catalog + search
 swiftc -parse-as-library -swift-version 6 \
     Smallcast/Core/Extensions/{ExtensionRuntime,ExtensionNodeShims,ExtensionBootConfig,ExtensionManifest,ExtensionScreen,ExtensionCatalog,ExtensionFetcher,RenderNode}.swift \
     Smallcast/Core/FuzzyMatch.swift Smallcast/Core/Compression/Zlib.swift \
