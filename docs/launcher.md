@@ -3,6 +3,11 @@
 `AppIndex.scan()` runs off-main, enumerates the standard `/Applications` dirs, and dedups by bundle ID
 (first dir wins). Icons go through a count-capped `NSCache` (`IconCache`).
 
+`extraApplicationPaths` adds the user-launchable apps that live outside those directories — today just
+**Finder**, which sits in `/System/Library/CoreServices/`. That directory holds ~350 bundles and is
+almost entirely agents and helpers (Dock, ControlCenter, rcd…); even filtering out `LSUIElement`
+leaves two dozen things nobody launches, so it's an allowlist rather than another search directory.
+
 ## Matching
 
 `FuzzyMatch.score` is a tiered scorer; each kind of match owns a 10 000-wide band, and
@@ -15,13 +20,18 @@
 | `.wordStart` | 80 000 | `machine` → Time Machine |
 | `.substring` | 70 000 | `cat` → Appli**cat**ion |
 | `.subsequence` | 50 000 | `tm` → **T**ime **M**achine |
-| `.typo` | 40 000 | `safri` → Safari |
+| `.typo` | 40 000 | `chorme` → Google Chrome |
 
 The typo tier is a **bounded Damerau–Levenshtein** distance from the query to the start of the
-candidate — or to the start of any of its words, so `managment` still finds Window Management. Trailing
-candidate characters are free (`clipbrd` → Clipboard History); leading ones are not. The allowance
-scales with query length and is **zero under four characters**, where almost everything is within one
-edit. The DP bails as soon as every alignment in a row exceeds the allowance.
+candidate — or to the start of any of its words, so `windwo` still finds Window Management. Trailing
+candidate characters are free (`calender` → Calendar), leading ones are not. In practice it earns its
+keep on *wrong or swapped* letters, since a merely **missing** letter (`managment`, `clipbrd`) still
+matches as a subsequence one tier up.
+
+The allowance is roughly one edit per eight characters and never more than a fifth of what was typed:
+zero under four characters, one through seven, two through eleven, three beyond. Being stingy matters —
+at two edits on six characters, `finder` matched "Find My". The DP bails as soon as every alignment in
+a row exceeds the allowance.
 
 `AppIndex.score(_:for:)` is the launcher's whole rule: name first, else the entry's **category**
 (`kindLabel` — "Window Management", "Application", an extension's title), which lands in its own low

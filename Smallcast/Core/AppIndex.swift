@@ -248,6 +248,14 @@ final class AppIndex: ObservableObject {
         matchCache = nil
     }
 
+    /// User-launchable apps that live outside the standard directories. `/System/Library/CoreServices`
+    /// holds ~350 bundles, almost all of them agents and helpers (Dock, ControlCenter, rcd…) — even
+    /// filtering out `LSUIElement` leaves two dozen things nobody launches — so this is an allowlist
+    /// rather than another search directory. Finder is the one omission people actually hit.
+    nonisolated private static let extraApplicationPaths = [
+        "/System/Library/CoreServices/Finder.app"
+    ]
+
     /// Every `.app` in the standard search directories, in scan order. Also serves extensions'
     /// `getApplications()`.
     nonisolated static func installedApplicationURLs() -> [URL] {
@@ -260,12 +268,15 @@ final class AppIndex: ObservableObject {
         ].map { URL(fileURLWithPath: $0) }
         searchDirs.append(fm.homeDirectoryForCurrentUser.appendingPathComponent("Applications"))
 
-        return searchDirs.flatMap { dir -> [URL] in
+        let scanned = searchDirs.flatMap { dir -> [URL] in
             let items =
                 (try? fm.contentsOfDirectory(
                     at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
             return items.filter { $0.pathExtension == "app" }
         }
+        let extras = extraApplicationPaths.filter { fm.fileExists(atPath: $0) }
+            .map { URL(fileURLWithPath: $0) }
+        return scanned + extras
     }
 
     nonisolated private static func scan() -> [AppEntry] {
