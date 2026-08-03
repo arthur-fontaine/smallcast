@@ -125,7 +125,8 @@ struct SectionHeader: View {
     }
 }
 
-private struct AppRow: View {
+/// One launcher row. Not private: the Recent list draws remembered entries with the very same row.
+struct AppRow: View {
     let app: AppEntry
     let selected: Bool
     let running: Bool

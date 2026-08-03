@@ -28,6 +28,9 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         }
     }
 
+    /// Key under which favorites, visibility and usage all record this entry.
+    var usageKey: String { bundleID ?? id }
+
     /// The global-hotkey action that opens this entry, or `nil` when there's nothing to key a binding on.
     var hotKeyAction: HotKeyAction? {
         if let action = WindowAction(entryID: id) { return .window(action) }
@@ -298,19 +301,51 @@ final class AppIndex: ObservableObject {
         return result
     }
 
+    /// Drops the one-deep memo — a launch changes the usage tiebreak, so the same query can rank
+    /// differently a moment later.
+    func invalidateMatches() { matchCache = nil }
+
+    /// Band a category-only match lands in: below every name match (typos included), so searching
+    /// "window management" lists those commands without ever outranking something actually named that.
+    nonisolated private static let categoryScore = 20_000
+
     private func rank(_ q: String, limit: Int) -> [AppEntry] {
-        let scored = apps.compactMap { app -> (AppEntry, Int)? in
-            guard let score = FuzzyMatch.score(query: q, candidate: app.name) else { return nil }
-            return (app, score)
+        let now = Date()
+        let usage = AppCore.shared.usage
+        let scored = apps.compactMap { app -> (entry: AppEntry, score: Int, usage: Int)? in
+            guard let score = Self.score(q, for: app) else { return nil }
+            return (app, score, usage.score(for: app.usageKey, now: now))
         }
         return
             scored
-            .sorted {
-                $0.1 != $1.1
-                    ? $0.1 > $1.1
-                    : $0.0.name.localizedCaseInsensitiveCompare($1.0.name) == .orderedAscending
+            .sorted { lhs, rhs in
+                // Usage only reorders equally good matches: comparing the *kind* of match (not the raw
+                // score) keeps a prefix hit above a subsequence one no matter how often the latter was
+                // launched.
+                let lhsKind = FuzzyMatch.kind(of: lhs.score)
+                let rhsKind = FuzzyMatch.kind(of: rhs.score)
+                if lhsKind != rhsKind { return lhsKind > rhsKind }
+                if lhs.usage != rhs.usage { return lhs.usage > rhs.usage }
+                if lhs.score != rhs.score { return lhs.score > rhs.score }
+                return lhs.entry.name.localizedCaseInsensitiveCompare(rhs.entry.name)
+                    == .orderedAscending
             }
             .prefix(limit)
-            .map(\.0)
+            .map(\.entry)
+    }
+
+    /// Name match, else the entry's category ("Window Management", "Application", an extension's
+    /// title) — so a whole group can be pulled up by what it *is*, not only by what it's called.
+    /// Shared with the Recent list so both filter identically.
+    ///
+    /// A category has to be named from its start (or be a near-miss of it): a mid-word substring would
+    /// make "cat" list every Appli**cat**ion, and a subsequence match is looser still.
+    nonisolated static func score(_ q: String, for app: AppEntry) -> Int? {
+        if let score = FuzzyMatch.score(query: q, candidate: app.name) { return score }
+        guard let category = FuzzyMatch.score(query: q, candidate: app.kindLabel) else { return nil }
+        switch FuzzyMatch.kind(of: category) {
+        case .exact, .prefix, .wordStart, .typo: return Self.categoryScore
+        case .substring, .subsequence: return nil
+        }
     }
 }

@@ -45,7 +45,8 @@ struct PopoverMenuItem {
 /// A popover menu's header + rows, built once per feature and consumed by both the render path and `RootPaletteView`'s keyboard handlers.
 struct PopoverMenuContent {
     var header: String? = nil
-    let items: [PopoverMenuItem]
+    /// `var` so a screen can extend another's menu — the Recent list reuses the launcher's and appends its own rows.
+    var items: [PopoverMenuItem]
 }
 
 /// In-window overlay menu (not a system popover), anchored to a bottom corner so it stays clipped inside the palette, with a stock Liquid Glass surface. Data-driven so `selection` can highlight a row for keyboard navigation; `onActivate(index)` is the single path fired by both a click and Return.

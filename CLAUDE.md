@@ -74,8 +74,11 @@ Never break these without an explicit task to do so.
   `Core/WindowManagement/` (`WindowAction`, `WindowGeometry`) for `Tools/window-test.swift` — only
   `WindowManager` may touch AppKit / the Accessibility API.
 - **`FuzzyMatch` lives in `Core/FuzzyMatch.swift`** (Foundation-only) and is shared by the launcher and
-  by extension `List` filtering; `Tools/fuzz-test.swift` compiles that real source — there is no copy to
-  keep in sync.
+  by extension `List` filtering; `Tools/fuzz-test.swift` compiles that real source (along with
+  `Core/UsageStore.swift`) — there is no copy to keep in sync.
+- **Match *kind* beats match score.** Ranking compares `FuzzyMatch.kind(of:)` before the usage
+  (frecency) tiebreak, so a popular subsequence hit can never outrank a fresh prefix hit. Anything that
+  scores must stay inside its 10 000-wide band. See [launcher.md](docs/launcher.md).
 - **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js`** — never edit it by hand.
 - **`Resources/RaycastRuntime.generated.js` is emitted by `Tools/raycast-runtime/build.mjs`** — never
   edit it by hand; change `Tools/raycast-runtime/src/` and rebuild.
@@ -109,10 +112,11 @@ Never break these without an explicit task to do so.
 - `Smallcast/Core/` — managers, stores, windows, AppKit glue (no view bodies beyond hosting).
   `Core/Calculator/` and `Core/Emoji/` are the Foundation-only engines; `Core/Extensions/` the Raycast
   extension host; `Core/Compression/Zlib.swift` gzip/zlib both directions; `Core/Theme.swift` the design
-  tokens; `Core/HotKey/` the in-house hotkey stack; `Core/WindowManagement/` the window commands.
+  tokens; `Core/HotKey/` the in-house hotkey stack; `Core/WindowManagement/` the window commands;
+  `Core/UsageStore.swift` + `Core/HistoryFeed.swift` the frecency ranking and the Recent list.
 - `Smallcast/Resources/` — `RaycastRuntime.generated.js`, the embedded extension runtime.
 - `Smallcast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Calculator/`,
-  `Emoji/`, `Extensions/`, `Settings/`, `About/`, `Onboarding/`, plus shared `PopoverMenu`.
+  `Emoji/`, `Extensions/`, `History/`, `Settings/`, `About/`, `Onboarding/`, plus shared `PopoverMenu`.
 - `Smallcast/App/` — `@main` app + delegate.
 - `Tools/` — standalone test harnesses, the emoji generator, and `raycast-runtime/` (the npm project
   that builds the embedded extension runtime).

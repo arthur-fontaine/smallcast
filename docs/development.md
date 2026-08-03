@@ -90,8 +90,8 @@ Details, the supported API surface and the known gaps: [`extensions.md`](extensi
 There's no XCTest target. Standalone harnesses, all compiling the **real** sources:
 
 ```sh
-swiftc Smallcast/Core/FuzzyMatch.swift Tools/fuzz-test.swift \
-    -o /tmp/fuzz-test && /tmp/fuzz-test                            # launcher fuzzy matcher
+swiftc Smallcast/Core/{FuzzyMatch,UsageStore}.swift Tools/fuzz-test.swift \
+    -o /tmp/fuzz-test && /tmp/fuzz-test                            # launcher matcher + frecency
 swiftc Smallcast/Core/Calculator/*.swift Tools/calc-test.swift \
     -o /tmp/calc-test && /tmp/calc-test                            # calculator engine
 swiftc Smallcast/Core/Emoji/{EmojiCatalog,EmojiGridGeometry,EmojiData.generated}.swift \

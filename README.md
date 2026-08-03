@@ -15,7 +15,8 @@ JavaScriptCore ships with macOS, so that costs no extra binary size.
 
 ## Features
 
-- **App launcher** — fuzzy-search and launch anything, pin favorites, see what's running.
+- **App launcher** — fuzzy-search and launch anything, typos included; what you use most floats up,
+  and ↑ on an empty search brings back what you just ran or calculated.
 - **Calculator** — do math and unit conversions inline, including across units: `1km + 1m`,
   `100km / 2h` → `50 km/h`.
 - **Clipboard history** — text and images, searchable, pasted back into the app you were using.
@@ -53,6 +54,7 @@ Settings → Privacy & Security → Accessibility**.
 1. Open **Settings → General** and record a global shortcut to summon Smallcast.
 2. Press it anywhere → the palette floats in. Type to filter, **↵** to launch.
 3. **Tab** switches between Apps and Clipboard; **↑/↓** move, **Esc** dismisses.
+   With the search empty, **↑** opens *Recent* — everything you last ran or calculated.
 4. **Settings → App Hotkeys** — search an app and record a shortcut to toggle it.
 5. **Settings → Extensions** — import Raycast extensions, then run their commands from the palette.
 6. **Settings → General → Window Management** — turn on the window commands, then bind shortcuts to

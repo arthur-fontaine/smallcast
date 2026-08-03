@@ -8,6 +8,7 @@ struct RootPaletteView: View {
     @EnvironmentObject private var favorites: FavoritesStore
     @EnvironmentObject private var visibility: VisibilityStore
     @EnvironmentObject private var calcHistory: CalculatorHistoryStore
+    @EnvironmentObject private var usage: UsageStore
     @EnvironmentObject private var emojiIndex: EmojiIndex
     @EnvironmentObject private var frequentEmoji: FrequentEmojiStore
     @EnvironmentObject private var extensions: ExtensionManager
@@ -50,6 +51,12 @@ struct RootPaletteView: View {
         return split.favorites + split.rest
     }
     private var clipResults: [ClipboardItem] { store.search(vm.query) }
+    /// The Recent feed: launches and calculations merged newest-first, filtered by whatever is typed.
+    private var historyResults: [HistoryItem] {
+        HistoryFeed.build(
+            usage: usage, apps: appIndex.apps.filter(visibility.isVisible),
+            calculations: calcHistory.entries, query: vm.query)
+    }
     private var histResults: [CalcHistoryEntry] { calcHistory.search(vm.query) }
     private var emojiSections: [EmojiGridSection] {
         EmojiGrid.sections(query: vm.query, index: emojiIndex, frequent: frequentEmoji)
@@ -86,6 +93,7 @@ struct RootPaletteView: View {
         case .clipboard: return clipResults.count
         case .calculatorHistory: return histResults.count + calcCount
         case .emoji: return emojiResults.count
+        case .history: return historyResults.count
         case .extensionCommand: return extensionScreen.items.count
         }
     }
@@ -121,6 +129,10 @@ struct RootPaletteView: View {
     private var selectedEmojiEntry: EmojiEntry? {
         emojiResults.indices.contains(selection) ? emojiResults[selection] : nil
     }
+    private var selectedHistoryItem: HistoryItem? {
+        let results = historyResults
+        return results.indices.contains(selection) ? results[selection] : nil
+    }
 
     /// The bottom-right Actions menu content for the current mode's selection, or nil when the selection has no actions.
     private var actionsContent: PopoverMenuContent? {
@@ -154,6 +166,11 @@ struct RootPaletteView: View {
                     entry: emoji, core: core, target: vm.pasteTarget)
             }
             return nil
+        case .history:
+            guard let item = selectedHistoryItem else { return nil }
+            return HistoryActionsMenu.content(
+                item: item, core: core, favorites: favorites, usage: usage,
+                calcHistory: calcHistory)
         case .extensionCommand:
             return ExtensionActionsMenu.content(
                 screen: extensionScreen, selection: selection,
@@ -185,6 +202,7 @@ struct RootPaletteView: View {
         let apps = vm.mode == .launcher ? appResults : []
         let clips = vm.mode == .clipboard ? clipResults : []
         let hist = vm.mode == .calculatorHistory ? histResults : []
+        let history = vm.mode == .history ? historyResults : []
         let emojiSections = vm.mode == .emoji ? emojiSections : []
         let emojis = emojiSections.flatMap(\.entries)
         let extensionScreen = self.extensionScreen
@@ -192,7 +210,7 @@ struct RootPaletteView: View {
         let calc = calcResult
         let offset = calc == nil ? 0 : 1
         // Only the active mode is non-empty.
-        let count = apps.count + offset + clips.count + hist.count + emojis.count
+        let count = apps.count + offset + clips.count + hist.count + emojis.count + history.count
             + extensionScreen.items.count
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
         let calcSelected = calc != nil && sel == 0
@@ -203,7 +221,10 @@ struct RootPaletteView: View {
             showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
         let selectedApp = apps.indices.contains(sel - offset) ? apps[sel - offset] : nil
         // Derive the footer label from the already-resolved selection so `bottomBar` doesn't re-run `appResults` (its filter/sort aren't memoized). The primary/Actions group is hidden when there's nothing to act on: no results in any mode, or an error calc card (selectable but action-less).
-        let pillLabel = actionPillLabel(selectedApp: selectedApp, calcActionable: calcActionable)
+        let selectedHistory = history.indices.contains(sel) ? history[sel] : nil
+        let pillLabel = actionPillLabel(
+            selectedApp: selectedApp, selectedHistory: selectedHistory,
+            calcActionable: calcActionable)
         var showActionGroup = count > 0 && !(calcSelected && !calcActionable)
         if vm.mode == .extensionCommand {
             showActionGroup = extensionScreen.actionPanel(forItemAt: sel) != nil
@@ -212,9 +233,10 @@ struct RootPaletteView: View {
         // Assembled in three stages — chrome, state observers, key handling. Splitting the chain is
         // not cosmetic: as one expression the type-checker gives up on it.
         let chrome = paletteChrome(
-            apps: apps, clips: clips, hist: hist, emojiSections: emojiSections, calc: calc,
-            extensionScreen: extensionScreen, selection: sel, favoriteCount: favoriteCount,
-            showSections: showSections, pillLabel: pillLabel, showActionGroup: showActionGroup)
+            apps: apps, clips: clips, hist: hist, history: history, emojiSections: emojiSections,
+            calc: calc, extensionScreen: extensionScreen, selection: sel,
+            favoriteCount: favoriteCount, showSections: showSections, pillLabel: pillLabel,
+            showActionGroup: showActionGroup)
         return keyHandlers(
             observers(chrome, clips: clips, extensionScreen: extensionScreen),
             selection: sel, extensionScreen: extensionScreen)
@@ -222,7 +244,7 @@ struct RootPaletteView: View {
 
     /// Everything visual: the mode's content, the pinned header and footer, and the menu overlays.
     private func paletteChrome(
-        apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry],
+        apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry], history: [HistoryItem],
         emojiSections: [EmojiGridSection], calc: CalcResult?, extensionScreen: ExtensionScreen,
         selection sel: Int, favoriteCount: Int, showSections: Bool, pillLabel: String,
         showActionGroup: Bool
@@ -233,8 +255,8 @@ struct RootPaletteView: View {
                 Color.clear
             } else {
                 content(
-                    apps: apps, clips: clips, hist: hist, emojiSections: emojiSections, calc: calc,
-                    extensionScreen: extensionScreen,
+                    apps: apps, clips: clips, hist: hist, history: history,
+                    emojiSections: emojiSections, calc: calc, extensionScreen: extensionScreen,
                     selection: sel, favoriteCount: favoriteCount, showSections: showSections
                 )
             }
@@ -377,11 +399,17 @@ struct RootPaletteView: View {
             return .handled
         }
         .onKeyPress(.upArrow) {
-            if isCollapsed { return .ignored }
-            if menuOpen {
+            if menuOpen, !isCollapsed {
                 moveMenu(-1)
                 return .handled
             }
+            // Nothing typed and nowhere further up to go: ↑ opens the Recent list, which ↓ then walks.
+            // In the compact bar there's no list at all, so ↑ always means history.
+            if vm.mode == .launcher, isQueryEmpty, !menuOpen, isCollapsed || selection == 0 {
+                vm.prepare(mode: .history)
+                return .handled
+            }
+            if isCollapsed { return .ignored }
             if vm.mode == .emoji { moveEmojiRow(-1) } else { move(-1) }
             return .handled
         }
@@ -423,6 +451,12 @@ struct RootPaletteView: View {
                 let index = selection - calcCount
                 guard command, histResults.indices.contains(index) else { return .ignored }
                 core.copyHistoryExpression(histResults[index])
+            case .history:
+                // ⌘↵ on a remembered calculation copies the expression, as in Calculator History.
+                guard command, case .calculation(let entry)? = selectedHistoryItem else {
+                    return .ignored
+                }
+                core.copyHistoryExpression(entry)
             case .launcher, .extensionCommand:
                 return .ignored
             }
@@ -501,6 +535,8 @@ struct RootPaletteView: View {
                 deleteSelectedClip()
             case .calculatorHistory:
                 deleteSelectedHistoryEntry()
+            case .history:
+                forgetSelectedHistoryItem()
             case .launcher, .emoji, .extensionCommand:
                 return .ignored
             }
@@ -580,7 +616,7 @@ struct RootPaletteView: View {
 
     @ViewBuilder
     private func content(
-        apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry],
+        apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry], history: [HistoryItem],
         emojiSections: [EmojiGridSection], calc: CalcResult?, extensionScreen: ExtensionScreen,
         selection: Int, favoriteCount: Int, showSections: Bool
     ) -> some View {
@@ -671,6 +707,25 @@ struct RootPaletteView: View {
                     }
                 )
             }
+        case .history:
+            if history.isEmpty {
+                EmptyResults(text: isQueryEmpty ? "Nothing here yet" : "No matching history")
+            } else {
+                let selected = history.indices.contains(selection) ? history[selection] : nil
+                HistoryList(
+                    results: history,
+                    selectedID: selected?.id,
+                    scrollToken: scrollToken,
+                    onSelect: { item in
+                        if let index = history.firstIndex(of: item) { vm.selection = index }
+                    },
+                    onActivate: activateSelection,
+                    onActions: { item in
+                        if let index = history.firstIndex(of: item) { vm.selection = index }
+                        withAnimation(Self.menuAnimation) { showActions = true }
+                    }
+                )
+            }
         case .extensionCommand:
             ExtensionCommandView(
                 screen: extensionScreen,
@@ -757,12 +812,20 @@ struct RootPaletteView: View {
     }
 
     /// Pill label for the current selection, derived from the selection already resolved in `body` so it never re-runs the (unmemoized) `appResults` filter/sort.
-    private func actionPillLabel(selectedApp: AppEntry?, calcActionable: Bool) -> String {
+    private func actionPillLabel(
+        selectedApp: AppEntry?, selectedHistory: HistoryItem?, calcActionable: Bool
+    ) -> String {
         switch vm.mode {
         case .clipboard, .emoji:
             return vm.pasteTarget?.pasteTitle ?? "Paste"
         case .calculatorHistory:
             return "Copy Answer"
+        case .history:
+            switch selectedHistory {
+            case .entry(let app, _): return app.kind == .extensionCommand ? "Run Command" : "Open"
+            case .calculation: return "Copy Answer"
+            case nil: return "Open"
+            }
         case .extensionCommand:
             let actions = ExtensionScreen.actions(
                 in: extensionScreen.actionPanel(forItemAt: selection))
@@ -802,6 +865,15 @@ struct RootPaletteView: View {
         let index = selection - calcCount  // the inline calc card can't be deleted
         guard histResults.indices.contains(index) else { return }
         calcHistory.remove(histResults[index])
+    }
+
+    /// ⌘⌫ in the Recent list: drop just that row from the history it came from.
+    private func forgetSelectedHistoryItem() {
+        switch selectedHistoryItem {
+        case .entry(let app, _): usage.forget(key: app.usageKey)
+        case .calculation(let entry): calcHistory.remove(entry)
+        case nil: break
+        }
     }
 
     // MARK: - Actions
@@ -937,6 +1009,12 @@ struct RootPaletteView: View {
         case .emoji:
             guard emojiResults.indices.contains(selection) else { return }
             core.pasteEmoji(emojiResults[selection])
+        case .history:
+            switch selectedHistoryItem {
+            case .entry(let app, _): core.launch(app)
+            case .calculation(let entry): core.copyHistoryEntry(entry)
+            case nil: break
+            }
         case .extensionCommand:
             let screen = extensionScreen
             // The primary action is the panel's first `Action`, exactly as in Raycast.

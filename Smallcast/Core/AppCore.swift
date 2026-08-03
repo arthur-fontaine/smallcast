@@ -6,6 +6,8 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case clipboard
     case calculatorHistory
     case emoji
+    /// Recently launched entries and past calculations, newest first — summoned with ↑ on an empty search.
+    case history
     /// A Raycast extension command rendering into the palette.
     case extensionCommand
 
@@ -16,6 +18,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "Clipboard"
         case .calculatorHistory: return "Calculator History"
         case .emoji: return "Emoji & Symbols"
+        case .history: return "Recent"
         case .extensionCommand: return "Extension"
         }
     }
@@ -25,6 +28,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "doc.on.doc"
         case .calculatorHistory: return "plus.forwardslash.minus"
         case .emoji: return "face.smiling"
+        case .history: return "clock.arrow.circlepath"
         case .extensionCommand: return "puzzlepiece.extension"
         }
     }
@@ -34,6 +38,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "Type to filter entries…"
         case .calculatorHistory: return "Do math, convert units, or search your past calculations…"
         case .emoji: return "Search emoji and symbols…"
+        case .history: return "Search what you ran and calculated…"
         case .extensionCommand: return "Search…"
         }
     }
@@ -105,6 +110,7 @@ final class AppCore: ObservableObject {
     let frequentEmoji = FrequentEmojiStore()
     let runningApps = RunningAppsMonitor()
     let windowManager = WindowManager()
+    let usage = UsageStore()
     let palette = PaletteViewModel()
     let extensions: ExtensionManager
 
@@ -258,6 +264,10 @@ final class AppCore: ObservableObject {
     // MARK: - Actions invoked from the palette UI
 
     func launch(_ app: AppEntry, arguments: [String: String] = [:]) {
+        // Every launch feeds the ranking tiebreak and the Recent list; the memoized ranking for the
+        // current query is stale the moment it does.
+        usage.record(key: app.usageKey)
+        appIndex.invalidateMatches()
         // Commands dispatch before the palette hides: mode-switching commands keep it open.
         if app.kind == .command {
             runCommand(app)
@@ -380,6 +390,8 @@ final class AppCore: ObservableObject {
             showPalette(mode: .clipboard)
         case .searchEmoji:
             showPalette(mode: .emoji)
+        case .history:
+            showPalette(mode: .history)
         case .exportSettings:
             hidePalette(restoreFocus: false)
             BackupActions.exportSettings()
