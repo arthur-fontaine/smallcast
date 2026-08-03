@@ -93,7 +93,8 @@ struct CalculatorHistoryList: View {
     }
 }
 
-private struct CalcHistoryRow: View {
+/// One past calculation. Not private: the Recent list interleaves these with launcher rows.
+struct CalcHistoryRow: View {
     let entry: CalcHistoryEntry
     let selected: Bool
     @State private var hovered = false

@@ -30,6 +30,7 @@
 		2B3F23F3410C1297D8121D0B /* ExtensionFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96FEC677DEEB52E461E90708 /* ExtensionFetcher.swift */; };
 		2EA5D17614C9C3AED012D957 /* SettingsComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 025AD2CAEE3B4EEDCDF116E1 /* SettingsComponents.swift */; };
 		32365BD1F00CD1C347571992 /* SmallcastApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB2C3D48685B6A5E86E3A886 /* SmallcastApp.swift */; };
+		3AC265E13C244317048843C7 /* HistoryFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C80D47FD72F82A59AA181B4 /* HistoryFeed.swift */; };
 		3DDF9A04F6EE7A67B9EB1D4B /* HyperKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF2572414FFBBABE58835707 /* HyperKey.swift */; };
 		402742AF0D6E91912A484BE4 /* SettingsBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB7103783B6F628F14FB019 /* SettingsBackup.swift */; };
 		40FA2CA38308B1FCC673BDA4 /* ExtensionFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBF0E5C35206BC3B5466DEBC /* ExtensionFormView.swift */; };
@@ -52,6 +53,7 @@
 		70F95148105531C6DC434577 /* LauncherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E67C9F7595A2CBF77FA0780 /* LauncherView.swift */; };
 		70FF369C89853F7B8FE41483 /* BackupSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C51BB65C396EF5EC5D216D /* BackupSettingsView.swift */; };
 		710D18E5F7600FEBF205D3BF /* smallcast.icon in Resources */ = {isa = PBXBuildFile; fileRef = 8DEEF28DF17DFDC611EC391E /* smallcast.icon */; };
+		73F39D3E5AF7ED6F5EF61972 /* UsageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B95C0599BFFDF8DEC7F9D129 /* UsageStore.swift */; };
 		7487FD3415D8AC6239D3BFB7 /* VisibilityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E9B1C46F3B190CE9DECADAE /* VisibilityStore.swift */; };
 		7AEDBBBB07771CAF98F274F3 /* WindowAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48349B9C1A9A3F023C267ABA /* WindowAction.swift */; };
 		7B53ACC1E7AAB88252002B01 /* AppIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 844989309BC17EA990ADF4F8 /* AppIndex.swift */; };
@@ -91,6 +93,7 @@
 		E4AD14DF1A00C62B89F6F624 /* ClipboardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2FC5D06AC67D73D8881071C /* ClipboardStore.swift */; };
 		E5CF61FFE73C1A85C21D229D /* Bundle+AppName.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D46B4C1EBFA5A964D2FA32 /* Bundle+AppName.swift */; };
 		E6A35C5DEDAD11DFD9797FBD /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B630A2453B1A335907DF0A1C /* HotKeyManager.swift */; };
+		E7009938739CC93C1D937D88 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61DCE330A64A48F52A481964 /* HistoryView.swift */; };
 		EA547F8D557AA061A341967A /* FuzzyMatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26481847F2B4C3714E33DBF /* FuzzyMatch.swift */; };
 		EEB75C5B78AB3A35B6FE6126 /* ExtensionStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4ABF35A438E278FEDDC62C4 /* ExtensionStorage.swift */; };
 		F11F9DAEAAD4AE2693952CE4 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A13C0D60AEDC3824EF05FF5 /* VisualEffectView.swift */; };
@@ -147,6 +150,7 @@
 		55C45071A76744EF8CCE08AD /* ExtensionManifest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionManifest.swift; sourceTree = "<group>"; };
 		576DDB2831DEBF763AEB47D1 /* ImageThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageThumbnail.swift; sourceTree = "<group>"; };
 		57FFAB36EFEBB0B70C659EB3 /* FavoritesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStore.swift; sourceTree = "<group>"; };
+		61DCE330A64A48F52A481964 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		6614E8CB0D34FC6C3443D87D /* HotKeyCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyCenter.swift; sourceTree = "<group>"; };
 		68C646A59F754CD2D3401E77 /* CalcDateTime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcDateTime.swift; sourceTree = "<group>"; };
 		70930E22D356AAD0EFD58C7A /* EmojiCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiCatalog.swift; sourceTree = "<group>"; };
@@ -159,6 +163,7 @@
 		80DF5A1755266ECAD68CBEFF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		844989309BC17EA990ADF4F8 /* AppIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIndex.swift; sourceTree = "<group>"; };
 		84D29B9784FC0508678495E0 /* ExtensionImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionImage.swift; sourceTree = "<group>"; };
+		8C80D47FD72F82A59AA181B4 /* HistoryFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryFeed.swift; sourceTree = "<group>"; };
 		8DEEF28DF17DFDC611EC391E /* smallcast.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = smallcast.icon; sourceTree = "<group>"; };
 		8F599EA7814B119641818658 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		943DA0ADC98F6781126B2CD0 /* FrequentEmojiStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequentEmojiStore.swift; sourceTree = "<group>"; };
@@ -179,6 +184,7 @@
 		B630A2453B1A335907DF0A1C /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
 		B77DCC1DF3530EA81FD37780 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 		B8DF6BB87E1FB2E2195977AE /* NotificationToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationToken.swift; sourceTree = "<group>"; };
+		B95C0599BFFDF8DEC7F9D129 /* UsageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageStore.swift; sourceTree = "<group>"; };
 		B9EDD43DEB18511D4B515AC9 /* EmojiGridGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiGridGeometry.swift; sourceTree = "<group>"; };
 		BBF0E5C35206BC3B5466DEBC /* ExtensionFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionFormView.swift; sourceTree = "<group>"; };
 		BC4229744A9F38A8AB2B0C43 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -230,6 +236,7 @@
 				A6C807158ED7C5E1BDD634AE /* EdgeDissolve.swift */,
 				57FFAB36EFEBB0B70C659EB3 /* FavoritesStore.swift */,
 				A26481847F2B4C3714E33DBF /* FuzzyMatch.swift */,
+				8C80D47FD72F82A59AA181B4 /* HistoryFeed.swift */,
 				B630A2453B1A335907DF0A1C /* HotKeyManager.swift */,
 				524484E02738C0E8D18EE2A3 /* HUDWindowController.swift */,
 				576DDB2831DEBF763AEB47D1 /* ImageThumbnail.swift */,
@@ -246,6 +253,7 @@
 				3DF3269EC84C8FB3A7DB375C /* SettingsPaneScanner.swift */,
 				EEB9E342579B7811BFD6A7AB /* Theme.swift */,
 				2EB579AD39D413971183F89B /* ThinScrollbar.swift */,
+				B95C0599BFFDF8DEC7F9D129 /* UsageStore.swift */,
 				0E9B1C46F3B190CE9DECADAE /* VisibilityStore.swift */,
 				4A13C0D60AEDC3824EF05FF5 /* VisualEffectView.swift */,
 			);
@@ -300,6 +308,14 @@
 				029DD0A9031B8F1DFF805C9B /* Zlib.swift */,
 			);
 			path = Compression;
+			sourceTree = "<group>";
+		};
+		4F43D36EEA576840602F70BD /* History */ = {
+			isa = PBXGroup;
+			children = (
+				61DCE330A64A48F52A481964 /* HistoryView.swift */,
+			);
+			path = History;
 			sourceTree = "<group>";
 		};
 		52BAA0EA1E6E1D2AAA10776E /* Backup */ = {
@@ -457,6 +473,7 @@
 				2D397744688362DF0E82B147 /* Clipboard */,
 				D4DB9016FA41917C750E8E47 /* Emoji */,
 				56753596EF272F4862FAC31F /* Extensions */,
+				4F43D36EEA576840602F70BD /* History */,
 				42E632DFE4FE0264F8BE4893 /* Launcher */,
 				9982C22F8841FAC5299B8482 /* Onboarding */,
 				78F1CF8B297F8F64907DC3D4 /* Settings */,
@@ -607,6 +624,8 @@
 				EA547F8D557AA061A341967A /* FuzzyMatch.swift in Sources */,
 				91A98D97CBB7D595363DA095 /* GeneralSettingsView.swift in Sources */,
 				847E609D89FD38261DA99450 /* HUDWindowController.swift in Sources */,
+				3AC265E13C244317048843C7 /* HistoryFeed.swift in Sources */,
+				E7009938739CC93C1D937D88 /* HistoryView.swift in Sources */,
 				0802EE7ECD975F86E1EAFEBF /* HotKeyCenter.swift in Sources */,
 				E6A35C5DEDAD11DFD9797FBD /* HotKeyManager.swift in Sources */,
 				3DDF9A04F6EE7A67B9EB1D4B /* HyperKey.swift in Sources */,
@@ -641,6 +660,7 @@
 				32365BD1F00CD1C347571992 /* SmallcastApp.swift in Sources */,
 				07C7CAF0AEC29062EC6D1A77 /* Theme.swift in Sources */,
 				451DCA421C19D494EFC50BDA /* ThinScrollbar.swift in Sources */,
+				73F39D3E5AF7ED6F5EF61972 /* UsageStore.swift in Sources */,
 				7487FD3415D8AC6239D3BFB7 /* VisibilityStore.swift in Sources */,
 				F11F9DAEAAD4AE2693952CE4 /* VisualEffectView.swift in Sources */,
 				7AEDBBBB07771CAF98F274F3 /* WindowAction.swift in Sources */,

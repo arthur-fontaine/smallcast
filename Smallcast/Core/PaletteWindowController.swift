@@ -124,6 +124,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environmentObject(core.emojiIndex)
             .environmentObject(core.frequentEmoji)
             .environmentObject(core.runningApps)
+            .environmentObject(core.usage)
             .environmentObject(core.hotKeys)
             .environmentObject(core.extensions)
         let panel = PalettePanel(rootView: root)
