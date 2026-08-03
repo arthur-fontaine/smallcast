@@ -33,12 +33,23 @@ near-miss of it: a mid-word substring would make "cat" list every Appli*cat*ion.
 `AppIndex.rank` sorts by match *kind*, then **usage**, then score, then name. Comparing kinds rather
 than raw scores is what lets frecency reorder equally good matches without ever promoting a worse one.
 
-`UsageStore` records every launch (`AppCore.launch` is the single funnel) as a count plus a timestamp,
-persisted to `~/Library/Caches/<bundle-id>/usage.json`. `UsageScore` multiplies a capped count by a
+`UsageStore` records every launch (`AppCore.launch` is the single funnel) as a count, a last-used date
+and the timestamps of the last 32 launches, persisted to `~/Library/Caches/<bundle-id>/usage.json`. `UsageScore` multiplies a capped count by a
 recency weight that decays hard (within the hour → 100, today → 60, this week → 30, this month → 12,
 older → 4): recency decides between habits, while the count is what lets a habit outrank something
 opened once this morning. A launch invalidates `AppIndex`'s one-deep match memo, since the same query
 ranks differently a moment later.
+
+**Settings › Search** shows the whole thing: every remembered entry in frecency order with its launch
+count, last use and a bar for its score — the same `UsageScore` the launcher sorts by, so the pane
+doubles as an explanation of why a result sits where it does. Rows can be forgotten individually, and
+`UsageStore.reset(_:)` forgets a window: the last hour, today, the last 7 or 30 days, or everything.
+
+That window is why records keep timestamps at all. With only a total and a last-used date, "reset
+today" could only drop a record whole — losing a habit built over months because it was touched this
+morning. `UsageRecord.cleared(since:)` instead drops the timestamps inside the window, subtracts just
+those from the count, and rewinds `lastUsed` to the newest survivor. Records written before timestamps
+existed (or older than the 32 kept) can only be dated once, so a window keeps or drops them whole.
 
 ## Recent (history)
 

@@ -42,6 +42,7 @@
 		5141B3ED4380149EA91A3A30 /* ExtensionBootConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02A50FEF31DD2795F4A113D /* ExtensionBootConfig.swift */; };
 		530D406FA553682B693738AD /* AppLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B5B49E893D8BB1FE05D0F43 /* AppLauncher.swift */; };
 		5BF327F2F87C419CF7908FEC /* SettingsRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E88D7C747266A2B8482D671 /* SettingsRootView.swift */; };
+		5C512E7E8B976DA0AFCE1D3B /* SearchSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20FBC19CAE5DF94C0A809316 /* SearchSettingsView.swift */; };
 		5CCA3D8B04B6FE9BF749F8A4 /* CalculatorCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD8D2BE2EB6EBFE394AED9D9 /* CalculatorCardView.swift */; };
 		6033D36223BD4DAB67EDF124 /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0A4CA9ADF25FED43561080 /* ClipboardManager.swift */; };
 		606B50BDC1F41F28BBC48343 /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 037825ABBE957F3CAEE13A05 /* OnboardingState.swift */; };
@@ -122,6 +123,7 @@
 		1A66C91C20F68CFD92E903FC /* HyperKeyTap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HyperKeyTap.swift; sourceTree = "<group>"; };
 		1B5B49E893D8BB1FE05D0F43 /* AppLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncher.swift; sourceTree = "<group>"; };
 		1C1FDD7810306E29891658D5 /* RaycastRuntime.generated.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = RaycastRuntime.generated.js; sourceTree = "<group>"; };
+		20FBC19CAE5DF94C0A809316 /* SearchSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSettingsView.swift; sourceTree = "<group>"; };
 		2128B3AD4DE035D62772728B /* CalcFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcFormatter.swift; sourceTree = "<group>"; };
 		218BDE6E48584CDE047ED49D /* ExtensionNodeShims.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionNodeShims.swift; sourceTree = "<group>"; };
 		21ED923235BE720F7463F980 /* Smallcast.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Smallcast.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -381,6 +383,7 @@
 				B77DCC1DF3530EA81FD37780 /* GeneralSettingsView.swift */,
 				32136408B5ED462404BDFEEA /* PermissionsSettingsView.swift */,
 				10380B618F9BA13A9F2AEA79 /* RaycastImportSelection.swift */,
+				20FBC19CAE5DF94C0A809316 /* SearchSettingsView.swift */,
 				025AD2CAEE3B4EEDCDF116E1 /* SettingsComponents.swift */,
 				4E88D7C747266A2B8482D671 /* SettingsRootView.swift */,
 				B004586B5E5722172218C6B0 /* ShortcutRecorder.swift */,
@@ -651,6 +654,7 @@
 				82ED512F90935F32B30AF6C5 /* RootPaletteView.swift in Sources */,
 				0B31B7AA85E61DBAE800EBD2 /* RunningApps.swift in Sources */,
 				44852C0BD4F331001BA9E1B1 /* Scrypt.swift in Sources */,
+				5C512E7E8B976DA0AFCE1D3B /* SearchSettingsView.swift in Sources */,
 				402742AF0D6E91912A484BE4 /* SettingsBackup.swift in Sources */,
 				2EA5D17614C9C3AED012D957 /* SettingsComponents.swift in Sources */,
 				DAB087394B2396E2EE128297 /* SettingsPaneScanner.swift in Sources */,
