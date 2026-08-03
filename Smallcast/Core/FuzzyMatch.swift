@@ -82,14 +82,16 @@ enum FuzzyMatch {
 
     // MARK: - Typo tolerance
 
-    /// How wrong a query of this length is allowed to be. Short queries get no slack at all: at three
+    /// How wrong a query of this length is allowed to be — roughly one edit per eight characters,
+    /// never more than a fifth of what was typed. Short queries get no slack at all: at three
     /// characters almost everything is within one edit, and the subsequence tier already covers
-    /// initialisms like "tm" → Time Machine.
+    /// initialisms like "tm" → Time Machine. Two edits on a six-letter word was too loose — it made
+    /// "finder" a match for "Find My".
     static func allowedDistance(forQueryLength length: Int) -> Int {
         switch length {
         case ..<4: return 0
-        case 4...5: return 1
-        case 6...9: return 2
+        case 4...7: return 1
+        case 8...11: return 2
         default: return 3
         }
     }

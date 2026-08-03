@@ -80,6 +80,24 @@ struct FuzzTests {
                 == .typo)
         check(
             "no slack under four characters", FuzzyMatch.allowedDistance(forQueryLength: 3) == 0)
+        check("one edit up to seven characters", FuzzyMatch.allowedDistance(forQueryLength: 7) == 1)
+        check("two from eight", FuzzyMatch.allowedDistance(forQueryLength: 8) == 2)
+        // Two edits on a six-letter word was too loose: it made "finder" a hit for a different app.
+        check(
+            "'finder' is not a typo of 'Find My'",
+            FuzzyMatch.score(query: "finder", candidate: "Find My") == nil)
+        check(
+            "'finder' still finds Finder itself",
+            FuzzyMatch.kind(of: FuzzyMatch.score(query: "finder", candidate: "Finder")!) == .exact)
+        // Missing letters are the subsequence tier's job; the typo tier is for wrong or swapped ones.
+        check(
+            "a dropped letter is a subsequence match",
+            FuzzyMatch.kind(of: FuzzyMatch.score(query: "managment", candidate: "Window Management")!)
+                == .subsequence)
+        check(
+            "a swapped pair is a typo match",
+            FuzzyMatch.kind(of: FuzzyMatch.score(query: "chorme", candidate: "Google Chrome")!)
+                == .typo)
 
         // Frecency: recency dominates, count only scales what's left, and both are capped
         let now = Date()
