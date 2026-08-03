@@ -263,17 +263,36 @@ contains frames only (V8 repeats the message, so the headline has to be prepende
 ## Making one look native
 
 An imported extension draws whatever icon it shipped, which rarely matches the rest of the launcher.
-**Settings › Extensions › Configure › Launcher icon** replaces it with a curated SF Symbol on a tinted
-tile — the same tile `IconCache` draws for the built-in commands, so the row reads as part of the app.
+**Settings › Extensions › Configure › Launcher icon** replaces it with an SF Symbol on a tinted tile —
+the same tile `IconCache` draws for the built-in commands, so the row reads as part of the app.
 
 - `ExtensionAppearance` (symbol + `ExtensionTint`) is stored per extension by manifest name in
   `ExtensionAppearanceStore`, and applies to **every command** of that extension — the same inheritance
   Raycast has when a command declares no icon of its own.
-- `ExtensionManager.publishLauncherEntries` resolves it into each `AppEntry`; `setAppearance` re-publishes
-  immediately, so rows change without waiting for a rescan.
-- The icon set is fixed on purpose: a curated list keeps everything looking like one app and avoids
-  custom-image plumbing (sizing, caching, files that go missing). `ExtensionSymbols.all` filters the
-  catalog against the running system, so a symbol this macOS lacks never appears as an empty tile.
-- Tints are pinned sRGB values, not system colours: tiles are rasterized off the main thread, where a
-  dynamic colour would resolve against whatever appearance that thread sees.
+- `ExtensionManager.publishLauncherEntries` resolves it into each `AppEntry`; `setAppearance`
+  re-publishes immediately, so rows change without waiting for a rescan.
+- 18 tints, pinned sRGB rather than system colours: tiles rasterize off the main thread, where a dynamic
+  colour would resolve against whatever appearance that thread sees. Pinning also makes the picker's
+  SwiftUI preview and the drawn bitmap the same colour by construction.
 - "Use Original" clears the override. Choices ride along in a settings backup.
+
+### Where the symbols come from
+
+`SymbolCatalog` reads **the system's own catalog** at runtime from
+`/System/Library/CoreServices/CoreGlyphs.bundle` — the symbol order, each symbol's categories, and the
+extra search terms the SF Symbols app matches on, so "coffee" finds `cup.and.saucer`. Reading it beats
+bundling a name list: the offer always matches the OS, with nothing to regenerate per release.
+
+Two filters apply, leaving ~6,500 of the 8,302 names on macOS 26:
+
+- **Apple's reserved marks** (`symbol_restrictions.strings`, ~600 symbols: iCloud, iPhone, AirPlay…),
+  which may only refer to those products.
+- **Locale renderings** (`.ar`, `.hi`, `.rtl`…), near-duplicates of a symbol already in the list.
+
+None of this is API, so every read is optional and `SymbolCatalog.fallback` — the curated ~85 in
+`SymbolCatalog.suggested` — stands in if the bundle ever moves. That curated set is also what the picker
+opens on, since scrolling six thousand icons is not a way to choose one; a search reaches the whole
+catalog regardless of the selected category.
+
+`Tools/symbols-test.swift` compiles the real source and asserts those invariants against this machine's
+CoreGlyphs (shapes and rules, not counts — those move every release).

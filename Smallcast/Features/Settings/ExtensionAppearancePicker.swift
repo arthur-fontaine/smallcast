@@ -55,20 +55,25 @@ struct ExtensionAppearanceRow: View {
     }
 }
 
-/// Symbol grid + colour row. Every change applies immediately — the launcher is the real preview, and
-/// an OK/Cancel dance over two properties isn't worth it.
+/// Colour swatches, a category menu and a searchable grid over every symbol the system ships. Changes
+/// apply immediately — the launcher is the real preview, so an OK/Cancel dance over two properties
+/// isn't worth it.
 private struct ExtensionAppearancePicker: View {
     let current: ExtensionAppearance
     let onPick: (ExtensionAppearance) -> Void
 
-    private let columns = Array(repeating: GridItem(.fixed(34), spacing: 4), count: 9)
+    /// Starts on the curated set and swaps in the system catalog once it's parsed (~700 KB of plists,
+    /// so it loads off the main actor rather than stalling the popover's first frame).
+    @State private var catalog = SymbolCatalog.fallback
+    @State private var category = SymbolCategory.suggested
+    @State private var query = ""
+
+    private let swatches = Array(repeating: GridItem(.fixed(22), spacing: 8), count: 9)
+    private let icons = Array(repeating: GridItem(.fixed(34), spacing: 4), count: 10)
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            Text("Colour")
-                .font(Theme.Typography.sectionHeader)
-                .foregroundStyle(.secondary)
-            HStack(spacing: Theme.Spacing.sm) {
+            LazyVGrid(columns: swatches, spacing: 8) {
                 ForEach(ExtensionTint.allCases) { tint in
                     Button {
                         onPick(ExtensionAppearance(symbol: current.symbol, tint: tint))
@@ -82,36 +87,69 @@ private struct ExtensionAppearancePicker: View {
                             )
                     }
                     .buttonStyle(.plain)
-                    .help(tint.rawValue.capitalized)
+                    .help(tint.title)
                 }
             }
 
-            Text("Icon")
-                .font(Theme.Typography.sectionHeader)
-                .foregroundStyle(.secondary)
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 4) {
-                    ForEach(ExtensionSymbols.all, id: \.self) { symbol in
-                        Button {
-                            onPick(ExtensionAppearance(symbol: symbol, tint: current.tint))
-                        } label: {
-                            SymbolTile(symbol: symbol, tint: current.tint, side: 30)
-                                .opacity(symbol == current.symbol ? 1 : 0.55)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                        .strokeBorder(
-                                            .white.opacity(symbol == current.symbol ? 0.9 : 0),
-                                            lineWidth: 2)
-                                )
-                        }
-                        .buttonStyle(.plain)
+            HStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Search symbols…", text: $query)
+                    .textFieldStyle(.plain)
+                Picker("", selection: $category) {
+                    ForEach(catalog.categories) { item in
+                        Text(item.title).tag(item)
                     }
                 }
-                .padding(.horizontal, 2)
+                .labelsHidden()
+                .fixedSize()
             }
-            .frame(width: 360, height: 220)
+
+            let results = catalog.search(query, in: category)
+            if results.isEmpty {
+                Text("No symbols match \u{201C}\(query)\u{201D}.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 396, height: 240)
+            } else {
+                ScrollView {
+                    LazyVGrid(columns: icons, spacing: 4) {
+                        ForEach(results, id: \.self) { symbol in
+                            Button {
+                                onPick(ExtensionAppearance(symbol: symbol, tint: current.tint))
+                            } label: {
+                                SymbolTile(symbol: symbol, tint: current.tint, side: 30)
+                                    .opacity(symbol == current.symbol ? 1 : 0.55)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                            .strokeBorder(
+                                                .white.opacity(symbol == current.symbol ? 0.9 : 0),
+                                                lineWidth: 2)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .help(symbol)
+                        }
+                    }
+                    .padding(.horizontal, 2)
+                }
+                .frame(width: 396, height: 240)
+            }
+
+            Text(footnote(results.count))
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .padding(Theme.Spacing.xl)
+        .task {
+            // Only the fallback has a single category; once the real catalog is in, don't re-read it.
+            guard catalog.categories.count == 1 else { return }
+            catalog = await Task.detached(priority: .userInitiated) { SymbolCatalog.load() }.value
+        }
+    }
+
+    private func footnote(_ count: Int) -> String {
+        let noun = count == 1 ? "symbol" : "symbols"
+        return query.isEmpty ? "\(count) \(noun) in \(category.title)" : "\(count) \(noun) matching"
     }
 }
 
