@@ -1,8 +1,8 @@
 ## Project
 
 Smallcast is a native macOS menu-bar launcher (a minimal Raycast): fuzzy app launcher, global +
-per-app hotkeys, a text/image clipboard history, an inline calculator, an emoji picker, and it **runs
-Raycast extensions** natively. SwiftUI + AppKit, runs as an accessory (no Dock icon, `LSUIElement`).
+per-app hotkeys, a text/image clipboard history, an inline calculator, an emoji picker, opt-in window
+management, and it **runs Raycast extensions** natively. SwiftUI + AppKit, runs as an accessory (no Dock icon, `LSUIElement`).
 Targets **macOS 26+** (Liquid Glass) and builds with the **Xcode 26** toolchain.
 
 - **Build:** XcodeGen owns the project — `Smallcast.xcodeproj` is committed but generated from
@@ -44,8 +44,8 @@ Full detail: [`docs/architecture.md`](docs/architecture.md).
   accessory apps).
 - **Subsystems:** [palette](docs/palette.md) · [launcher & fuzzy match](docs/launcher.md) ·
   [calculator](docs/calculator.md) · [clipboard](docs/clipboard.md) · [emoji](docs/emoji.md) ·
-  [hotkeys](docs/hotkeys.md) · [Raycast extensions](docs/extensions.md) ·
-  [UI & design system](docs/ui.md).
+  [hotkeys](docs/hotkeys.md) · [window management](docs/windows.md) ·
+  [Raycast extensions](docs/extensions.md) · [UI & design system](docs/ui.md).
 - **Extensions** run prebuilt Raycast bundles in a JavaScriptCore context on a private serial queue
   (`Core/Extensions/ExtensionRuntime.swift`); a bundled React reconciler commits a JSON render tree that
   `ExtensionScreen` flattens and `Features/Extensions/` draws natively.
@@ -70,7 +70,9 @@ Never break these without an explicit task to do so.
   Accessibility permission (`Permissions.ensureAccessibility()`). See [palette.md](docs/palette.md).
 - **`Core/Calculator/` (incl. `CalcDateTime`) must stay Foundation-only** — no AppKit / SwiftUI
   imports. `Tools/calc-test.swift` compiles the real engine sources. Likewise `Core/Emoji/`
-  (`EmojiCatalog`, `EmojiGridGeometry`) stays AppKit/SwiftUI-free for `Tools/emoji-test.swift`.
+  (`EmojiCatalog`, `EmojiGridGeometry`) stays AppKit/SwiftUI-free for `Tools/emoji-test.swift`, and
+  `Core/WindowManagement/` (`WindowAction`, `WindowGeometry`) for `Tools/window-test.swift` — only
+  `WindowManager` may touch AppKit / the Accessibility API.
 - **`FuzzyMatch` lives in `Core/FuzzyMatch.swift`** (Foundation-only) and is shared by the launcher and
   by extension `List` filtering; `Tools/fuzz-test.swift` compiles that real source — there is no copy to
   keep in sync.
@@ -91,6 +93,9 @@ Never break these without an explicit task to do so.
   via `Task.detached` / `nonisolated`. Keep that boundary. House idioms: `NotificationToken` (RAII) for
   block observers, `isolated deinit` for `ClipboardStore`'s SQLite teardown, decode raw Carbon / C
   pointers to plain values before crossing into actor code.
+- **Window geometry is computed in Accessibility space** (origin top-left, y downward), and
+  `WindowManager.axRect` is the only place Cocoa's y-up screen coordinates are converted. See
+  [windows.md](docs/windows.md).
 - **Clipboard writes stamp a private `internalType` marker** so the poller skips Smallcast's own writes.
 - **Hotkeys persist under legacy `KeyboardShortcuts_<name>` UserDefaults keys** (from the removed
   KeyboardShortcuts package) so old bindings survive. See [hotkeys.md](docs/hotkeys.md).
@@ -104,7 +109,7 @@ Never break these without an explicit task to do so.
 - `Smallcast/Core/` — managers, stores, windows, AppKit glue (no view bodies beyond hosting).
   `Core/Calculator/` and `Core/Emoji/` are the Foundation-only engines; `Core/Extensions/` the Raycast
   extension host; `Core/Compression/Zlib.swift` gzip/zlib both directions; `Core/Theme.swift` the design
-  tokens; `Core/HotKey/` the in-house hotkey stack.
+  tokens; `Core/HotKey/` the in-house hotkey stack; `Core/WindowManagement/` the window commands.
 - `Smallcast/Resources/` — `RaycastRuntime.generated.js`, the embedded extension runtime.
 - `Smallcast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Calculator/`,
   `Emoji/`, `Extensions/`, `Settings/`, `About/`, `Onboarding/`, plus shared `PopoverMenu`.
@@ -119,8 +124,8 @@ Never break these without an explicit task to do so.
 - [`docs/palette.md`](docs/palette.md) — palette state flow, menu-open freeze, focus restoration.
 - [`docs/launcher.md`](docs/launcher.md) · [`docs/calculator.md`](docs/calculator.md) ·
   [`docs/clipboard.md`](docs/clipboard.md) · [`docs/emoji.md`](docs/emoji.md) ·
-  [`docs/hotkeys.md`](docs/hotkeys.md) · [`docs/extensions.md`](docs/extensions.md) — subsystem
-  internals.
+  [`docs/hotkeys.md`](docs/hotkeys.md) · [`docs/windows.md`](docs/windows.md) ·
+  [`docs/extensions.md`](docs/extensions.md) — subsystem internals.
 - [`docs/ui.md`](docs/ui.md) — the full visual design system, tokens, scrollbars, section headers.
 - [`docs/development.md`](docs/development.md) — build, test, package, release.
 - [`docs/signing.md`](docs/signing.md) — signing model and Gatekeeper.

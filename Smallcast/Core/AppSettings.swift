@@ -4,6 +4,9 @@ import SwiftUI
 enum SettingsKey {
     /// Menu-bar icon visibility — read by `MenuBarExtra(isInserted:)` and the Settings toggle.
     static let showInMenuBar = "showInMenuBar"
+    /// Window management is opt-in; `CommandRegistry` reads this key off the main actor to decide whether the commands exist at all.
+    static let windowManagementEnabled = "windowManagementEnabled"
+    static let windowGap = "windowGap"
 }
 
 /// Delay before a closed palette resets to the root launcher; raw value is seconds in UserDefaults, so an unset key (0) reads as `.immediately`, the default.
@@ -92,6 +95,16 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(showFavoritesInCompactMode, forKey: Key.showFavoritesInCompactMode) }
     }
 
+    /// Surface the window-arrangement commands (off by default — they only make sense with the Accessibility permission granted). `AppCore.windowManagementDidChange` re-registers hotkeys and re-scans the launcher.
+    @Published var windowManagementEnabled: Bool {
+        didSet { defaults.set(windowManagementEnabled, forKey: SettingsKey.windowManagementEnabled) }
+    }
+
+    /// Spacing a tiled window keeps to the screen edges and to its neighbour, in points. `WindowManager` reads the stored value at use time, so a change applies to the very next command.
+    @Published var windowGap: Int {
+        didSet { defaults.set(windowGap, forKey: SettingsKey.windowGap) }
+    }
+
     init() {
         // integer(forKey:) returns 0 when unset, which no case matches — falls through to 3 Months.
         clipboardRetention =
@@ -120,6 +133,8 @@ final class AppSettings: ObservableObject {
             PopToRootTimeout(rawValue: defaults.integer(forKey: Key.popToRootTimeout))
             ?? .immediately
         compactMode = defaults.bool(forKey: Key.compactMode)
+        windowManagementEnabled = defaults.bool(forKey: SettingsKey.windowManagementEnabled)
+        windowGap = defaults.integer(forKey: SettingsKey.windowGap)
         // Defaults to true, so absence must be distinguished from a stored `false`.
         showFavoritesInCompactMode =
             defaults.object(forKey: Key.showFavoritesInCompactMode) == nil

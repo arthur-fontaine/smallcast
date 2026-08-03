@@ -96,14 +96,17 @@ swiftc Smallcast/Core/Calculator/*.swift Tools/calc-test.swift \
     -o /tmp/calc-test && /tmp/calc-test                            # calculator engine
 swiftc Smallcast/Core/Emoji/{EmojiCatalog,EmojiGridGeometry,EmojiData.generated}.swift \
     Tools/emoji-test.swift -o /tmp/emoji-test && /tmp/emoji-test    # emoji catalog + grid geometry
+swiftc Smallcast/Core/WindowManagement/{WindowAction,WindowGeometry}.swift \
+    Tools/window-test.swift -o /tmp/window-test && /tmp/window-test # window arrangement geometry
 swiftc -parse-as-library -swift-version 6 \
     Smallcast/Core/Extensions/{ExtensionRuntime,ExtensionNodeShims,ExtensionBootConfig,ExtensionManifest,ExtensionScreen,ExtensionCatalog,ExtensionFetcher,RenderNode}.swift \
     Smallcast/Core/FuzzyMatch.swift Smallcast/Core/Compression/Zlib.swift \
     Tools/ext-test.swift -o /tmp/ext-test && /tmp/ext-test         # extension runtime (JavaScriptCore)
 ```
 
-That the harnesses compile the shipped sources is why `Smallcast/Core/Calculator/` and
-`Smallcast/Core/Emoji/` must stay Foundation-only, and why `FuzzyMatch` is its own Foundation-only file.
+That the harnesses compile the shipped sources is why `Smallcast/Core/Calculator/`,
+`Smallcast/Core/Emoji/` and the two geometry files in `Smallcast/Core/WindowManagement/` must stay
+Foundation-only, and why `FuzzyMatch` is its own Foundation-only file.
 
 `ext-test` also runs any installed extension and prints the tree it renders:
 

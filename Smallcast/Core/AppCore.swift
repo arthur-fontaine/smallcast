@@ -104,6 +104,7 @@ final class AppCore: ObservableObject {
     let emojiIndex = EmojiIndex()
     let frequentEmoji = FrequentEmojiStore()
     let runningApps = RunningAppsMonitor()
+    let windowManager = WindowManager()
     let palette = PaletteViewModel()
     let extensions: ExtensionManager
 
@@ -135,6 +136,10 @@ final class AppCore: ObservableObject {
         hotKeys.onTogglePalette = { [weak self] in self?.togglePalette() }
         hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }
         hotKeys.onToggleEmoji = { [weak self] in self?.toggleEmoji() }
+        // A window shortcut fires while another app is frontmost, so that app is the target.
+        hotKeys.onWindowAction = { [weak self] action in
+            self?.performWindowAction(action, on: NSWorkspace.shared.frontmostApplication)
+        }
         hotKeys.start()
         // Deliberately keeps running while `hotKeys.recordingAction` pauses Carbon: the recorder relies on the tap's rewritten flags to capture Hyper shortcuts.
         hyperKeyTap.start(settings: settings)
@@ -343,7 +348,31 @@ final class AppCore: ObservableObject {
             name: .smallcastSelectExtension, object: owner.manifest.name)
     }
 
+    // MARK: - Window management
+
+    /// Runs a window command against `app`'s focused window, surfacing any refusal as a HUD — the
+    /// arrangement itself is its own feedback, exactly as in Raycast.
+    private func performWindowAction(_ action: WindowAction, on app: NSRunningApplication?) {
+        if let message = windowManager.perform(action, on: app) { hud.show(message) }
+    }
+
+    /// Settings toggled the feature: swap the global shortcut registrations and re-scan so the commands
+    /// appear in (or vanish from) the launcher without waiting for anything else to invalidate the index.
+    func windowManagementDidChange(_ enabled: Bool) {
+        hotKeys.setWindowActionsEnabled(enabled)
+        if !enabled { windowManager.forgetRestoreHistory() }
+        Task { await appIndex.refresh() }
+    }
+
     private func runCommand(_ entry: AppEntry) {
+        // A window command acts on the app that was in front when the palette opened, and hands focus
+        // straight back to it.
+        if let action = WindowAction(entryID: entry.id) {
+            let target = windowController.previousApp
+            hidePalette()
+            performWindowAction(action, on: target)
+            return
+        }
         switch CommandRegistry.command(for: entry) {
         case .calculatorHistory:
             showPalette(mode: .calculatorHistory)
