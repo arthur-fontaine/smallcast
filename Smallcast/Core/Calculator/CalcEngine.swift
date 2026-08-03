@@ -98,6 +98,10 @@ enum CalcEngine {
                 payload: .value(display: display, copyText: copyText))
         }
 
+        // Dimensional arithmetic: `1 km + 1 m`, `100 km / 2 h` → km/h, `5 ft 10 in`. Runs after the
+        // single-unit paths above so their curated output (`1m` → feet + inches) still wins.
+        if let dimensional = dimensionalExpression(tokens, query: query) { return dimensional }
+
         // Natural-language percent: `20% off 500`, `50 as % of 200`.
         if let percent = CalcPercent.evaluate(tokens, query: query) { return percent }
 
@@ -115,6 +119,103 @@ enum CalcEngine {
             payload: .value(
                 display: CalcFormatter.display(value),
                 copyText: CalcFormatter.copyText(value)))
+    }
+
+    // MARK: - Dimensional arithmetic
+
+    /// Anything whose value carries units: a sum across units (`1 km + 1 m`), a derived unit
+    /// (`100 km / 2 h` → km/h, `2 m * 3 m` → m²), or either of those converted onwards
+    /// (`1 km + 1 m to ft`). Returns nil when nothing in the expression is dimensional, so the plain
+    /// arithmetic path still owns ordinary math.
+    private static func dimensionalExpression(_ tokens: [CalcToken], query: String) -> CalcResult? {
+        // `<expression> to <unit>`, where either side may be compound: `1 km + 1 m to ft`,
+        // `10 m/s to km/h`.
+        if let (index, target) = conversionTarget(tokens) {
+            switch CalcParser.evaluateQuantity(Array(tokens[0..<index])) {
+            case .value(let quantity):
+                guard quantity.unit.dimension == target.dimension else {
+                    return mismatchResult(
+                        query: query, quantity.unit.dimension.displayName,
+                        target.dimension.displayName)
+                }
+                // The affine term applies only to a plain temperature target — every other unit's is 0.
+                let output = (quantity.si - (target.singleUnit?.offset ?? 0)) / target.siFactor
+                guard output.isFinite else { return nil }
+                return CalcResult(
+                    expression: "\(CalcFormatter.display(quantity.magnitude)) \(quantity.unit.symbol)",
+                    sourceBadge: quantity.unit.name,
+                    targetBadge: target.name,
+                    payload: .value(
+                        display: "\(CalcFormatter.display(output)) \(target.symbol)",
+                        copyText: "\(CalcFormatter.copyText(output)) \(target.symbol)"))
+            case .mismatch(let lhs, let rhs):
+                return mismatchResult(query: query, lhs.displayName, rhs.displayName, adding: true)
+            case .none:
+                return nil
+            }
+        }
+
+        guard isCompound(tokens) else { return nil }
+        switch CalcParser.evaluateQuantity(tokens) {
+        case .value(let quantity):
+            let output = quantity.magnitude
+            guard output.isFinite else { return nil }
+            return CalcResult(
+                expression: prettyExpression(query),
+                sourceBadge: "Expression",
+                targetBadge: quantity.unit.name,
+                payload: .value(
+                    display: "\(CalcFormatter.display(output)) \(quantity.unit.symbol)",
+                    copyText: "\(CalcFormatter.copyText(output)) \(quantity.unit.symbol)"))
+        case .mismatch(let lhs, let rhs):
+            return mismatchResult(query: query, lhs.displayName, rhs.displayName, adding: true)
+        case .none:
+            return nil
+        }
+    }
+
+    /// The connector splitting `<expression> to <unit>` and the unit that follows it, searched from the
+    /// right so `10 in in cm` reads the trailing "in" as the connector. A single ident is looked up
+    /// directly (that's the only way an affine unit like `°F` can be a target, since a temperature never
+    /// attaches to a number); anything longer is evaluated as `1 <unit expression>`, which is what makes
+    /// `to km/h` work.
+    private static func conversionTarget(_ tokens: [CalcToken]) -> (index: Int, unit: CompoundUnit)? {
+        guard tokens.count >= 3 else { return nil }
+        for index in stride(from: tokens.count - 2, through: 1, by: -1)
+        where CalcUnits.isConnector(tokens[index]) {
+            let rest = Array(tokens[(index + 1)...])
+            if rest.count == 1, case .ident(let name) = rest[0], let unit = CalcUnits.byName[name] {
+                return (index, CompoundUnit(unit))
+            }
+            if case .value(let target) = CalcParser.evaluateQuantity([.number(1)] + rest) {
+                return (index, target.unit)
+            }
+        }
+        return nil
+    }
+
+    /// A lone quantity (`5 km`, `5k`) belongs to the curated bare-unit path, which converts it to a
+    /// counterpart instead of echoing it back; this path only claims expressions that combine something.
+    private static func isCompound(_ tokens: [CalcToken]) -> Bool {
+        var units = 0
+        for token in tokens {
+            switch token {
+            case .op, .arrow: return true
+            case .ident(let name) where CalcUnits.byName[name] != nil: units += 1
+            default: break
+            }
+        }
+        return units >= 2
+    }
+
+    private static func mismatchResult(
+        query: String, _ lhs: String, _ rhs: String, adding: Bool = false
+    ) -> CalcResult {
+        CalcResult(
+            expression: query,
+            payload: .error(
+                message: adding ? "Cannot add \(lhs) and \(rhs)." : "Cannot convert \(lhs) to \(rhs)."
+            ))
     }
 
     // MARK: - Number bases

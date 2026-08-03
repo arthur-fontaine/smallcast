@@ -80,6 +80,47 @@ struct CalcTests {
         expectDisplay("8 bit to byte", "1 B")
         expectDisplay("2*5 km to mi", "6.213711922 mi")  // expression on the left side
 
+        // Cross-unit arithmetic — the result reads in the unit written first
+        expectDisplay("1km+1m", "1.001 km")
+        expectDisplay("1 km + 1 m", "1.001 km")
+        expectDisplay("1m + 1km", "1,001 m")
+        expectDisplay("10 m + 5 cm", "10.05 m")
+        expectDisplay("2kg - 500g", "1.5 kg")
+        expectDisplay("1hr + 30min", "1.5 hr")
+        expectDisplay("1 GB + 500 MB", "1.5 GB")
+        expectDisplay("1km+1m to ft", "3,284.120735 ft")
+        expectDisplay("(1km + 1m) / 2", "0.5005 km")
+        expectBadges("1km+1m", source: "Expression", target: "Kilometers")
+
+        // Adjacent quantities of the same dimension add up
+        expectDisplay("5ft 10in", "5.833333333 ft")
+        expectDisplay("1hr 30min", "1.5 hr")
+        expectDisplay("5ft 10in to cm", "177.8 cm")
+
+        // Derived units: dividing and multiplying compose the unit
+        expectDisplay("100km / 2h", "50 km/h")
+        expectDisplay("100 km / 2 hr to mph", "31.06855961 mph")
+        expectDisplay("10m / 2s", "5 m/s")
+        expectDisplay("60mph * 2hr", "120 mi")
+        expectDisplay("2m * 3m", "6 m²")
+        expectDisplay("2km * 3km", "6 km²")
+        expectDisplay("1m * 1m * 1m", "1 m³")
+        expectDisplay("100 MB / 8 s", "12.5 MB/s")
+        expectDisplay("(2 m)^2", "4 m²")
+        expectDisplay("10km / 2km", "5")  // fully cancelling units leave a plain number
+        expectDisplay("1km + 10%", "1.1 km")
+        expectBadges("100km / 2h", source: "Expression", target: "Kilometers per Hour")
+
+        // Clashing dimensions are named, not silently dropped
+        expectError("1km + 1kg", "Cannot add Length and Weight.")
+        expectError("3 kg + 2 s", "Cannot add Weight and Time.")
+        expectError("100km / 2h to kg", "Cannot convert Speed to Weight.")
+
+        // Still not calculator input
+        expectNil("2 m + 3")  // half-typed: a quantity and a bare number don't add up
+        expectNil("sqrt(4 m)")  // a dimensional function argument has no meaning
+        expectDisplay("5 km", "3.106855961 mi")  // a lone quantity keeps its curated bare conversion
+
         // Number bases
         expectDisplay("255 to hex", "0xFF")
         expectDisplay("255 to binary", "0b11111111")
