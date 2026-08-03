@@ -107,6 +107,63 @@ struct FuzzTests {
             UsageScore.score(UsageRecord(count: 25, lastUsed: now), now: now)
                 == UsageScore.score(UsageRecord(count: 9_000, lastUsed: now), now: now))
 
+        // Windowed resets: forgetting "today" must not forget the months before it
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: now)
+        let yesterday = startOfToday.addingTimeInterval(-7200)
+        let mixed = UsageRecord(
+            count: 10, lastUsed: now.addingTimeInterval(-600),
+            recent: [yesterday, startOfToday.addingTimeInterval(60), now.addingTimeInterval(-600)])
+        let afterToday = mixed.cleared(since: startOfToday)
+        check("a mixed record survives a reset of today", afterToday != nil)
+        check(
+            "only today's launches are subtracted", afterToday?.count == 8,
+            "got \(String(describing: afterToday?.count))")
+        check(
+            "last used falls back to the newest survivor", afterToday?.lastUsed == yesterday,
+            "got \(String(describing: afterToday?.lastUsed))")
+        check("today's timestamps are gone", afterToday?.recent == [yesterday])
+
+        let todayOnly = UsageRecord(
+            count: 2, lastUsed: now, recent: [startOfToday.addingTimeInterval(30), now])
+        check("a record made entirely today disappears", todayOnly.cleared(since: startOfToday) == nil)
+
+        let old = UsageRecord(count: 5, lastUsed: yesterday, recent: [yesterday])
+        check(
+            "a record older than the cutoff is untouched",
+            old.cleared(since: startOfToday) == old)
+
+        // Records written before timestamps existed can only be dated once, so a window either keeps
+        // them whole or drops them whole
+        let legacy = UsageRecord(count: 7, lastUsed: now)
+        check("a legacy record inside the window is dropped", legacy.cleared(since: startOfToday) == nil)
+        let legacyOld = UsageRecord(count: 7, lastUsed: yesterday)
+        check(
+            "a legacy record outside it is kept", legacyOld.cleared(since: startOfToday) == legacyOld)
+
+        check(
+            "'today' means the start of the day",
+            UsageResetRange.today.cutoff(now: now, calendar: calendar) == startOfToday)
+        check(
+            "'everything' has no cutoff",
+            UsageResetRange.everything.cutoff(now: now, calendar: calendar) == nil)
+        check("launches since counts only the window", mixed.launches(since: startOfToday) == 2)
+        check(
+            "the timestamp log is capped",
+            {
+                var record = UsageRecord(count: 0, lastUsed: now)
+                for i in 0..<(UsageRecord.recentCap + 10) {
+                    record.launched(at: now.addingTimeInterval(Double(i)))
+                }
+                return record.count == UsageRecord.recentCap + 10
+                    && record.recent.count == UsageRecord.recentCap
+            }())
+
+        // A record written by an older build (no `recent` key) still decodes
+        let legacyJSON = Data(#"{"count":3,"lastUsed":761_000_000}"#.replacingOccurrences(of: "_", with: "").utf8)
+        let decoded = try? JSONDecoder().decode(UsageRecord.self, from: legacyJSON)
+        check("legacy JSON still decodes", decoded?.count == 3 && decoded?.recent.isEmpty == true)
+
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         exit(failures == 0 ? 0 : 1)
     }

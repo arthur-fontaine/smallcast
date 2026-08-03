@@ -57,7 +57,9 @@ Settings → Privacy & Security → Accessibility**.
    With the search empty, **↑** opens *Recent* — everything you last ran or calculated.
 4. **Settings → App Hotkeys** — search an app and record a shortcut to toggle it.
 5. **Settings → Extensions** — import Raycast extensions, then run their commands from the palette.
-6. **Settings → General → Window Management** — turn on the window commands, then bind shortcuts to
+6. **Settings → Search** — see what the ranking has learned and reset it (the last hour, today, or
+   all of it).
+7. **Settings → General → Window Management** — turn on the window commands, then bind shortcuts to
    them in **Settings → Shortcuts → Commands**. See **[docs/windows.md](docs/windows.md)**.
 
 ### Raycast extensions
