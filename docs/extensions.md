@@ -259,3 +259,21 @@ harnesses read the same three variables.
 Two JavaScriptCore differences that have already bitten and are worth remembering: `Error.stack`
 contains frames only (V8 repeats the message, so the headline has to be prepended by hand), and
 `MessageChannel` is absent, so React's scheduler falls back to `setTimeout`.
+
+## Making one look native
+
+An imported extension draws whatever icon it shipped, which rarely matches the rest of the launcher.
+**Settings › Extensions › Configure › Launcher icon** replaces it with a curated SF Symbol on a tinted
+tile — the same tile `IconCache` draws for the built-in commands, so the row reads as part of the app.
+
+- `ExtensionAppearance` (symbol + `ExtensionTint`) is stored per extension by manifest name in
+  `ExtensionAppearanceStore`, and applies to **every command** of that extension — the same inheritance
+  Raycast has when a command declares no icon of its own.
+- `ExtensionManager.publishLauncherEntries` resolves it into each `AppEntry`; `setAppearance` re-publishes
+  immediately, so rows change without waiting for a rescan.
+- The icon set is fixed on purpose: a curated list keeps everything looking like one app and avoids
+  custom-image plumbing (sizing, caching, files that go missing). `ExtensionSymbols.all` filters the
+  catalog against the running system, so a symbol this macOS lacks never appears as an empty tile.
+- Tints are pinned sRGB values, not system colours: tiles are rasterized off the main thread, where a
+  dynamic colour would resolve against whatever appearance that thread sees.
+- "Use Original" clears the override. Choices ride along in a settings backup.

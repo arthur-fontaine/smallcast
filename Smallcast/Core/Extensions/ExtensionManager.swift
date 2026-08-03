@@ -29,6 +29,9 @@ final class ExtensionManager: ObservableObject, ExtensionRuntimeDelegate, Extens
     @Published private(set) var navigationDepth = 1
 
     let storage: ExtensionStorage
+    /// Per-extension icon overrides, owned here alongside `storage` for the same reason: both are
+    /// extension-scoped state the launcher and Settings read through this manager.
+    let appearances = ExtensionAppearanceStore()
     private let runtime: ExtensionRuntime
     private let bridge: ExtensionHostBridge
     private weak var appIndex: AppIndex?
@@ -69,6 +72,8 @@ final class ExtensionManager: ObservableObject, ExtensionRuntimeDelegate, Extens
     private func publishLauncherEntries() {
         let entries = installed.flatMap { installedExtension -> [AppEntry] in
             let iconPath = installedExtension.iconPath
+            // A chosen appearance replaces the shipped icon for every command of the extension.
+            let appearance = appearances.appearance(for: installedExtension.manifest.name)
             return installedExtension.manifest.commands.compactMap { command -> AppEntry? in
                 let reference = ExtensionCommandRef(
                     extensionName: installedExtension.manifest.name, commandName: command.name)
@@ -78,12 +83,27 @@ final class ExtensionManager: ObservableObject, ExtensionRuntimeDelegate, Extens
                     url: installedExtension.directory,
                     bundleID: nil,
                     kind: .extensionCommand,
-                    imageIconPath: commandIconPath(command, in: installedExtension) ?? iconPath,
-                    kindLabelOverride: installedExtension.title)
+                    imageIconPath: appearance == nil
+                        ? (commandIconPath(command, in: installedExtension) ?? iconPath) : nil,
+                    kindLabelOverride: installedExtension.title,
+                    appearance: appearance)
             }
         }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         appIndex?.setExtensionCommands(entries)
+    }
+
+    /// Settings picked (or cleared) an icon: persist it and re-publish, so the launcher rows change
+    /// under the user rather than on the next scan.
+    func setAppearance(_ appearance: ExtensionAppearance?, for extensionName: String) {
+        appearances.set(appearance, for: extensionName)
+        publishLauncherEntries()
+    }
+
+    /// Bulk apply from a settings backup.
+    func replaceAppearances(_ overrides: [String: ExtensionAppearance]) {
+        appearances.replace(overrides)
+        publishLauncherEntries()
     }
 
     private func commandIconPath(_ command: ExtensionCommand, in owner: InstalledExtension) -> String? {

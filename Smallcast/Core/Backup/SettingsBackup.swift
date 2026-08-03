@@ -8,6 +8,8 @@ struct SettingsBackup: Codable {
     var favoriteApps: [String]?
     var hiddenLauncherItems: [String]?
     var hiddenLauncherKinds: [String]?
+    /// Per-extension launcher icons, keyed by manifest name.
+    var extensionAppearances: [String: ExtensionAppearance]?
 
     /// Enum-backed settings are stored by raw value so the JSON stays legible and forward-compatible (an unknown value is ignored on import rather than failing the whole decode).
     struct SettingsData: Codable {
@@ -89,6 +91,7 @@ extension SettingsBackup {
             })
         backup.hotkeys = hotkeys
 
+        backup.extensionAppearances = core.extensions.appearances.overrides
         backup.favoriteApps = core.favorites.keys
         backup.hiddenLauncherItems = Array(core.visibility.hiddenItemKeys)
         backup.hiddenLauncherKinds = Array(core.visibility.hiddenKinds)
@@ -100,6 +103,9 @@ extension SettingsBackup {
         var summary = ApplySummary()
         if let s = settings { summary.settingsFields = applySettings(s, to: core) }
         if let hotkeys { summary.hotkeys = applyHotkeys(hotkeys, to: core) }
+        if let extensionAppearances {
+            core.extensions.replaceAppearances(extensionAppearances)
+        }
         if let favoriteApps {
             core.favorites.replace(keys: favoriteApps)
             summary.favorites = favoriteApps.count

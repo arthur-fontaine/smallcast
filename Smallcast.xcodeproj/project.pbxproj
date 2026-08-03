@@ -41,9 +41,11 @@
 		49D7268C0D42D2D66457624B /* EmojiGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77B398E4FE3CA44BE3CA73C6 /* EmojiGridView.swift */; };
 		5141B3ED4380149EA91A3A30 /* ExtensionBootConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02A50FEF31DD2795F4A113D /* ExtensionBootConfig.swift */; };
 		530D406FA553682B693738AD /* AppLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B5B49E893D8BB1FE05D0F43 /* AppLauncher.swift */; };
+		5621F643292DC64C81DE9792 /* ExtensionAppearancePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB7A2B4E7336371C61C3C37D /* ExtensionAppearancePicker.swift */; };
 		5BF327F2F87C419CF7908FEC /* SettingsRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E88D7C747266A2B8482D671 /* SettingsRootView.swift */; };
 		5C512E7E8B976DA0AFCE1D3B /* SearchSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20FBC19CAE5DF94C0A809316 /* SearchSettingsView.swift */; };
 		5CCA3D8B04B6FE9BF749F8A4 /* CalculatorCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD8D2BE2EB6EBFE394AED9D9 /* CalculatorCardView.swift */; };
+		5FFD6C829D52ABFAB35F189A /* ExtensionAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBA469A6AB7CE853334B34AE /* ExtensionAppearance.swift */; };
 		6033D36223BD4DAB67EDF124 /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0A4CA9ADF25FED43561080 /* ClipboardManager.swift */; };
 		606B50BDC1F41F28BBC48343 /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 037825ABBE957F3CAEE13A05 /* OnboardingState.swift */; };
 		63100BD5C164313EF8E01F4B /* CalculatorHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26964DCE115D945B721803E5 /* CalculatorHistoryView.swift */; };
@@ -204,12 +206,14 @@
 		DF2572414FFBBABE58835707 /* HyperKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HyperKey.swift; sourceTree = "<group>"; };
 		E207FE495FD75F0AC656009F /* ExtensionScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionScreen.swift; sourceTree = "<group>"; };
 		E82DD2F1C8C904DF69D47BE5 /* EmojiSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiSettingsView.swift; sourceTree = "<group>"; };
+		EBA469A6AB7CE853334B34AE /* ExtensionAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionAppearance.swift; sourceTree = "<group>"; };
 		EBD269FE356013CB1BE1D873 /* ExtensionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionManager.swift; sourceTree = "<group>"; };
 		EEB9E342579B7811BFD6A7AB /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		F0B69B8A813E2462A4203E21 /* WindowGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowGeometry.swift; sourceTree = "<group>"; };
 		F2A9695537089776D4660C65 /* ExtensionCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionCatalog.swift; sourceTree = "<group>"; };
 		F8E24D8786E0B0986DE8F774 /* RenderNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderNode.swift; sourceTree = "<group>"; };
 		FB2C3D48685B6A5E86E3A886 /* SmallcastApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallcastApp.swift; sourceTree = "<group>"; };
+		FB7A2B4E7336371C61C3C37D /* ExtensionAppearancePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionAppearancePicker.swift; sourceTree = "<group>"; };
 		FBA3D37419483976BDA17CD6 /* RunningApps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningApps.swift; sourceTree = "<group>"; };
 		FD8D2BE2EB6EBFE394AED9D9 /* CalculatorCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorCardView.swift; sourceTree = "<group>"; };
 		FDC3C9C36374711CB9D201E6 /* Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Permissions.swift; sourceTree = "<group>"; };
@@ -379,6 +383,7 @@
 				17C51BB65C396EF5EC5D216D /* BackupSettingsView.swift */,
 				CF9C08ED1DD0CD87805D638F /* ClipboardSettingsView.swift */,
 				E82DD2F1C8C904DF69D47BE5 /* EmojiSettingsView.swift */,
+				FB7A2B4E7336371C61C3C37D /* ExtensionAppearancePicker.swift */,
 				055869B732B1B5AA15A49534 /* ExtensionsSettingsView.swift */,
 				B77DCC1DF3530EA81FD37780 /* GeneralSettingsView.swift */,
 				32136408B5ED462404BDFEEA /* PermissionsSettingsView.swift */,
@@ -409,6 +414,7 @@
 		7DA10CE60BD348CA7FDB0172 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				EBA469A6AB7CE853334B34AE /* ExtensionAppearance.swift */,
 				D02A50FEF31DD2795F4A113D /* ExtensionBootConfig.swift */,
 				F2A9695537089776D4660C65 /* ExtensionCatalog.swift */,
 				96FEC677DEEB52E461E90708 /* ExtensionFetcher.swift */,
@@ -606,6 +612,8 @@
 				49D7268C0D42D2D66457624B /* EmojiGridView.swift in Sources */,
 				F8BAE182517C0710BB7C79C4 /* EmojiIndex.swift in Sources */,
 				7D99D04D96E736B8F80B5C2B /* EmojiSettingsView.swift in Sources */,
+				5FFD6C829D52ABFAB35F189A /* ExtensionAppearance.swift in Sources */,
+				5621F643292DC64C81DE9792 /* ExtensionAppearancePicker.swift in Sources */,
 				5141B3ED4380149EA91A3A30 /* ExtensionBootConfig.swift in Sources */,
 				22F5936927D7977F1946349D /* ExtensionCatalog.swift in Sources */,
 				08570E0877633E8399D2C3F9 /* ExtensionCommandView.swift in Sources */,
