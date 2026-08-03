@@ -223,7 +223,8 @@ struct GeneralSettingsView: View {
                 SettingsDivider()
                 SettingsRow(
                     title: "Pop to Root Search",
-                    subtitle: "Reset to the launcher this long after the window closes.",
+                    subtitle:
+                        "Reset to the launcher this long after the window closes. Whatever you've typed is kept for 30 seconds regardless.",
                     systemImage: "arrow.uturn.backward",
                     tint: .indigo
                 ) {

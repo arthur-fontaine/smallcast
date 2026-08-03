@@ -21,6 +21,23 @@ The flat `selection` index is the single source of truth for highlight / activat
 match the visible row order**, including the inline calculator card at index 0 when present (see
 [calculator.md](calculator.md)).
 
+## Dismissal and the typed query
+
+A half-written search is worth more than a keystroke, so closing the palette treats it as pending work:
+
+- **Escape with text** clears the field and leaves the palette open; a second Escape closes it. (Inside
+  a running extension command Escape still pops that command's own stack first — the extension owns its
+  search bar.)
+- **Escape with an empty field** closes, as it always did.
+- **Dismissing with text** — the toggle hotkey, Escape, or clicking away — keeps the query for
+  `PaletteWindowController.typedQueryGrace` (30 s), whatever Pop to Root Search is set to, so glancing
+  at the window behind and coming back doesn't lose it. The next summon consumes the preserved state
+  exactly as a within-timeout reopen already did.
+
+`PaletteHideReason` is what keeps that honest: closing because an action *ran* (`.actionTaken`, the
+default) resets as before, since the search already did its job — only `.dismissed` holds on. The three
+dismissal sites name themselves; everything else inherits the safe default.
+
 ## Menu-open input freeze
 
 While a footer popover menu (⌘K Actions / app menu) is open the search field reads as inert but
