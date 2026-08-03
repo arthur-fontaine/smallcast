@@ -161,7 +161,7 @@ final class AppCore: ObservableObject {
 
     func togglePalette() {
         if windowController.isVisible, palette.mode == .launcher {
-            hidePalette()
+            hidePalette(reason: .dismissed)
         } else {
             showPalette(mode: .launcher, restoreAnyMode: true)
         }
@@ -169,7 +169,7 @@ final class AppCore: ObservableObject {
 
     func toggleClipboard() {
         if windowController.isVisible, palette.mode == .clipboard {
-            hidePalette()
+            hidePalette(reason: .dismissed)
         } else {
             showPalette(mode: .clipboard)
         }
@@ -177,7 +177,7 @@ final class AppCore: ObservableObject {
 
     func toggleEmoji() {
         if windowController.isVisible, palette.mode == .emoji {
-            hidePalette()
+            hidePalette(reason: .dismissed)
         } else {
             showPalette(mode: .emoji)
         }
@@ -194,8 +194,11 @@ final class AppCore: ObservableObject {
         if palette.mode == .launcher { Task { await appIndex.refresh() } }
     }
 
-    func hidePalette(restoreFocus: Bool = true) {
-        windowController.hide(restoreFocus: restoreFocus)
+    /// `reason` defaults to `.actionTaken`: every caller that hides the palette because something ran
+    /// wants the next summon to start clean. The three dismissal paths (Escape, the toggle hotkeys, and
+    /// clicking away) say so explicitly, and only those hold on to what was typed.
+    func hidePalette(restoreFocus: Bool = true, reason: PaletteHideReason = .actionTaken) {
+        windowController.hide(restoreFocus: restoreFocus, reason: reason)
     }
 
     /// True when the palette should render as the slim compact bar: compact mode on, launcher root, empty query, and not force-expanded via the "…" overflow.

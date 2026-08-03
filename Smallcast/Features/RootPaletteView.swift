@@ -476,7 +476,14 @@ struct RootPaletteView: View {
                 core.exitExtensionScreen()
                 return .handled
             }
-            core.hidePalette()
+            // With something typed, the first Escape clears it and the palette stays open — closing
+            // takes a second press. Losing a half-written search to a stray Escape is the worse
+            // failure of the two.
+            if !isQueryEmpty {
+                vm.query = ""
+                return .handled
+            }
+            core.hidePalette(reason: .dismissed)
             return .handled
         }
         .onKeyPress(.tab) {

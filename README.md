@@ -53,7 +53,9 @@ Settings → Privacy & Security → Accessibility**.
 
 1. Open **Settings → General** and record a global shortcut to summon Smallcast.
 2. Press it anywhere → the palette floats in. Type to filter, **↵** to launch.
-3. **Tab** switches between Apps and Clipboard; **↑/↓** move, **Esc** dismisses.
+3. **Tab** switches between Apps and Clipboard; **↑/↓** move. **Esc** clears what you typed, and
+   closes when there's nothing left to clear — and a search you walk away from is still there if you
+   come back within 30 seconds.
    With the search empty, **↑** opens *Recent* — everything you last ran or calculated.
 4. **Settings → App Hotkeys** — search an app and record a shortcut to toggle it.
 5. **Settings → Extensions** — import Raycast extensions, then run their commands from the palette.
