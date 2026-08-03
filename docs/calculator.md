@@ -55,3 +55,21 @@ against a fixed clock.
 When the launcher or Calculator History query evaluates to a result the card is pinned at the top of
 the list (flat selection index 0, shifting rows by one) and Enter copies the answer + records it to
 `CalculatorHistoryStore`.
+
+## What reaches the history
+
+Copying isn't the only way in — a calculation you only *looked at* is still one you did. `AppCore`
+records whatever the search evaluates to at the moments the query stops being edited:
+
+- **Escape** clearing the field (`clearSearch`)
+- every **`PaletteViewModel.prepare`** — the pop-to-root reset after the window closes, a mode switch, a
+  fresh summon — via the `onWillReset` hook, which fires while the query is still readable
+
+Editing never commits, which is what makes the rule feel right: growing `1+2` into `1+21` records only
+the latter, and closing the palette then reopening within the 30-second grace to keep typing replaces
+the pending calculation instead of saving it. Committing the same thing twice is harmless —
+`record` drops a repeat of the newest entry, so the copy path and a following reset can't duplicate.
+
+Only the two screens that show the card (`.launcher`, `.calculatorHistory`) count: inside a running
+extension command the search bar belongs to the extension, and text typed into its filter isn't a
+calculation.

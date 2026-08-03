@@ -79,8 +79,12 @@ final class PaletteViewModel: ObservableObject {
     var menuOpen = false { didSet { onMenuOpenChanged?(menuOpen) } }
     /// Fired when `menuOpen` flips so `PalettePanel` can hide/show the search field's caret while it keeps first-responder status (no focus swap, so the placeholder never reflows).
     var onMenuOpenChanged: ((Bool) -> Void)?
+    /// Fired at the *start* of every reset, while the query is still readable — the one moment a
+    /// calculation the user only looked at can still be remembered (see `AppCore.commitCalculation`).
+    var onWillReset: (() -> Void)?
 
     func prepare(mode: PaletteMode) {
+        onWillReset?()
         self.mode = mode
         query = ""
         selection = 0
@@ -139,6 +143,8 @@ final class AppCore: ObservableObject {
         Task { await emojiIndex.load() }
         extensions.start(appIndex: appIndex, core: self)
 
+        // A reset is where a calculation stops being edited, so that's where it gets remembered.
+        palette.onWillReset = { [weak self] in self?.commitCalculation() }
         hotKeys.onTogglePalette = { [weak self] in self?.togglePalette() }
         hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }
         hotKeys.onToggleEmoji = { [weak self] in self?.toggleEmoji() }
@@ -415,6 +421,33 @@ final class AppCore: ObservableObject {
         case nil:
             break
         }
+    }
+
+    /// Remember whatever the search currently evaluates to, without copying it — a calculation you only
+    /// looked at is still one you did.
+    ///
+    /// Called at exactly the moments a query stops being edited: Escape clearing the field, and every
+    /// `PaletteViewModel.prepare` (the pop-to-root reset, a mode switch, a fresh summon). Editing never
+    /// commits, so "1+2" grown into "1+21" only ever records the latter, and re-opening within the
+    /// grace period to keep typing replaces it rather than saving it. Re-committing the same thing is
+    /// harmless — `CalculatorHistoryStore.record` drops a repeat of the newest entry.
+    func commitCalculation() {
+        // Only the two screens that actually show the answer card: inside a running command the search
+        // bar belongs to the extension, and "1+2" typed into its filter is not a calculation the user
+        // did.
+        guard palette.mode == .launcher || palette.mode == .calculatorHistory,
+            !palette.query.trimmingCharacters(in: .whitespaces).isEmpty,
+            let result = CalcMemo.evaluate(palette.query),
+            case .value(let display, _) = result.payload
+        else { return }
+        calcHistory.record(expression: result.expression, result: display)
+    }
+
+    /// Escape with text: remember any calculation it produced, then empty the field — the palette stays
+    /// open, so this is the one discard that doesn't go through `prepare`.
+    func clearSearch() {
+        commitCalculation()
+        palette.query = ""
     }
 
     /// Enter on the inline calculator card: copy the answer, remember the calculation, dismiss.

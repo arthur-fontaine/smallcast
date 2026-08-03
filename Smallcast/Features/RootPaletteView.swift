@@ -480,7 +480,7 @@ struct RootPaletteView: View {
             // takes a second press. Losing a half-written search to a stray Escape is the worse
             // failure of the two.
             if !isQueryEmpty {
-                vm.query = ""
+                core.clearSearch()
                 return .handled
             }
             core.hidePalette(reason: .dismissed)
