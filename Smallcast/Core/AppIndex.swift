@@ -17,6 +17,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     var imageIconPath: String? = nil
     /// Replaces the trailing kind label; an extension command shows its extension's title there.
     var kindLabelOverride: String? = nil
+    /// A symbol + tile colour chosen in Settings, drawn instead of whatever icon the source shipped.
+    var appearance: ExtensionAppearance? = nil
 
     var kindLabel: String {
         if let kindLabelOverride { return kindLabelOverride }
@@ -43,18 +45,29 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     }
 
     /// Command entries draw an SF Symbol tile; an extension command draws its manifest icon when it
-    /// ships one, and falls back to a symbol tile otherwise.
-    var isSymbolIcon: Bool { kind == .command || (kind == .extensionCommand && imageIconPath == nil) }
+    /// ships one, and falls back to a symbol tile otherwise. A chosen appearance always wins.
+    var isSymbolIcon: Bool {
+        appearance != nil || kind == .command
+            || (kind == .extensionCommand && imageIconPath == nil)
+    }
     var symbolIconName: String {
+        if let appearance { return appearance.symbol }
         if kind == .extensionCommand { return "puzzlepiece.extension" }
         if let action = WindowAction(entryID: id) { return action.sfSymbol }
         return CommandRegistry.command(for: self)?.sfSymbol ?? "questionmark"
     }
+    /// Tile colour for the symbol, or nil for the neutral tile the built-in commands use.
+    var symbolTint: ExtensionTint? { appearance?.tint }
+    /// Identity of the *drawn* icon — changes when a re-skin changes the symbol or its colour, even
+    /// though the entry is the same row.
+    var iconKey: String {
+        "\(id)|\(appearance?.symbol ?? "")|\(appearance?.tint.rawValue ?? "")"
+    }
 
     var icon: NSImage {
+        if isSymbolIcon { return IconCache.symbolIcon(named: symbolIconName, tint: symbolTint) }
         if let imageIconPath { return IconCache.imageIcon(atPath: imageIconPath) }
-        return isSymbolIcon
-            ? IconCache.symbolIcon(named: symbolIconName) : IconCache.icon(forFile: url.path)
+        return IconCache.icon(forFile: url.path)
     }
 }
 
@@ -74,8 +87,13 @@ enum IconCache {
 
     /// Cache-only lookups (never decode) so a row can paint an already-warm icon on the same frame.
     static func cached(forFile path: String) -> NSImage? { cache.object(forKey: path as NSString) }
-    static func cachedSymbol(named name: String) -> NSImage? {
-        cache.object(forKey: ("symbol:" + name) as NSString)
+    static func cachedSymbol(named name: String, tint: ExtensionTint? = nil) -> NSImage? {
+        cache.object(forKey: symbolKey(name, tint))
+    }
+
+    /// The tint is part of the key: the same glyph on two tile colours is two bitmaps.
+    private static func symbolKey(_ name: String, _ tint: ExtensionTint?) -> NSString {
+        "symbol:\(tint?.rawValue ?? "plain"):\(name)" as NSString
     }
 
     /// A freshly-decoded, thereafter-immutable `NSImage` is safe to move across the actor boundary.
@@ -89,10 +107,10 @@ enum IconCache {
             return Decoded(image: icon(forFile: path))
         }.value.image
     }
-    static func loadSymbolAsync(named name: String) async -> NSImage? {
-        if let cached = cachedSymbol(named: name) { return cached }
+    static func loadSymbolAsync(named name: String, tint: ExtensionTint? = nil) async -> NSImage? {
+        if let cached = cachedSymbol(named: name, tint: tint) { return cached }
         return await Task.detached(priority: .userInitiated) {
-            Decoded(image: symbolIcon(named: name))
+            Decoded(image: symbolIcon(named: name, tint: tint))
         }.value.image
     }
 
@@ -150,20 +168,21 @@ enum IconCache {
         return icon
     }
 
-    /// Command "icons": an SF Symbol on a rounded tile, in the same bitmap shape as app icons so rows treat every entry identically.
-    static func symbolIcon(named name: String) -> NSImage {
-        let key = "symbol:" + name as NSString
+    /// Command "icons": an SF Symbol on a rounded tile, in the same bitmap shape as app icons so rows treat every entry identically. A tint fills the tile with that colour and brightens the glyph to white — the same treatment as the Settings sidebar, so a re-skinned extension reads as part of the app.
+    static func symbolIcon(named name: String, tint: ExtensionTint? = nil) -> NSImage {
+        let key = symbolKey(name, tint)
         if let cached = cache.object(forKey: key) { return cached }
 
         let side = displayPixel
         let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { _ in
             // Tile inset mirrors the margin macOS app icons carry inside their canvas.
             let tile = NSRect(x: 0, y: 0, width: side, height: side).insetBy(dx: 4, dy: 4)
-            NSColor.white.withAlphaComponent(0.09).setFill()
+            (tint?.nsColor ?? NSColor.white.withAlphaComponent(0.09)).setFill()
             NSBezierPath(roundedRect: tile, xRadius: 9, yRadius: 9).fill()
 
+            let glyph = tint == nil ? NSColor.white.withAlphaComponent(0.85) : NSColor.white
             let config = NSImage.SymbolConfiguration(pointSize: 21, weight: .medium)
-                .applying(.init(paletteColors: [.white.withAlphaComponent(0.85)]))
+                .applying(.init(paletteColors: [glyph]))
             guard
                 let symbol = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
                     .withSymbolConfiguration(config)

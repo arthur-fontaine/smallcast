@@ -195,13 +195,16 @@ struct AppIconView: View {
 
     init(app: AppEntry) {
         self.app = app
-        _image = State(
-            initialValue: {
-                if let path = app.imageIconPath { return IconCache.cachedImage(atPath: path) }
-                return app.isSymbolIcon
-                    ? IconCache.cachedSymbol(named: app.symbolIconName)
-                    : IconCache.cached(forFile: app.url.path)
-            }())
+        _image = State(initialValue: Self.cached(app))
+    }
+
+    /// Cache-only peek, shared by the initial seed and the reload — a warm icon paints on the same frame.
+    private static func cached(_ app: AppEntry) -> NSImage? {
+        if app.isSymbolIcon {
+            return IconCache.cachedSymbol(named: app.symbolIconName, tint: app.symbolTint)
+        }
+        if let path = app.imageIconPath { return IconCache.cachedImage(atPath: path) }
+        return IconCache.cached(forFile: app.url.path)
     }
 
     var body: some View {
@@ -213,15 +216,20 @@ struct AppIconView: View {
                     .fill(Color.white.opacity(0.06))
             }
         }
-        .task(id: app.id) {
-            guard image == nil else { return }
-            if let path = app.imageIconPath {
+        // Keyed on what's drawn, not just which row it is: re-skinning an extension in Settings changes
+        // the symbol/tint while the row identity stays put, and a warm `image` would otherwise stick.
+        .task(id: app.iconKey) {
+            if let warm = Self.cached(app) {
+                image = warm
+                return
+            }
+            if app.isSymbolIcon {
+                image = await IconCache.loadSymbolAsync(
+                    named: app.symbolIconName, tint: app.symbolTint)
+            } else if let path = app.imageIconPath {
                 image = await IconCache.loadImageAsync(atPath: path)
             } else {
-                image =
-                    app.isSymbolIcon
-                    ? await IconCache.loadSymbolAsync(named: app.symbolIconName)
-                    : await IconCache.loadAsync(forFile: app.url.path)
+                image = await IconCache.loadAsync(forFile: app.url.path)
             }
         }
     }

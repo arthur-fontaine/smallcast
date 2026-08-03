@@ -24,7 +24,8 @@ JavaScriptCore ships with macOS, so that costs no extra binary size.
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
 - **Window management** — optional Raycast-style commands: halves, thirds, quarters, sixths, Almost
   Maximize, Reasonable Size, move between displays.
-- **Raycast extensions** — import the ones you already have and run them natively.
+- **Raycast extensions** — import the ones you already have and run them natively; give any of them a
+  native icon and colour if the one it ships looks out of place.
 
 ## Install
 

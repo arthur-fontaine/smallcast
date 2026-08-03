@@ -149,6 +149,7 @@ private struct ExtensionRow: View {
 
             if isExpanded {
                 VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                    ExtensionAppearanceRow(installed: installed)
                     if !installed.manifest.preferences.isEmpty {
                         preferenceGroup(
                             title: "Extension preferences",
