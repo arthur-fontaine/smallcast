@@ -11,23 +11,29 @@ struct CalcDimension: Equatable, Sendable {
     var information = 0
     var angle = 0
     var temperature = 0
+    /// Currency. Not a physical dimension, but it behaves like one for everything the calculator does:
+    /// money adds to money, `$/h` is money¹·time⁻¹, and `$/€` cancels to a plain number.
+    var money = 0
 
     static let scalar = CalcDimension()
 
     var isScalar: Bool { self == .scalar }
 
+    /// True for an amount of money and for any rate or density built on one (`$`, `$/h`, `$/km`).
+    var isMonetary: Bool { money != 0 }
+
     static func + (lhs: CalcDimension, rhs: CalcDimension) -> CalcDimension {
         CalcDimension(
             length: lhs.length + rhs.length, mass: lhs.mass + rhs.mass, time: lhs.time + rhs.time,
             information: lhs.information + rhs.information, angle: lhs.angle + rhs.angle,
-            temperature: lhs.temperature + rhs.temperature)
+            temperature: lhs.temperature + rhs.temperature, money: lhs.money + rhs.money)
     }
 
     func scaled(by power: Int) -> CalcDimension {
         CalcDimension(
             length: length * power, mass: mass * power, time: time * power,
             information: information * power, angle: angle * power,
-            temperature: temperature * power)
+            temperature: temperature * power, money: money * power)
     }
 
     /// Human-facing name for error messages: a category name when one matches exactly ("Speed"), else
@@ -42,6 +48,7 @@ struct CalcDimension: Equatable, Sendable {
                 (name: "Length", exponent: length), (name: "Mass", exponent: mass),
                 (name: "Time", exponent: time), (name: "Data", exponent: information),
                 (name: "Angle", exponent: angle), (name: "Temperature", exponent: temperature),
+                (name: "Money", exponent: money),
             ], separator: "·")
     }
 }
@@ -61,6 +68,7 @@ extension UnitCategory {
         case .speed: return CalcDimension(length: 1, time: -1)
         case .pressure: return CalcDimension(length: -1, mass: 1, time: -2)
         case .dataRate: return CalcDimension(time: -1, information: 1)
+        case .money: return CalcDimension(money: 1)
         }
     }
 

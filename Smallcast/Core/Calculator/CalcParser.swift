@@ -82,6 +82,11 @@ enum CalcTokenizer {
             }
 
             switch ch {
+            // Currency symbols are units, so they become idents like any other unit name — `CalcUnits.money`
+            // keys them by the glyph itself. They can't join the letter run above: `$` isn't a letter, and
+            // `100usd` must still read as two tokens.
+            case "$", "€", "£", "¥", "₹", "₩", "₪", "₺":
+                tokens.append(.ident(String(ch)))
             case "+", "(", ")", "!", "%", "^":
                 tokens.append(.op(ch))
             case "*", "×":
@@ -129,9 +134,9 @@ enum CalcParser {
         case none
     }
 
-    /// Scalar entry point: an expression that ends up carrying units is *not* a plain number, so it reads as nil here exactly like any other unparseable input.
-    static func evaluate(_ tokens: [CalcToken]) -> Double? {
-        var parser = Parser(tokens: tokens)
+    /// Scalar entry point: an expression that ends up carrying units is *not* a plain number, so it reads as nil here exactly like any other unparseable input. `rates` is still needed to *recognize* currencies — that's what lets the ones in `10 $ / 2 $` cancel to a plain 5.
+    static func evaluate(_ tokens: [CalcToken], rates: CurrencyRates) -> Double? {
+        var parser = Parser(tokens: tokens, rates: rates)
         guard let result = parser.parseExpression(minBP: 0), parser.isAtEnd, result.unit == nil,
             result.effective.isFinite
         else { return nil }
@@ -139,8 +144,8 @@ enum CalcParser {
     }
 
     /// Dimensional entry point: `1 km + 1 m`, `100 km / 2 h`, `60 mph * 2 hr`. Returns `.none` for a scalar or unparseable expression, leaving the caller's other paths to handle it.
-    static func evaluateQuantity(_ tokens: [CalcToken]) -> QuantityResult {
-        var parser = Parser(tokens: tokens)
+    static func evaluateQuantity(_ tokens: [CalcToken], rates: CurrencyRates) -> QuantityResult {
+        var parser = Parser(tokens: tokens, rates: rates)
         let result = parser.parseExpression(minBP: 0)
         if let (lhs, rhs) = parser.mismatch { return .mismatch(lhs, rhs) }
         guard let result, parser.isAtEnd, let unit = result.unit, result.value.isFinite else {
@@ -169,11 +174,15 @@ private struct Parser {
     }
 
     let tokens: [CalcToken]
+    let rates: CurrencyRates
     var pos = 0
     /// Set when `+`/`-` (or a conversion) meets two different dimensions; the parse then fails, but the caller can still say what didn't line up.
     var mismatch: (CalcDimension, CalcDimension)?
 
-    init(tokens: [CalcToken]) { self.tokens = tokens }
+    init(tokens: [CalcToken], rates: CurrencyRates) {
+        self.tokens = tokens
+        self.rates = rates
+    }
 
     var isAtEnd: Bool { pos == tokens.count }
     private var current: CalcToken? { pos < tokens.count ? tokens[pos] : nil }
@@ -291,7 +300,7 @@ private struct Parser {
                 guard !value.isPercent, value.unit == nil else { return nil }
                 value = Value(value: value.value * .pi / 180)
             case .ident(let name):
-                guard let unit = Self.attachableUnit(name), !value.isPercent, value.unit == nil
+                guard let unit = attachableUnit(name), !value.isPercent, value.unit == nil
                 else { break loop }
                 value = Value(value: value.value * unit.siFactor, unit: CompoundUnit(unit))
             default:
@@ -303,8 +312,10 @@ private struct Parser {
     }
 
     /// A unit a number can be written against. Temperatures are excluded because they're affine: `20°C + 5°C` has no meaning, while `20 K + 5 K` (a ratio scale, no offset) does.
-    private static func attachableUnit(_ name: String) -> UnitDef? {
-        guard let unit = CalcUnits.byName[name], unit.offset == 0 else { return nil }
+    private func attachableUnit(_ name: String) -> UnitDef? {
+        guard let unit = CalcUnits.unit(named: name, rates: rates), unit.offset == 0 else {
+            return nil
+        }
         return unit
     }
 
@@ -351,7 +362,7 @@ private struct Parser {
             }
             // A unit with no number in front is one of it — the same default `parseConversion` applies
             // to `day to s`, and what makes the "h" in `km/h` parse.
-            if let unit = Self.attachableUnit(name) {
+            if let unit = attachableUnit(name) {
                 pos += 1
                 return Value(value: unit.siFactor, unit: CompoundUnit(unit))
             }

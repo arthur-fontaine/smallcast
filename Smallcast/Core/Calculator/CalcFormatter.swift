@@ -17,6 +17,19 @@ enum CalcFormatter {
         return String(format: "%.10g", v)
     }
 
+    /// Money quoted to the cent. Ten significant digits of a currency amount is noise, and so are the
+    /// trailing zeros a fixed two-decimal format would add, so this rounds and then trims like every
+    /// other value ("86.5 €", not "86.49610678 €" or "86.50 €"). Sub-cent amounts — a per-second wage,
+    /// a weak currency's smallest unit — keep full precision rather than collapsing to zero.
+    static func moneyDisplay(_ value: Double) -> String {
+        grouped(moneyCopyText(value))
+    }
+
+    static func moneyCopyText(_ value: Double) -> String {
+        guard value == 0 || abs(value) >= 0.005 else { return copyText(value) }
+        return copyText((value * 100).rounded() / 100)
+    }
+
     /// A length in feet rendered as whole feet + remaining inches ("3 feet 3.370078740 inches"); used only for the bare metric-length auto-conversion. Sub-foot values drop the feet part.
     static func compoundFeetInches(_ feet: Double) -> String {
         let sign = feet < 0 ? "-" : ""

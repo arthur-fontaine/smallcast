@@ -110,6 +110,7 @@ final class AppCore: ObservableObject {
     let favorites = FavoritesStore()
     let visibility = VisibilityStore()
     let calcHistory = CalculatorHistoryStore()
+    let currencyRates = CurrencyRatesStore()
     let emojiIndex = EmojiIndex()
     let frequentEmoji = FrequentEmojiStore()
     let runningApps = RunningAppsMonitor()
@@ -141,6 +142,7 @@ final class AppCore: ObservableObject {
 
         Task { await appIndex.refresh() }
         Task { await emojiIndex.load() }
+        currencyRates.start()
         extensions.start(appIndex: appIndex, core: self)
 
         // A reset is where a calculation stops being edited, so that's where it gets remembered.
@@ -437,7 +439,7 @@ final class AppCore: ObservableObject {
         // did.
         guard palette.mode == .launcher || palette.mode == .calculatorHistory,
             !palette.query.trimmingCharacters(in: .whitespaces).isEmpty,
-            let result = CalcMemo.evaluate(palette.query),
+            let result = CalcMemo.evaluate(palette.query, rates: currencyRates.rates),
             case .value(let display, _) = result.payload
         else { return }
         calcHistory.record(expression: result.expression, result: display)

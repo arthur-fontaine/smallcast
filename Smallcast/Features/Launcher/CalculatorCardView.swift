@@ -1,14 +1,14 @@
 import SwiftUI
 
-/// One-deep memo over `CalcEngine.evaluate`, mirroring `AppIndex.matchCache`, so hover/selection re-renders with the same query don't re-run the evaluator.
+/// One-deep memo over `CalcEngine.evaluate`, mirroring `AppIndex.matchCache`, so hover/selection re-renders with the same query don't re-run the evaluator. Keyed on the exchange rates as well as the query: an answer priced at yesterday's snapshot has to be recomputed when today's lands, not served from here.
 @MainActor
 enum CalcMemo {
-    private static var cache: (query: String, result: CalcResult?)?
+    private static var cache: (query: String, rates: CurrencyRates, result: CalcResult?)?
 
-    static func evaluate(_ query: String) -> CalcResult? {
-        if let cache, cache.query == query { return cache.result }
-        let result = CalcEngine.evaluate(query)
-        cache = (query, result)
+    static func evaluate(_ query: String, rates: CurrencyRates) -> CalcResult? {
+        if let cache, cache.query == query, cache.rates == rates { return cache.result }
+        let result = CalcEngine.evaluate(query, rates: rates)
+        cache = (query, rates, result)
         return result
     }
 }
