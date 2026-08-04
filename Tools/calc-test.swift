@@ -256,6 +256,18 @@ struct CalcTests {
         // Date ± duration now carries the resolved start as a source badge
         expectBadgesAt("today + 3 weeks", source: "Friday, 24 July", target: "Result")
 
+        // Calendar-average month and year, so a rate over one is well-defined
+        expectDisplay("1 month to day", "30.436875 day")
+        expectDisplay("1 year to day", "365.2425 day")
+        expectDisplay("1 year to month", "12 month")
+        expectDisplay("6 months to weeks", "26.08875 week")
+        expectBadges("1 year to month", source: "Years", target: "Months")
+
+        // A rate converts on both halves at once
+        expectDisplay("1km/h to m/month", "730,485 m/month")
+        expectDisplay("1 km/h to m/year", "8,765,820 m/year")
+        expectDisplay("100 km/month to km/year", "1,200 km/year")
+
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }

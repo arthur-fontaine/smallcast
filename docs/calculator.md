@@ -33,10 +33,17 @@ only converting between two of them:
   `1 kg * 9.81 m / 1 s^2` → `9.81 kg·m/s²`. Units that fully cancel leave a plain number
   (`10 km / 2 km` → `5`).
 - **Either side of a conversion may be compound** — `1km+1m to ft`, `10 m/s to km/h`.
+- **A rate converts on both halves at once** — `1km/h to m/month`, `2000 km/year to m/day`. Nothing
+  special-cases these; they're two compound units of the same dimension, so the line above already
+  covers them.
 
 A `CompoundUnit` is the ordered product of table units the user actually wrote; at display time
 `namedEquivalent` looks for a table unit with the same dimension *and* size (`km·h⁻¹` → `km/h`,
 `km·km` → `km²`, `mph·hr` → `mi`) and falls back to composing the symbol (`kg/(m·s²)`).
+
+`month` and `year` are ordinary time units sized to the Gregorian average (365.2425 days, and a twelfth
+of that) — the only reading under which a per-month rate means anything definite. Date arithmetic is
+untouched by them: `today + 3 weeks` still goes through `CalcDateTime`, which walks the real calendar.
 
 Two deliberate exclusions: **temperatures never attach to a number** (they're affine — `20°C + 5°C` has
 no meaning, while Kelvin, a ratio scale, is fine), and **`deg` stays the trig postfix** (`sin 30deg`)

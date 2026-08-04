@@ -127,7 +127,8 @@ enum CalcUnits {
         "°C": ("f", false), "°F": ("c", false), "K": ("c", false),
         // Time
         "ms": ("s", false), "s": ("ms", false), "min": ("s", false), "hr": ("min", false),
-        "day": ("hr", false), "week": ("day", false),
+        "day": ("hr", false), "week": ("day", false), "month": ("day", false),
+        "year": ("day", false),
         // Area
         "mm²": ("in2", false), "cm²": ("in2", false), "m²": ("ft2", false), "km²": ("mi2", false),
         "in²": ("cm2", false), "ft²": ("m2", false), "yd²": ("m2", false), "mi²": ("km2", false),
@@ -208,6 +209,12 @@ enum CalcUnits {
         add(UnitDef("hr", "Hours", .time, 3600), ["h", "hr", "hrs", "hour", "hours"])
         add(UnitDef("day", "Days", .time, 86400), ["d", "day", "days"])
         add(UnitDef("week", "Weeks", .time, 604800), ["wk", "week", "weeks"])
+        // Calendar months and years vary, so a *rate* over one can only mean the average: a Gregorian
+        // year is 365.2425 days and a month exactly a twelfth of it. That's what makes `m/month`
+        // arithmetic well-defined; date math (`today + 3 weeks`) stays with `CalcDateTime`, which walks
+        // the real calendar.
+        add(UnitDef("month", "Months", .time, 2_629_746), ["mo", "month", "months"])
+        add(UnitDef("year", "Years", .time, 31_556_952), ["yr", "yrs", "year", "years"])
 
         // Area (base: square meter). The tokenizer folds "²" to "2", so mm²/mm2 are one name.
         add(UnitDef("mm²", "Square Millimeters", .area, 1e-6), ["mm2", "sqmm"])
