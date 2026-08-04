@@ -8,6 +8,8 @@ struct RootPaletteView: View {
     @EnvironmentObject private var favorites: FavoritesStore
     @EnvironmentObject private var visibility: VisibilityStore
     @EnvironmentObject private var calcHistory: CalculatorHistoryStore
+    /// Observed so a card priced at the bundled rates re-renders the moment the day's rates land.
+    @EnvironmentObject private var currencyRates: CurrencyRatesStore
     @EnvironmentObject private var usage: UsageStore
     @EnvironmentObject private var emojiIndex: EmojiIndex
     @EnvironmentObject private var frequentEmoji: FrequentEmojiStore
@@ -66,7 +68,8 @@ struct RootPaletteView: View {
 
     /// Inline calculator answer for the current query, live in both the launcher and Calculator History search; when present it occupies flat selection index 0 so rows shift by `calcCount`.
     private var calcResult: CalcResult? {
-        vm.mode == .launcher || vm.mode == .calculatorHistory ? CalcMemo.evaluate(vm.query) : nil
+        vm.mode == .launcher || vm.mode == .calculatorHistory
+            ? CalcMemo.evaluate(vm.query, rates: currencyRates.rates) : nil
     }
     private var calcCount: Int { calcResult == nil ? 0 : 1 }
 

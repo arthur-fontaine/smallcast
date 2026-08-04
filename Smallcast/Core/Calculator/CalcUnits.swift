@@ -2,10 +2,11 @@ import Foundation
 
 enum UnitCategory: String, CaseIterable, Sendable {
     case length, weight, temperature, time, area, volume, digitalStorage
-    case angle, speed, pressure, dataRate
+    case angle, speed, pressure, dataRate, money
 
     var displayName: String {
         switch self {
+        case .money: return "Money"
         case .length: return "Length"
         case .weight: return "Weight"
         case .temperature: return "Temperature"
@@ -28,13 +29,29 @@ struct UnitDef: Equatable, Sendable {
     let category: UnitCategory
     let factor: Double
     let offset: Double
+    /// ISO code for a `.money` unit, nil for every other category. A currency's `factor` isn't a
+    /// constant — it's stamped on by `CalcUnits.unit(named:rates:)` from the day's snapshot — and this
+    /// is what says which rate to look up.
+    let currency: String?
 
-    init(_ symbol: String, _ name: String, _ category: UnitCategory, _ factor: Double, offset: Double = 0) {
+    init(
+        _ symbol: String, _ name: String, _ category: UnitCategory, _ factor: Double,
+        offset: Double = 0, currency: String? = nil
+    ) {
         self.symbol = symbol
         self.name = name
         self.category = category
         self.factor = factor
         self.offset = offset
+        self.currency = currency
+    }
+
+    /// This unit priced at `rates` — itself for everything but money, which has no size until a
+    /// snapshot gives it one (nil when the snapshot doesn't quote this currency).
+    func priced(at rates: CurrencyRates) -> UnitDef? {
+        guard let currency else { return self }
+        guard let factor = rates.eurPerUnit(currency) else { return nil }
+        return UnitDef(symbol, name, category, factor, currency: currency)
     }
 }
 
@@ -54,19 +71,19 @@ enum CalcUnits {
     }
 
     /// Detects `expr unit (to|in|->) unit` (connector second-to-last, known unit last), returning `.mismatch` only when both units are known but incompatible; matching the last position lets "in" double as inches. A missing value defaults to 1, so `day to s` reads as `1 day to s`.
-    static func parseConversion(_ tokens: [CalcToken]) -> ConversionParse? {
+    static func parseConversion(_ tokens: [CalcToken], rates: CurrencyRates) -> ConversionParse? {
         guard tokens.count >= 3, isConnector(tokens[tokens.count - 2]),
             case .ident(let toName) = tokens[tokens.count - 1],
-            let to = byName[toName],
+            let to = unit(named: toName, rates: rates),
             case .ident(let fromName) = tokens[tokens.count - 3],
-            let from = byName[fromName]
+            let from = unit(named: fromName, rates: rates)
         else { return nil }
 
         let valueTokens = Array(tokens[0..<(tokens.count - 3)])
         let input: Double
         if valueTokens.isEmpty {
             input = 1
-        } else if let value = CalcParser.evaluate(valueTokens) {
+        } else if let value = CalcParser.evaluate(valueTokens, rates: rates) {
             input = value
         } else {
             return nil
@@ -79,10 +96,12 @@ enum CalcUnits {
     }
 
     /// A no-connector two-unit query (`day s`, `km mi`) → `1 <first>` in `<second>`. Both must be known units in the same category; anything else returns nil so coincidental two-word searches don't produce a card.
-    static func parseUnitPairConversion(_ tokens: [CalcToken]) -> ConversionParse? {
+    static func parseUnitPairConversion(_ tokens: [CalcToken], rates: CurrencyRates)
+        -> ConversionParse?
+    {
         guard tokens.count == 2,
-            case .ident(let fromName) = tokens[0], let from = byName[fromName],
-            case .ident(let toName) = tokens[1], let to = byName[toName],
+            case .ident(let fromName) = tokens[0], let from = unit(named: fromName, rates: rates),
+            case .ident(let toName) = tokens[1], let to = unit(named: toName, rates: rates),
             from.category == to.category
         else { return nil }
 
@@ -92,16 +111,16 @@ enum CalcUnits {
     }
 
     /// Detects `expr unit` with no connector (`1m`, `2*3 kg`) and converts to a curated counterpart from `autoTargets`. Single-letter temperature aliases (c/f/k) are excluded so `5k` stays an app search rather than "5 Kelvin".
-    static func parseBareConversion(_ tokens: [CalcToken]) -> BareConversion? {
+    static func parseBareConversion(_ tokens: [CalcToken], rates: CurrencyRates) -> BareConversion? {
         guard tokens.count >= 2, case .ident(let fromName) = tokens[tokens.count - 1],
             !["c", "f", "k"].contains(fromName),
-            let from = byName[fromName],
-            let mapping = autoTargets[from.symbol],
-            let to = byName[mapping.to]
+            let from = unit(named: fromName, rates: rates),
+            let mapping = autoTarget(for: from),
+            let to = unit(named: mapping.to, rates: rates)
         else { return nil }
 
         let valueTokens = Array(tokens[0..<(tokens.count - 1)])
-        guard let input = CalcParser.evaluate(valueTokens) else { return nil }
+        guard let input = CalcParser.evaluate(valueTokens, rates: rates) else { return nil }
 
         let output = (input * from.factor + from.offset - to.offset) / to.factor
         guard output.isFinite else { return nil }
@@ -113,6 +132,22 @@ enum CalcUnits {
         case .arrow, .ident("to"), .ident("in"): return true
         default: return false
         }
+    }
+
+    /// The single way a name becomes a unit. Fixed-size units come straight from `catalog`; a currency
+    /// comes from `money` priced at today's snapshot, and drops out entirely when the snapshot doesn't
+    /// quote it — better no card than a rate we made up.
+    static func unit(named name: String, rates: CurrencyRates) -> UnitDef? {
+        if let unit = byName[name] { return unit }
+        return money[name]?.priced(at: rates)
+    }
+
+    /// The keyword-less counterpart for a bare quantity: the curated `autoTargets` entry, or — for
+    /// money, where a per-currency table would say the same thing thirty times — the euro, and the
+    /// dollar for the euro itself.
+    private static func autoTarget(for unit: UnitDef) -> (to: String, compound: Bool)? {
+        if let currency = unit.currency { return (currency == "EUR" ? "usd" : "eur", false) }
+        return autoTargets[unit.symbol]
     }
 
     /// Keyword-less counterpart per unit (metric↔imperial where it applies): source `symbol` → target `byName` key + whether to render feet+inches. Only `m→ft` is compound.
@@ -210,8 +245,8 @@ enum CalcUnits {
         add(UnitDef("day", "Days", .time, 86400), ["d", "day", "days"])
         add(UnitDef("week", "Weeks", .time, 604800), ["wk", "week", "weeks"])
         // Calendar months and years vary, so a *rate* over one can only mean the average: a Gregorian
-        // year is 365.2425 days and a month exactly a twelfth of it. That's what makes `m/month`
-        // arithmetic well-defined; date math (`today + 3 weeks`) stays with `CalcDateTime`, which walks
+        // year is 365.2425 days and a month exactly a twelfth of it. That's what makes `$/month`
+        // arithmetic well-defined; date math (`today + 3 months`) stays with `CalcDateTime`, which walks
         // the real calendar.
         add(UnitDef("month", "Months", .time, 2_629_746), ["mo", "month", "months"])
         add(UnitDef("year", "Years", .time, 31_556_952), ["yr", "yrs", "year", "years"])

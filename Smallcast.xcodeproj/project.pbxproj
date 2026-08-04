@@ -59,6 +59,7 @@
 		73F39D3E5AF7ED6F5EF61972 /* UsageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B95C0599BFFDF8DEC7F9D129 /* UsageStore.swift */; };
 		7487FD3415D8AC6239D3BFB7 /* VisibilityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E9B1C46F3B190CE9DECADAE /* VisibilityStore.swift */; };
 		762F759630879BDDB3A49286 /* SymbolCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8872E608B67FED62B775E73B /* SymbolCatalog.swift */; };
+		7AC39DAA9314091CE348469D /* CurrencyRatesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5FB7FE0C6D82F94A3345F9F /* CurrencyRatesStore.swift */; };
 		7AEDBBBB07771CAF98F274F3 /* WindowAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48349B9C1A9A3F023C267ABA /* WindowAction.swift */; };
 		7B53ACC1E7AAB88252002B01 /* AppIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 844989309BC17EA990ADF4F8 /* AppIndex.swift */; };
 		7BF5A9C767D786D2E2F1D685 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F4BF0D2B82AA86EAA30AAD3 /* AppSettings.swift */; };
@@ -67,6 +68,7 @@
 		80D939246B8E42F472ED01D9 /* ExtensionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0252747D87A78F6E21CD39B /* ExtensionDetailView.swift */; };
 		82ED512F90935F32B30AF6C5 /* RootPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E800A435BF34A13E190E8BF /* RootPaletteView.swift */; };
 		847E609D89FD38261DA99450 /* HUDWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 524484E02738C0E8D18EE2A3 /* HUDWindowController.swift */; };
+		88DC63E03DAC443F00E73198 /* CalcCurrency.swift in Sources */ = {isa = PBXBuildFile; fileRef = E285C2125FC598EC4E9231D8 /* CalcCurrency.swift */; };
 		89141E6CD2133A85CF04DC64 /* ExtensionImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84D29B9784FC0508678495E0 /* ExtensionImage.swift */; };
 		8A366E94C0CBAC6CE5FD9929 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5103E09104528B24AB9CB60E /* LaunchAtLogin.swift */; };
 		8B143A1031B36C4C099E9D5A /* RaycastImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8EC2CC00DE8448ED8299012 /* RaycastImport.swift */; };
@@ -196,6 +198,7 @@
 		BC4229744A9F38A8AB2B0C43 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		C1C05B695864FC9385D06D01 /* PalettePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalettePanel.swift; sourceTree = "<group>"; };
 		C1FEACB17B6AC4B9C09E9FE3 /* CommandRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandRegistry.swift; sourceTree = "<group>"; };
+		C5FB7FE0C6D82F94A3345F9F /* CurrencyRatesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyRatesStore.swift; sourceTree = "<group>"; };
 		C6A2BF4A9DBEED9F6151CBC3 /* EmojiIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiIndex.swift; sourceTree = "<group>"; };
 		CD049BA721B1318AD7F12C18 /* CalcPercent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcPercent.swift; sourceTree = "<group>"; };
 		CF9C08ED1DD0CD87805D638F /* ClipboardSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSettingsView.swift; sourceTree = "<group>"; };
@@ -207,6 +210,7 @@
 		DBB7103783B6F628F14FB019 /* SettingsBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsBackup.swift; sourceTree = "<group>"; };
 		DF2572414FFBBABE58835707 /* HyperKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HyperKey.swift; sourceTree = "<group>"; };
 		E207FE495FD75F0AC656009F /* ExtensionScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionScreen.swift; sourceTree = "<group>"; };
+		E285C2125FC598EC4E9231D8 /* CalcCurrency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcCurrency.swift; sourceTree = "<group>"; };
 		E82DD2F1C8C904DF69D47BE5 /* EmojiSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiSettingsView.swift; sourceTree = "<group>"; };
 		EBA469A6AB7CE853334B34AE /* ExtensionAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionAppearance.swift; sourceTree = "<group>"; };
 		EBD269FE356013CB1BE1D873 /* ExtensionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionManager.swift; sourceTree = "<group>"; };
@@ -241,6 +245,7 @@
 				AA0A4CA9ADF25FED43561080 /* ClipboardManager.swift */,
 				A2FC5D06AC67D73D8881071C /* ClipboardStore.swift */,
 				C1FEACB17B6AC4B9C09E9FE3 /* CommandRegistry.swift */,
+				C5FB7FE0C6D82F94A3345F9F /* CurrencyRatesStore.swift */,
 				A6C807158ED7C5E1BDD634AE /* EdgeDissolve.swift */,
 				57FFAB36EFEBB0B70C659EB3 /* FavoritesStore.swift */,
 				A26481847F2B4C3714E33DBF /* FuzzyMatch.swift */,
@@ -402,6 +407,7 @@
 		79BDC818DD230FC3345F7F18 /* Calculator */ = {
 			isa = PBXGroup;
 			children = (
+				E285C2125FC598EC4E9231D8 /* CalcCurrency.swift */,
 				68C646A59F754CD2D3401E77 /* CalcDateTime.swift */,
 				A37117DCA661F95FBBD122E9 /* CalcEngine.swift */,
 				2128B3AD4DE035D62772728B /* CalcFormatter.swift */,
@@ -592,6 +598,7 @@
 				F7684A264325604216CB035C /* BackupActions.swift in Sources */,
 				70FF369C89853F7B8FE41483 /* BackupSettingsView.swift in Sources */,
 				E5CF61FFE73C1A85C21D229D /* Bundle+AppName.swift in Sources */,
+				88DC63E03DAC443F00E73198 /* CalcCurrency.swift in Sources */,
 				18F7E8579CF7355AF5A0D0B6 /* CalcDateTime.swift in Sources */,
 				235612E8C94DA250B9F3374F /* CalcEngine.swift in Sources */,
 				A54AF3EDD6636B892A26D429 /* CalcFormatter.swift in Sources */,
@@ -608,6 +615,7 @@
 				9EEBB9F8CB387E76910CF60D /* ClipboardView.swift in Sources */,
 				26112688CE1BA8E05BCBF637 /* CommandArgumentsRow.swift in Sources */,
 				B1675EB22E288FEB42095841 /* CommandRegistry.swift in Sources */,
+				7AC39DAA9314091CE348469D /* CurrencyRatesStore.swift in Sources */,
 				C87C4182FB75D5A3DB5FB9C4 /* EdgeDissolve.swift in Sources */,
 				C01D4167D37971777821E2AA /* EmojiCatalog.swift in Sources */,
 				0A4BA78AB4CF3ECE80A3266F /* EmojiData.generated.swift in Sources */,

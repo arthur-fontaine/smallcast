@@ -256,21 +256,67 @@ struct CalcTests {
         // Date ± duration now carries the resolved start as a source badge
         expectBadgesAt("today + 3 weeks", source: "Friday, 24 July", target: "Result")
 
+        // Money — converted at the pinned snapshot above, never at a live rate
+        expectDisplay("100 $ to €", "90.91 €")
+        expectDisplay("100 € to $", "110 $")
+        expectDisplay("100 eur to usd", "110 $")
+        expectDisplay("5 dollars to euros", "4.55 €")
+        expectDisplay("100 £ to €", "125 €")
+        expectDisplay("1600 ¥ to €", "10 €")
+        expectDisplay("100 chf to sek", "1,157.89 SEK")
+        expectExpression("100 $ to €", "100 $")
+        expectBadges("100 $ to €", source: "US Dollars", target: "Euros")
+        expectCopy("100 $ to €", "90.91 €")
+        // A currency the snapshot doesn't quote has no size, so it produces nothing rather than a guess
+        expectNil("100 $ to nok")
+        // The symbol may lead its amount ("$5"), which no code or word may do — `php 8` stays a search
+        expectDisplay("$100 to €", "90.91 €")
+        expectDisplay("$100", "90.91 €")
+        expectDisplay("100$", "90.91 €")
+        expectNil("php 8")
+        // Bare money auto-converts to euros, and the euro itself to dollars
+        expectDisplay("20 £", "25 €")
+        expectDisplay("5 €", "5.5 $")
+        expectBadges("5 €", source: "Euros", target: "US Dollars")
+        // Amounts round to the cent instead of carrying ten significant digits
+        expectDisplay("1 $ to €", "0.91 €")
+        expectDisplay("1000000 € to $", "1,100,000 $")
+        // Money is a dimension: it adds to money, scales by a number, and cancels against itself
+        expectDisplay("10 $ + 5 €", "15.5 $")
+        expectDisplay("3 $ * 4", "12 $")
+        expectDisplay("10 $ / 2 $", "5")
+        expectError("10 $ to kg", "Cannot convert Money to Weight.")
+        expectError("10 $ + 5 kg", "Cannot add Money and Weight.")
+
         // Calendar-average month and year, so a rate over one is well-defined
         expectDisplay("1 month to day", "30.436875 day")
         expectDisplay("1 year to day", "365.2425 day")
         expectDisplay("1 year to month", "12 month")
         expectDisplay("6 months to weeks", "26.08875 week")
-        expectBadges("1 year to month", source: "Years", target: "Months")
 
-        // A rate converts on both halves at once
+        // Rates: any unit over any unit, converted on both halves at once
+        expectDisplay("0.22$/h to $/month", "160.71 $/month")
+        expectExpression("0.22$/h to $/month", "0.22 $/hr")
+        expectDisplay("0.22 usd/h to usd/month", "160.71 $/month")
+        expectDisplay("50000 $/year to €/month", "3,787.88 €/month")
+        expectDisplay("2000 €/month to $/year", "26,400 $/year")
+        expectDisplay("12 €/h * 8 h", "96 €")
         expectDisplay("1km/h to m/month", "730,485 m/month")
         expectDisplay("1 km/h to m/year", "8,765,820 m/year")
-        expectDisplay("100 km/month to km/year", "1,200 km/year")
+        expectDisplay("0.5 $/km to $/mi", "0.8 $/mi")
+        expectError("1 $/h to m/month", "Cannot convert Money/Time to Speed.")
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }
+
+    // MARK: - Pinned exchange rates
+
+    /// Round numbers, and pinned so refreshing `CurrencyRates.bundled` never moves an assertion above.
+    /// USD is deliberately the only one that isn't 1:1-ish, which is what makes a wrong direction visible.
+    static let rates = CurrencyRates(
+        date: "2026-01-01",
+        perEUR: ["USD": 1.10, "GBP": 0.80, "JPY": 160, "CHF": 0.95, "SEK": 11])
 
     // MARK: - Fixed clock for deterministic date/time tests (Fri 2026-07-24 00:18:00 UTC)
 
@@ -293,7 +339,7 @@ struct CalcTests {
     static func expectDisplayAt(_ query: String, _ expected: String) {
         guard
             case .value(let display, _)? = CalcEngine.evaluate(
-                query, now: clock.now, calendar: clock.calendar)?.payload
+                query, now: clock.now, calendar: clock.calendar, rates: rates)?.payload
         else {
             fail(query, expected: expected, got: "nil / error")
             return
@@ -302,7 +348,7 @@ struct CalcTests {
     }
 
     static func expectBadgesAt(_ query: String, source: String, target: String) {
-        guard let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar)
+        guard let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar, rates: rates)
         else {
             fail(query, expected: "\(source) → \(target)", got: "nil")
             return
@@ -312,7 +358,7 @@ struct CalcTests {
     }
 
     static func expectNilAt(_ query: String) {
-        if let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar) {
+        if let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar, rates: rates) {
             fail(query, expected: "nil", got: "\(result.payload)")
         } else {
             passes += 1
@@ -320,7 +366,7 @@ struct CalcTests {
     }
 
     static func expectBadges(_ query: String, source: String, target: String) {
-        guard let result = CalcEngine.evaluate(query) else {
+        guard let result = CalcEngine.evaluate(query, rates: rates) else {
             fail(query, expected: "\(source) → \(target)", got: "nil")
             return
         }
@@ -329,7 +375,7 @@ struct CalcTests {
     }
 
     static func expectDisplay(_ query: String, _ expected: String) {
-        guard case .value(let display, _)? = CalcEngine.evaluate(query)?.payload else {
+        guard case .value(let display, _)? = CalcEngine.evaluate(query, rates: rates)?.payload else {
             fail(query, expected: expected, got: "nil / error")
             return
         }
@@ -337,7 +383,7 @@ struct CalcTests {
     }
 
     static func expectCopy(_ query: String, _ expected: String) {
-        guard case .value(_, let copy)? = CalcEngine.evaluate(query)?.payload else {
+        guard case .value(_, let copy)? = CalcEngine.evaluate(query, rates: rates)?.payload else {
             fail(query, expected: expected, got: "nil / error")
             return
         }
@@ -345,7 +391,7 @@ struct CalcTests {
     }
 
     static func expectError(_ query: String, _ expected: String) {
-        guard case .error(let message)? = CalcEngine.evaluate(query)?.payload else {
+        guard case .error(let message)? = CalcEngine.evaluate(query, rates: rates)?.payload else {
             fail(query, expected: "error: \(expected)", got: "nil / value")
             return
         }
@@ -353,7 +399,7 @@ struct CalcTests {
     }
 
     static func expectExpression(_ query: String, _ expected: String) {
-        guard let result = CalcEngine.evaluate(query) else {
+        guard let result = CalcEngine.evaluate(query, rates: rates) else {
             fail(query, expected: expected, got: "nil")
             return
         }
@@ -361,7 +407,7 @@ struct CalcTests {
     }
 
     static func expectNil(_ query: String) {
-        if let result = CalcEngine.evaluate(query) {
+        if let result = CalcEngine.evaluate(query, rates: rates) {
             fail(query, expected: "nil", got: "\(result.payload)")
         } else {
             passes += 1
