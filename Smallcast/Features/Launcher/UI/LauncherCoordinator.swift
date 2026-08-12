@@ -4,6 +4,7 @@ import AppKit
 @MainActor
 final class LauncherCoordinator {
     private let ranking: LauncherRankingStore
+    private let launchHistory: LaunchHistoryStore
     private let windowController: PaletteWindowController
     private let paletteCoordinator: PaletteCoordinator
     private let settingsCoordinator: SettingsCoordinator
@@ -19,6 +20,7 @@ final class LauncherCoordinator {
 
     init(
         ranking: LauncherRankingStore,
+        launchHistory: LaunchHistoryStore,
         windowController: PaletteWindowController,
         paletteCoordinator: PaletteCoordinator,
         settingsCoordinator: SettingsCoordinator,
@@ -32,6 +34,7 @@ final class LauncherCoordinator {
         core: AppCore
     ) {
         self.ranking = ranking
+        self.launchHistory = launchHistory
         self.windowController = windowController
         self.paletteCoordinator = paletteCoordinator
         self.settingsCoordinator = settingsCoordinator
@@ -53,6 +56,8 @@ final class LauncherCoordinator {
         if let searchQuery {
             ranking.record(itemKey: app.preferenceKey, query: searchQuery)
         }
+        // Every launch, query or not: the Recent list is about what happened, not what was typed.
+        launchHistory.record(itemKey: app.preferenceKey)
         // Commands dispatch before the palette hides: mode-switching commands keep it open.
         if app.kind == .command {
             runCommand(app)

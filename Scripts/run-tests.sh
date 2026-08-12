@@ -71,6 +71,7 @@ run file-search-session-test Smallcast/Platform/Signposts.swift \
                              Smallcast/Features/FileSearch/Model/*.swift \
                              Smallcast/Features/FileSearch/Service/*.swift
 run ranking-test           $L/SearchRelevance.swift $L/LauncherRankingStore.swift
+run launch-history-test    $L/LaunchHistoryStore.swift
 run scopes-test            $L/SearchScopes.swift
 run calc-test              Smallcast/Features/Calculator/Model/*.swift
 run clipboard-test         Smallcast/Features/Clipboard/Model/ClipboardStore.swift

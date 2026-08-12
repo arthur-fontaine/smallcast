@@ -7,6 +7,7 @@ final class AppCore {
     static let shared = AppCore()
 
     let launcherRanking: LauncherRankingStore
+    let launchHistory = LaunchHistoryStore()
     let appIndex: AppIndex
     let customCommands = CustomCommandStore()
     let quicklinks = QuicklinkStore()
@@ -75,7 +76,8 @@ final class AppCore {
         ranking: launcherRanking, core: self)
 
     @ObservationIgnored private(set) lazy var launcherCoordinator = LauncherCoordinator(
-        ranking: launcherRanking, windowController: windowController,
+        ranking: launcherRanking, launchHistory: launchHistory,
+        windowController: windowController,
         paletteCoordinator: paletteCoordinator,
         settingsCoordinator: settingsCoordinator,
         customCommandCoordinator: customCommandCoordinator,

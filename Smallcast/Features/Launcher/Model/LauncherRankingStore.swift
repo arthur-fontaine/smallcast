@@ -106,8 +106,21 @@ final class LauncherRankingStore {
     }
 
     func resetAll() {
-        guard !records.isEmpty else { return }
-        records = []
+        reset(since: nil)
+    }
+
+    /// Forgetting a window rather than everything: a record last used inside it goes, so undoing an
+    /// afternoon of habit doesn't cost the months before it.
+    func reset(since cutoff: Date?) {
+        guard let cutoff else {
+            guard !records.isEmpty else { return }
+            records = []
+            didMutate()
+            return
+        }
+        let oldCount = records.count
+        records.removeAll { $0.lastUsed >= cutoff }
+        guard records.count != oldCount else { return }
         didMutate()
     }
 

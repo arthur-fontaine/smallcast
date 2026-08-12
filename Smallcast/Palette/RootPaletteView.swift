@@ -17,6 +17,8 @@ struct RootPaletteView: View {
     @Environment(QuicklinkStore.self) private var quicklinks
     @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments
     @Environment(ExtensionManager.self) private var extensions
+    @Environment(LaunchHistoryStore.self) private var launchHistory
+    @Environment(RunningAppsMonitor.self) private var runningApps
     @Environment(AppSettings.self) private var settings
     @FocusState private var searchFocused: Bool
     /// Focus inside the inline argument fields, kept apart from the search field's own — the palette's
@@ -66,6 +68,11 @@ struct RootPaletteView: View {
         case .calculatorHistory:
             return CalculatorHistoryScreen(
                 history: calcHistory, currencyRates: currencyRates, core: core, vm: vm,
+                openActions: openActions)
+        case .recent:
+            return RecentScreen(
+                launchHistory: launchHistory, appIndex: appIndex, calcHistory: calcHistory,
+                favorites: favorites, runningApps: runningApps, core: core, vm: vm,
                 openActions: openActions)
         case .extensionCommand:
             return ExtensionCommandScreen(
@@ -271,6 +278,7 @@ struct RootPaletteView: View {
                 moveMenu(-1)
                 return .handled
             }
+            if openRecentFromTop() { return .handled }
             moveVertically(-1)
             return .handled
         }
@@ -650,6 +658,13 @@ struct RootPaletteView: View {
         }
         vm.selection = next
         scroll = ScrollIntent(kind: .follow)
+    }
+
+    /// ↑ with nothing typed and nothing above it opens what you just did, as a shell prompt would.
+    private func openRecentFromTop() -> Bool {
+        guard vm.mode == .launcher, vm.query.isEmpty, vm.selection == 0 else { return false }
+        vm.prepare(mode: .recent)
+        return true
     }
 
     /// ←/→: consumed only by a horizontally navigating screen, else the caret keeps them.

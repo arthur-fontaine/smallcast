@@ -12,6 +12,8 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case quicklinkArguments
     /// A Raycast extension command rendering into the palette.
     case extensionCommand
+    /// What you just did — launches and calculations, newest first.
+    case recent
 
     var id: String { rawValue }
     var title: String {
@@ -25,6 +27,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .quicklinks: return "Quicklinks"
         case .quicklinkArguments: return "Open Quicklink"
         case .extensionCommand: return "Extension"
+        case .recent: return "Recent"
         }
     }
     var systemImage: String {
@@ -37,6 +40,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .uninstall: return "trash"
         case .quicklinks, .quicklinkArguments: return Quicklink.sfSymbol
         case .extensionCommand: return "puzzlepiece.extension"
+        case .recent: return "clock.arrow.circlepath"
         }
     }
     var placeholder: String {
@@ -52,6 +56,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .quicklinkArguments: return "Enter a value…"
         // Replaced by the command's own `searchBarPlaceholder` whenever it declares one.
         case .extensionCommand: return "Search…"
+        case .recent: return "Search what you did recently…"
         }
     }
 }

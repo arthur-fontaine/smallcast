@@ -118,7 +118,7 @@ struct LauncherList: View {
     }
 }
 
-private struct AppRow: View {
+struct AppRow: View {
     let app: AppEntry
     let selected: Bool
     let running: Bool

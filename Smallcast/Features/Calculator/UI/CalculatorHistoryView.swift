@@ -102,7 +102,7 @@ struct CalculatorHistoryList: View {
     }
 }
 
-private struct CalcHistoryRow: View {
+struct CalcHistoryRow: View {
     let entry: CalcHistoryEntry
     let selected: Bool
     @State private var hovered = false
