@@ -2,12 +2,23 @@
 
 A tiny, fully native macOS launcher — the essentials, without the bloat.
 
-<!-- Screenshot placeholder — drop the real image at docs/screenshot.png -->
+<p align="center">
+  <a href="https://discord.gg/v2Eeb4QQy3">
+    <img alt="Join the Smallcast Discord"
+         src="https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?style=flat&logo=discord&logoColor=white"></a>
+  <a href="mailto:iabueammar@gmail.com?subject=Hiring%20enquiry">
+    <img alt="Hire me — iabueammar@gmail.com"
+         src="https://img.shields.io/badge/Hire%20me-Let's%20talk-111111?style=flat&logo=gmail&logoColor=white"></a>
+  <a href="LICENSE">
+    <img alt="License: AGPL-3.0"
+         src="https://img.shields.io/badge/License-AGPL--3.0-3DA639?style=flat"></a>
+</p>
+
 <p align="center">
   <img src="docs/screenshot.png" alt="Smallcast command palette" width="720">
 </p>
 
-Around **4 MB on disk** and **under 100 MB of RAM** — no Electron, no telemetry, no background
+Around **3 MB on disk** and **under 100 MB of RAM** — no Electron, no telemetry, no background
 CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there's nothing to it.
 
 It also **runs Raycast extensions** — the real ones, rendered as native SwiftUI. No Node.js, no browser:
@@ -15,17 +26,16 @@ JavaScriptCore ships with macOS, so that costs no extra binary size.
 
 ## Features
 
-- **App launcher** — fuzzy-search and launch anything, typos included; what you use most floats up,
-  and ↑ on an empty search brings back what you just ran or calculated.
-- **Calculator** — do math and unit conversions inline, including across units: `1km + 1m`,
-  `100km / 2h` → `50 km/h`.
+- **App launcher** — fuzzy-search and launch anything, pin favorites, see what's running, quit an app
+  or every app at once.
+- **Custom commands** — run named shell commands through fuzzy search or their own global hotkeys.
+- **Calculator** — do math, unit and live currency conversions inline, right in the palette.
 - **Clipboard history** — text and images, searchable, pasted back into the app you were using.
+- **Snippets** — reusable Markdown templates with dynamic placeholders, arguments, nested references
+  and optional keyword expansion.
+- **Raycast extensions** — import the ones an installed Raycast already built, and run them natively.
 - **Global hotkey** — one shortcut summons the palette from anywhere.
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
-- **Window management** — optional Raycast-style commands: halves, thirds, quarters, sixths, Almost
-  Maximize, Reasonable Size, move between displays.
-- **Raycast extensions** — import the ones you already have and run them natively; give any of them a
-  native icon and colour if the one it ships looks out of place.
 
 ## Install
 
@@ -34,7 +44,10 @@ brew trust --tap arthur-fontaine/smallcast   # required for third-party taps
 brew tap arthur-fontaine/smallcast
 brew install --cask smallcast          # stable
 brew install --cask smallcast@beta     # beta  (installs side-by-side)
+brew install --cask smallcast-sequoia  # stable channel  (macOS 15 Sequoia)
 ```
+
+Smallcast also runs on macOS 15 Sequoia — install the `smallcast-sequoia` cask above.
 
 Each channel is a separate app (`Smallcast.app`, `Smallcast Beta.app`) with its own settings and
 permissions, so you can run stable next to the beta.
@@ -46,43 +59,39 @@ directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine
 
 ## Permissions
 
-**Accessibility** — needed so Smallcast can paste a clipboard item back into the app you came from,
-and to move other apps' windows. You're prompted the first time you paste; grant it in **System
-Settings → Privacy & Security → Accessibility**.
+**Accessibility** — needed when Smallcast pastes or expands text into another app, and the only
+permission snippet keyword expansion needs. You're prompted when you first use a feature that needs
+it; grant access in **System Settings → Privacy & Security → Accessibility**. Snippets ship
+disabled, and keystrokes are matched locally, never stored and never sent anywhere.
 
 ## Using it
 
 1. Open **Settings → General** and record a global shortcut to summon Smallcast.
 2. Press it anywhere → the palette floats in. Type to filter, **↵** to launch.
-3. **Tab** switches between Apps and Clipboard; **↑/↓** move. **Esc** clears what you typed, and
-   closes when there's nothing left to clear — and a search you walk away from is still there if you
-   come back within 30 seconds.
-   With the search empty, **↑** opens *Recent* — everything you last ran or calculated.
-4. **Settings → App Hotkeys** — search an app and record a shortcut to toggle it.
-5. **Settings → Extensions** — import Raycast extensions, then run their commands from the palette.
-6. **Settings → Search** — see what the ranking has learned and reset it (the last hour, today, or
-   all of it).
-7. **Settings → General → Window Management** — turn on the window commands, then bind shortcuts to
-   them in **Settings → Shortcuts → Commands**. See **[docs/windows.md](docs/windows.md)**.
-
-### Raycast extensions
-
-Smallcast runs the same prebuilt extension bundles Raycast does. **Settings → Extensions → Import from
-Raycast** copies the ones already built on your machine; **Add Extension Folder…** takes any directory
-you've run `ray build` in. Their commands then appear in the launcher under *Extensions*, and their
-`List`, `Grid`, `Detail` and `Form` screens are drawn natively — same keyboard model, ⌘K action panel
-included.
-
-Most extensions work as-is. The notable exceptions are ones that sign in through Raycast's OAuth
-redirect service, `menu-bar` commands, and Raycast's own cloud features (AI). Raycast's built-in window
-management is replaced by Smallcast's own commands (above).
-See **[docs/extensions.md](docs/extensions.md)** for the full picture.
+3. **Tab** switches between Apps and Clipboard; **↑/↓** move, **Esc** dismisses.
+4. **Settings → Shortcuts** — search an app or custom command and record a global shortcut.
+5. **Settings → Snippets** — enable the feature, then create templates with expansion keywords.
 
 ## Building from source
 
-See **[docs/development.md](docs/development.md)** for the toolchain, build, packaging, release,
-and website workflows, **[docs/ui.md](docs/ui.md)** for the UI design system, and
-**[docs/extensions.md](docs/extensions.md)** for how the extension runtime works.
+See **[docs/development.md](docs/development.md)** for the toolchain, build, packaging, release and
+website workflows. **[docs/](docs/README.md)** indexes everything else — architecture, engineering
+standards, the design system and one document per feature.
+
+## Contributing
+
+> [!IMPORTANT]
+> **Open an issue before you write code — this is mandatory.** Get the bug or the feature agreed on
+> first; discussing it in the issue (or on [Discord](https://discord.gg/v2Eeb4QQy3)) is strongly
+> encouraged. A PR with no agreed issue behind it gets closed however good the patch is, and the
+> work is wasted. Typo and docs-only fixes are the one exception.
+
+Read **[CONTRIBUTING.md](CONTRIBUTING.md)** first — it covers the memory budget every PR is held to,
+the before/after video requirement for visual changes, and why features get declined. Every PR fills
+in the **[pull request template](.github/PULL_REQUEST_TEMPLATE.md)**. Security issues go through
+[SECURITY.md](SECURITY.md), not the issue tracker.
+
+Questions, ideas, or just want to follow along? **[Join the Discord](https://discord.gg/v2Eeb4QQy3)**.
 
 ## License
 

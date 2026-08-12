@@ -26,6 +26,10 @@
 	<true/>
 	<key>NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Smallcast uses automation to perform system actions you explicitly run.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Smallcast uses Bluetooth access only when you run the Toggle Bluetooth action.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Smallcast</string>
 </dict>

@@ -1,24 +1,28 @@
 # Development
 
-How to build, test, package, and release Smallcast.
+The local loop: set up, build, run, regenerate. Shipping a build is [release.md](release.md);
+verifying a change is [testing.md](testing.md).
 
 ## Requirements
 
 - macOS 26 or later (Liquid Glass).
-- Xcode 26 installed — it provides the SwiftUI macro plugin and SDK used to build.
+- Xcode 26 — it provides the SwiftUI macro plugin and the SDK.
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen), and for linting:
+  `brew install swiftlint`.
 
 ## First-time setup
 
-Create the `Smallcast Self-Signed` code-signing identity once — builds sign with it, which keeps the
-macOS Accessibility grant from being forgotten every rebuild. Follow **[signing.md](signing.md) §1**
-(a few `openssl`/`security` commands).
+Create the `Smallcast Self-Signed` code-signing identity once — builds sign with it, which is what keeps
+macOS from forgetting the Accessibility grant on every rebuild. Follow **[signing.md](signing.md) §1**,
+a few `openssl`/`security` commands.
+
+That is the whole required setup. Editor configuration is personal and the repo does not prescribe it;
+the section below is a note for anyone who wants it, not a step.
 
 ## Build & run
 
-Open the project in Xcode and run it:
-
 ```sh
-open Smallcast.xcodeproj    # then press ⌘R
+open Smallcast.xcodeproj    # then ⌘R
 ```
 
 Or from the command line:
@@ -31,149 +35,139 @@ xcodebuild -project Smallcast.xcodeproj -scheme Smallcast -configuration Debug b
 Xcode, prefix with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (the SwiftUI
 `@State`/`@FocusState` macros need Xcode's macOS platform).
 
-`Smallcast.xcodeproj` is committed and generated from `project.yml` via
-[XcodeGen](https://github.com/yonaskolb/XcodeGen) — after changing project settings in `project.yml`,
-run `xcodegen generate` and commit the result.
+`Smallcast.xcodeproj` is committed and generated from `project.yml` via XcodeGen — after changing
+project settings in `project.yml`, run `xcodegen generate` and commit the result. There is no
+`Package.swift`, and `Bundle.module` must never be used.
 
 ### The dev channel
 
-Debug builds are a separate channel: **`Smallcast Dev.app`**, bundle id `com.smallcast.app.dev`. Since
-every persisted thing is keyed by bundle
-id — `~/Library/Preferences/<id>.plist` (settings + hotkey bindings),
-`~/Library/Caches/<id>/` (clipboard history, calculator history, frequent emoji),
-`~/Library/Application Support/<id>/` (the onboarding marker), the `SMAppService` login item, and the
-Accessibility / Input Monitoring (TCC) grants — a build you run locally can't read or clobber the
-installed app's state, and both can run side-by-side.
+Debug builds are a separate channel: **`Smallcast Dev.app`**, bundle id `com.smallcast.app.dev`. Every
+persisted thing is keyed by bundle id — `~/Library/Preferences/<id>.plist` (settings and hotkey
+bindings), `~/Library/Caches/<id>/` (clipboard history, calculator history, exchange rates, frequent
+emoji), `~/Library/Application Support/<id>/` (the onboarding marker and snippets), the `SMAppService`
+login item, and the Accessibility / Input Monitoring (TCC) grants — so a local build can neither read
+nor clobber an installed app's state, and both run side by side.
 
 Consequences worth knowing:
 
 - The dev build asks for Accessibility on its own the first time, and starts with **no** hotkeys bound
-  and onboarding unseen. Grant + bind once; it persists across rebuilds (the fixed build path and the
-  `Smallcast Self-Signed` identity keep the TCC grant alive).
+  and onboarding unseen. Grant and bind once; it persists across rebuilds, because the fixed build path
+  and the `Smallcast Self-Signed` identity keep the TCC grant alive.
 - Don't bind the same global hotkey in both — whichever registered first wins.
-- The Hyper Key's Caps Lock remap is `hidutil` state, which is **system-wide, not per-bundle**:
-  quitting one build clears the remap for the other, which then needs a rebind (or relaunch) to
-  restore it.
+- The Hyper Key's Caps Lock remap is `hidutil` state, which is **system-wide, not per-bundle**: quitting
+  one build clears the remap for the other, which then needs a rebind or a relaunch to restore it.
 
-### Editor (VS Code) code-intelligence
+## Editor
 
-Autocomplete / go-to-definition come from SourceKit-LSP driven by a `buildServer.json`. Generate it
-once (it's machine-specific and git-ignored):
+Xcode works out of the box and needs nothing here. Everything below is optional, and which editor you
+use is your business — the repo prescribes none of it.
+
+VS Code gets code intelligence from SourceKit-LSP, which needs a `buildServer.json` because there is no
+`Package.swift`. Build once, then hand the log to the sync script — that writes both `buildServer.json`
+and the flag database:
 
 ```sh
 brew install xcode-build-server
-xcode-build-server config -project Smallcast.xcodeproj -scheme Smallcast \
-    --build_root "$PWD/build/DerivedData"
+xcodebuild -project Smallcast.xcodeproj -scheme Smallcast -configuration Debug \
+    -derivedDataPath build/DerivedData build 2>&1 | tee /tmp/smallcast-build.log
+./Scripts/sync-lsp.sh /tmp/smallcast-build.log
 ```
 
-`--build_root` matches the fixed path the VS Code build task / F5 use, so the editor indexes what you
-actually build. Do a build once (⌘⇧B or F5) to populate it. In VS Code, **F5** builds and launches the
-app; changes always apply (fixed build path — no need to delete `build/`).
+Both files are git-ignored because they embed absolute paths, and `sourcekit-lsp` looks for
+`buildServer.json` at the workspace root by name, so it cannot live in a subfolder. After this the
+**Build Smallcast.app (debug)** task (⌘⇧B) and **F5** re-run the script on every build, so new and
+renamed files keep resolving.
 
-## The extension runtime
+**Do not run `xcode-build-server config`.** It writes `kind: xcode`, and in that mode the server ignores
+`.compile` entirely — it serves flags from a cache it scrapes out of `.xcactivitylog` instead. That
+cache is only refreshed when `LogStoreManifest.plist` advances, and when the manifest stops updating
+(it does) the editor silently pins itself to the source list from some older build: every reference to a
+file added since reads *cannot find type X in scope*, in every file, until you restart the server. It
+also mixes Release entries in with Debug and lets them win. `Scripts/sync-lsp.sh` keeps the mode
+`manual`, where `.compile` is the single source of truth.
 
-`Smallcast/Resources/RaycastRuntime.generated.js` (React + a reconciler + the `@raycast/api` shim + the
-Node/web polyfills JavaScriptCore lacks) is **generated and committed**, so a plain app build needs no
-Node. Regenerate it only when changing `Tools/raycast-runtime/src/`:
+### Symbols in `Tests/`
+
+`xcodebuild` never compiles the harnesses — they are not in the Xcode project — so nothing emits a
+compile command for them, and without one an open harness reports every shipped type it uses as *cannot
+find in scope*. Measured on `fuzz-test.swift`: 60 errors with no entry, 0 with one.
 
 ```sh
-cd Tools/raycast-runtime
-pnpm install
-node gen-enums.mjs        # only after bumping the @raycast/api devDependency
-node build.mjs            # -> Smallcast/Resources/RaycastRuntime.generated.js (commit it)
+./Scripts/run-tests.sh --index    # merge the harness compile commands into .compile
 ```
 
-Details, the supported API surface and the known gaps: [`extensions.md`](extensions.md).
+It reads the source lists from `run-tests.sh` itself, so they cannot drift from what the suite actually
+compiles. `Scripts/sync-lsp.sh` runs it too. Three things it has to get right, all of which fail
+silently otherwise: every path is absolute, because `sourcekit-lsp` resolves the command itself and does
+not apply `directory` to relative arguments; the command carries an explicit `-sdk`; and each entry
+claims **only its own harness** in `files`. The command still lists every shipped source it compiles, so
+symbols resolve inside the harness — but claiming those sources too would hand them this three-file
+command instead of the app's, and `.compile` is last-wins.
 
-## Tests
+Re-run it after adding a harness, then **Swift: Restart LSP Server** from the Command Palette — an
+already-running server does not re-read `.compile`.
 
-There's no XCTest target. Standalone harnesses, all compiling the **real** sources:
+## Linting
 
 ```sh
-swiftc Smallcast/Core/{FuzzyMatch,UsageStore}.swift Tools/fuzz-test.swift \
-    -o /tmp/fuzz-test && /tmp/fuzz-test                            # launcher matcher + frecency
-swiftc Smallcast/Core/Calculator/*.swift Tools/calc-test.swift \
-    -o /tmp/calc-test && /tmp/calc-test                            # calculator engine
-swiftc Smallcast/Core/Emoji/{EmojiCatalog,EmojiGridGeometry,EmojiData.generated}.swift \
-    Tools/emoji-test.swift -o /tmp/emoji-test && /tmp/emoji-test    # emoji catalog + grid geometry
-swiftc Smallcast/Core/WindowManagement/{WindowAction,WindowGeometry}.swift \
-    Tools/window-test.swift -o /tmp/window-test && /tmp/window-test # window arrangement geometry
-swiftc Smallcast/Core/Extensions/SymbolCatalog.swift Tools/symbols-test.swift \
-    -o /tmp/symbols-test && /tmp/symbols-test                       # SF Symbol catalog + search
-swiftc -parse-as-library -swift-version 6 \
-    Smallcast/Core/Extensions/{ExtensionRuntime,ExtensionNodeShims,ExtensionBootConfig,ExtensionManifest,ExtensionScreen,ExtensionCatalog,ExtensionFetcher,RenderNode}.swift \
-    Smallcast/Core/FuzzyMatch.swift Smallcast/Core/Compression/Zlib.swift \
-    Tools/ext-test.swift -o /tmp/ext-test && /tmp/ext-test         # extension runtime (JavaScriptCore)
+./Scripts/lint.sh          # lint the whole project
+./Scripts/lint.sh --fix    # auto-correct the mechanical subset first
 ```
 
-That the harnesses compile the shipped sources is why `Smallcast/Core/Calculator/`,
-`Smallcast/Core/Emoji/` and the two geometry files in `Smallcast/Core/WindowManagement/` must stay
-Foundation-only, and why `FuzzyMatch` is its own Foundation-only file.
+[SwiftLint](https://github.com/realm/SwiftLint) is the only code-quality tool here. `.swiftlint.yml` at
+the repo root excludes the generated files and the two off-limits files in `DesignSystem/Scrolling/`.
+The comment policy in [standards.md](standards.md#comments) is deliberately not among its rules.
 
-`ext-test` also runs any installed extension and prints the tree it renders:
+## Formatting
 
 ```sh
-/tmp/ext-test ~/Library/Application\ Support/com.smallcast.app.dev/extensions/<name> [command]
+./Scripts/format.sh            # format Smallcast/ and Tests/ in place
+./Scripts/format.sh --check    # report what would change, write nothing (exit 1 if any)
 ```
 
-The JS half has its own faster loop, which needs no Swift build:
+`swift-format` from the Xcode toolchain — the same binary sourcekit-lsp formats with, so ⌘S in VS Code
+and this script cannot disagree. `.swift-format` at the repo root tunes it to this tree; without it the
+stock config defaults to 2-space indent and rewrites all 200 files.
+
+Both `*.generated.swift` files are excluded: formatting one is hand-editing it, and the next
+`node Scripts/gen-emoji.js` would revert it. swift-format also refuses any file that does not parse, so
+a failure from either command is a syntax error rather than a tooling problem — and it is why ⌘S looks
+like it does nothing while a file is mid-edit with unbalanced braces.
+
+**Think twice before leaning on this.** A formatter was rejected here on measured evidence, and that
+stands: running it over the tree touched 68 files, and 67 of those changed more than whitespace.
+
+The config sticks to rules that catch defects and stays quiet about style, because **there is no
+formatter**, on measured evidence. Formatting is
+Xcode's re-indent (⌃I), as it always has been. Two consequences worth knowing:
+
+- `empty_count` is **disabled**, and `isEmpty`-style rewrites are unsafe here generally:
+  `LauncherRankingRecord` and `PaletteRowIndex` have a `count` that is a hit count, not a collection
+  count. A rule that rewrites `count > 0` to `!isEmpty` on them does not compile.
+- `force_try` is an error; `force_cast` only warns, because the AX and AppKit bridges have four
+  legitimate ones.
+
+Errors block, warnings do not. CI runs this same script on every PR and annotates the diff with each
+violation — see [release.md](release.md#continuous-integration) — so run it locally first rather than
+finding out from a review.
+
+## Generated data
+
+Two Swift files are emitted by scripts and must never be hand-edited. Both download their source, so
+run them online, then commit the result:
 
 ```sh
-cd Tools/raycast-runtime
-node fixtures.mjs                                          # runtime fixtures in a bare `vm` context
-node test.mjs ~/.config/raycast/extensions/<uuid> [command]  # any prebuilt extension
+node Scripts/gen-emoji.js            # -> Smallcast/Features/Emoji/Model/EmojiData.generated.swift
+node Scripts/gen-currencies.js       # -> Smallcast/Features/Calculator/Model/CurrencyData.generated.swift
 ```
 
-## Packaging a DMG
+`gen-currencies.js` joins two sources on the ISO code: **Frankfurter**'s currency list — the same feed
+`CurrencyRateStore` fetches rates from, so the table and the rate source cannot drift apart — and
+**Unicode CLDR**'s `en` currency data, which supplies display names, signs and the singular/plural
+noun. It reads the pinned `cldr-json` checkout rather than the host's `Intl`, whose output shifts with
+the local ICU version and would make the file unreproducible.
 
-For a local signed DMG:
-
-```sh
-./build-dmg.sh            # -> build/Smallcast-<version>.dmg (version from project.yml)
-./build-dmg.sh 0.5.7      # -> build/Smallcast-0.5.7.dmg
-```
-
-It builds a Release `Smallcast.app` signed with `Smallcast Self-Signed` and packs it (with an
-`/Applications` symlink). Official per-channel releases (beta/stable) are built by CI — see
-below and [`.github/workflows/release.yml`](../.github/workflows/release.yml).
-
-## Signing & Gatekeeper
-
-Both local builds and CI releases sign with the same stable `Smallcast Self-Signed` identity (not an
-Apple Developer ID), so macOS quarantines a directly-downloaded DMG — the Homebrew cask strips that
-automatically, and direct downloaders run `xattr -dr com.apple.quarantine "…/Smallcast.app"` once.
-Full details in [signing.md](signing.md).
-
-## CI releases
-
-`.github/workflows/release.yml` builds and publishes a DMG from GitHub Actions — no local machine
-needed. Run it from the **Actions** tab (`Release` → **Run workflow**) and pick:
-
-- **channel** — `beta` or `stable`. Each builds a distinct app
-  (`Smallcast Beta.app` / `Smallcast.app`) with its own bundle id, alongside the local
-  `Smallcast Dev.app` (above).
-  Beta gets an auto-incrementing `-beta.N` suffix (`N` = the Actions run number)
-  so re-running never collides; stable ships the version as-is.
-- **version** — base semver, e.g. `0.2.0`.
-
-It builds on a `macos-26` runner with Xcode 26 and publishes a GitHub Release tagged
-`v<full-version>` with a versioned DMG asset (`Smallcast-<full-version>.dmg`), marked prerelease
-for beta. On success it also bumps the matching cask in the tap (below).
-
-### Homebrew tap automation
-
-The release job's final step rewrites the `version` + `sha256` of the channel's cask (`smallcast`
-or `smallcast@beta`) in the
-[`homebrew-smallcast`](https://github.com/arthur-fontaine/homebrew-smallcast) tap and pushes. It needs a
-`HOMEBREW_TAP_TOKEN` repo secret — a fine-grained PAT with **Contents: read/write** on the tap
-repo. Without the secret the step logs a warning and skips (the release still publishes).
-
-## Website
-
-`.github/workflows/website.yml` builds `website/` (Vite + React + TS) and deploys it to GitHub
-Pages at `https://abue-ammar.github.io/tinycast/` on every push to `main` that touches
-`website/`. Enable it once via **Settings → Pages → Source = GitHub Actions**.
-
-```sh
-cd website && npm install && npm run dev     # local preview
-```
+Only unambiguous data is emitted. Anything two currencies claim — `dollars`, `pounds`, `krona` — is
+left out and decided by hand in `CalcCurrency.contested`, the one currency table still written by hand.
+Re-run the script when a currency is added or retired; nothing breaks in the meantime, since an
+unquoted code just reports "no exchange rate".

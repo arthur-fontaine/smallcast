@@ -1,0 +1,78 @@
+import Foundation
+
+/// Palette state shared between the panel's SwiftUI tree and the coordinator.
+@MainActor
+@Observable
+final class PaletteState {
+    var mode: PaletteMode = .launcher
+    var query: String = ""
+    var selection: Int = 0
+    /// Changes every time the palette is shown so the search field can re-focus.
+    var focusToken = UUID()
+    /// Bumped only by `prepare`, so lists snap to the top even when nothing else changed.
+    var resetToken = UUID()
+    /// Bumped when an action reorders the list, so the highlight scrolls back into view.
+    var followToken = UUID()
+    /// Set by the compact bar's overflow to expand without a query; cleared by `prepare`.
+    var forceExpanded = false
+    /// The paste target, mirrored on every show; `prepare` resets the screen, not this.
+    var pasteTarget: PasteTarget?
+    /// Values typed into the inline argument fields an extension command declares, keyed by
+    /// `argumentKey`. Cleared with the rest of the screen.
+    var commandArguments: [String: String] = [:]
+    /// True only once the pointer has moved of its own accord; untracked, so it never re-renders.
+    @ObservationIgnored private(set) var hoverHighlightArmed = false
+    /// Bumped when the highlight drops, so a lit row clears even though the pointer never left it.
+    private(set) var hoverDisarmToken = UUID()
+    /// Where the pointer stood when the list last moved on its own; movement is measured from here.
+    @ObservationIgnored private var hoverAnchor: CGPoint = .zero
+    /// The search field's frame, published by the view that owns it. The panel's cursor policy
+    /// is a containment test against this: hit-testing a rebuilding hierarchy misses the field.
+    @ObservationIgnored var searchFieldFrame: CGRect = .zero
+    /// True while a footer menu is open. See docs/features/palette.md#menu-open-input-freeze.
+    @ObservationIgnored var menuOpen = false { didSet { onMenuOpenChanged?(menuOpen) } }
+    /// Fired when `menuOpen` flips, so the panel can hide the caret without a focus swap.
+    @ObservationIgnored var onMenuOpenChanged: ((Bool) -> Void)?
+    /// Fired at the *start* of every reset, while the query is still readable — the one moment a
+    /// calculation you only looked at can still be remembered.
+    @ObservationIgnored var onWillReset: (() -> Void)?
+
+    func prepare(mode: PaletteMode) {
+        onWillReset?()
+        self.mode = mode
+        query = ""
+        selection = 0
+        commandArguments = [:]
+        forceExpanded = false
+        dropHoverHighlight()
+        menuOpen = false
+        focusToken = UUID()
+        resetToken = UUID()
+    }
+
+    /// U+0001 can't appear in an entry id or an argument name, so the halves stay unambiguous.
+    nonisolated static func argumentKey(_ entryID: String, _ name: String) -> String {
+        entryID + "\u{1}" + name
+    }
+
+    /// The pointer moved, which re-lights the highlight once it has cleared the arming slop.
+    func notePointerMoved(to location: CGPoint) {
+        guard !hoverHighlightArmed, HoverArming.isDeliberate(location, from: hoverAnchor) else {
+            return
+        }
+        hoverHighlightArmed = true
+    }
+
+    /// Keys and scrolling move the list themselves, so the highlight drops and movement is then
+    /// measured from where the pointer stands now — drift under it is not a new choice of row.
+    func disarmHoverHighlight(pointerAt location: CGPoint) {
+        hoverAnchor = location
+        dropHoverHighlight()
+    }
+
+    private func dropHoverHighlight() {
+        guard hoverHighlightArmed else { return }
+        hoverHighlightArmed = false
+        hoverDisarmToken = UUID()
+    }
+}
