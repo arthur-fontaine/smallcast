@@ -90,7 +90,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     var searchFields: SearchFields {
         SearchFields(
             names: [name] + matchAliases, alternateNames: alternateNames,
-            bundleID: bundleID, executableName: executableName)
+            bundleID: bundleID, executableName: executableName, category: kindLabel)
     }
 
     var kindLabel: String { kindLabelOverride ?? kind.descriptor.label }

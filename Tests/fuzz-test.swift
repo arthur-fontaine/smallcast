@@ -10,6 +10,7 @@ struct FuzzTest {
         var alternates: [String] = []
         var bundleID: String?
         var executable: String?
+        var category: String? = "Application"
 
         /// Mirrors AppEntry.searchFields, including the alternate-name sanitizing the scan applies.
         var fields: SearchFields {
@@ -17,7 +18,7 @@ struct FuzzTest {
                 names: [name],
                 alternateNames: SearchFields.usableAlternateNames(
                     alternates, displayName: name, fileName: name + ".app"),
-                bundleID: bundleID, executableName: executable)
+                bundleID: bundleID, executableName: executable, category: category)
         }
     }
 
@@ -101,11 +102,63 @@ struct FuzzTest {
         fieldPriority()
         alternateNameSanitizing()
         identifierFields()
+        typoTolerance()
+        categoryMatching()
         edgeCases()
         propertyLoop()
 
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         exit(failures == 0 ? 0 : 1)
+    }
+
+    // MARK: - Typo tolerance
+
+    static func typoTolerance() {
+        print("\n# typo tolerance")
+
+        check("'chorme' still finds Google Chrome", score("chorme", "Google Chrome") != nil)
+        check("'terminla' still finds Terminal", score("terminla", "Terminal") != nil)
+        // Matching a word start, not only the whole name.
+        check("'sharring' finds Screen Sharing", score("sharring", "Screen Sharing") != nil)
+
+        // A typo never outranks a real match — that is the whole point of the band.
+        let chess = rank("chesss")
+        check("'chesss' top is Chess", chess.first == "Chess", "got \(chess)")
+        check(
+            "an exact name beats another entry's typo",
+            score("chess", "Chess")! > score("chesss", "Chess")!)
+
+        // Short queries get no slack: at three characters almost everything is one edit away.
+        check("'cat' is not a typo of Chess", score("cat", "Chess") == nil)
+        check("'wick' does not typo-match WhatsApp", score("wick", "WhatsApp") == nil)
+        check(
+            "the allowance grows with the query",
+            FuzzyMatch.allowedDistance(forQueryLength: 3) == 0
+                && FuzzyMatch.allowedDistance(forQueryLength: 5) == 1
+                && FuzzyMatch.allowedDistance(forQueryLength: 9) == 2)
+    }
+
+    // MARK: - Category matching
+
+    static func categoryMatching() {
+        print("\n# category matching")
+
+        var command = App(name: "Move Window Left")
+        command.category = "Window Management"
+        check(
+            "a category names its whole group",
+            SearchRelevance.score(query: "window man", fields: command.fields) != nil)
+        check(
+            "a mid-word substring is not a category match",
+            SearchRelevance.score(query: "anage", fields: command.fields) == nil)
+        check(
+            "'cat' does not pull in every Application",
+            SearchRelevance.score(query: "cat", fields: app("Photos").fields) == nil)
+        // Weakest band of all: anything actually named that comes first.
+        check(
+            "a name beats a category",
+            SearchRelevance.score(query: "window", fields: App(name: "Window Server").fields)!
+                > SearchRelevance.score(query: "window", fields: command.fields)!)
     }
 
     // MARK: - Display-name ranking (unchanged behavior)
@@ -409,7 +462,9 @@ struct FuzzTest {
                 // Every score sits inside exactly one band, and the boost cap cannot lift it out.
                 let band = score / SearchRelevance.bandStride
                 let offset = score - band * SearchRelevance.bandStride
-                if offset < 0 || offset > FuzzyMatch.maximumScore || band > 5 { bandViolations += 1 }
+                if offset < 0 || offset > FuzzyMatch.maximumScore || band >= SearchRelevance.bandCount {
+                    bandViolations += 1
+                }
                 if (score + LauncherRankingBoostCap) / SearchRelevance.bandStride != band {
                     boostCrossedBand += 1
                 }
