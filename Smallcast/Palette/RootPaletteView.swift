@@ -273,12 +273,13 @@ struct RootPaletteView: View {
             return .handled
         }
         .onKeyPress(.upArrow) {
-            if isCollapsed { return .ignored }
             if menuOpen {
                 moveMenu(-1)
                 return .handled
             }
+            // Before the compact guard: the bar has nothing above it either, so ↑ means the same.
             if openRecentFromTop() { return .handled }
+            if isCollapsed { return .ignored }
             moveVertically(-1)
             return .handled
         }
@@ -441,9 +442,11 @@ struct RootPaletteView: View {
                     .frame(width: Theme.Size.headerIconSlot)
             }
             headerGutter(width: Theme.Spacing.md)
+            // One structural position, always: putting the field inside a branch tears down its
+            // field editor when the branch flips, which drops first responder mid-navigation.
+            // The width shrinks to the typed text so argument fields sit right after it, as in Raycast.
+            searchField.frame(width: selectedCommandArguments.map(searchFieldWidth))
             if let arguments = selectedCommandArguments {
-                // The field shrinks to the typed text so the fields sit right after it, as in Raycast.
-                searchField.frame(width: searchFieldWidth(for: arguments))
                 CommandArgumentsRow(
                     arguments: arguments,
                     icon: (screen as? LauncherScreen)?.argumentIconPath(
@@ -452,8 +455,6 @@ struct RootPaletteView: View {
                     focused: $argumentFocused,
                     onSubmit: activateSelection)
                 Spacer(minLength: 0)
-            } else {
-                searchField
             }
             // Compact pins favorites beside the field; expanded shows them as rows.
             if isCollapsed, settings.showFavoritesInCompactMode,
@@ -656,6 +657,11 @@ struct RootPaletteView: View {
 
     /// ↑/↓: the screen's own move where it has one, else a linear step through the rows.
     private func moveVertically(_ delta: Int) {
+        // Moving off a command takes its argument fields with it, so hand focus back first.
+        if argumentFocused != nil {
+            argumentFocused = nil
+            searchFocused = true
+        }
         let screen = screen
         guard let next = screen.move(delta, axis: .vertical, from: selection(in: screen)) else {
             move(delta, in: screen)
@@ -667,7 +673,9 @@ struct RootPaletteView: View {
 
     /// ↑ with nothing typed and nothing above it opens what you just did, as a shell prompt would.
     private func openRecentFromTop() -> Bool {
-        guard vm.mode == .launcher, vm.query.isEmpty, vm.selection == 0 else { return false }
+        guard vm.mode == .launcher, vm.query.isEmpty, isCollapsed || vm.selection == 0 else {
+            return false
+        }
         vm.prepare(mode: .recent)
         return true
     }
