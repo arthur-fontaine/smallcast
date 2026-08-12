@@ -340,11 +340,18 @@ struct CalcTests {
         // Adjacency is different: there a bare number is a unit still being typed, so it stays silent
         expectNil("1hr 30")  // mid-way through "1hr 30min"
         expectNil("5 feet 3")  // mid-way through "5 feet 3 inches"
-        expectError(
-            "1kg * 1m",
-            "Multiplication of two unit values is not supported.")
-        expectError("1 / 1kg", "Division by a unit value is not supported.")
-        expectNil("(2m)^2")
+        // Units carry through as a product of powers, so a combination with no table entry of its
+        // own still has a well-defined dimension and renders composed.
+        expectDisplay("1kg * 1m", "1 kg·m")
+        expectDisplay("1 / 1kg", "1 1/kg")
+        expectDisplay("(2m)^2", "4 m²")
+        expectDisplay("100km / 2hr", "50 km/h")
+        expectBadges("100km / 2hr", source: "Expression", target: "Kilometers per Hour")
+        expectDisplay("60 km/h * 2hr", "120 km")
+        // A combination the table does name is answered by that name; only the rest compose.
+        expectDisplay("1kg / (1m * 1s * 1s)", "1 Pa")
+        expectDisplay("1kg / (1m * 1s)", "1 kg/(m·s)")
+        expectDisplay("5kg / 500g", "10")
         expectNil("sqrt(4kg)")
         expectNil("1kg!")
         expectDisplay("10kg +", "10 kg")
@@ -483,6 +490,13 @@ struct CalcTests {
         expectError("5 usd to npr", "No exchange rate for NPR.")
         expectErrorWithoutRates(
             "1 eur to usd", "Exchange rates unavailable — check your connection.")
+        // Money is a dimension like any other, so it composes: rates, and rates that cancel.
+        expectDisplay("$30/hr * 40hr", "1,200.00 USD")
+        expectDisplay("$50 / 200km", "0.25 USD/km")
+        expectDisplay("$100/month * 12month", "1,200.00 USD")
+        expectDisplay("$100 / €20", "4.6")
+        expectDisplay("1 year to months", "12 month")
+        expectDisplay("1 month to days", "30.436875 day")
         expectNil("10 usd to nonsense")
         expectNil("usd")  // a lone code is still an app search
         expectNil("btc")  // crypto isn't in the table — Frankfurter is central-bank fiat only

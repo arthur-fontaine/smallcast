@@ -3,6 +3,8 @@ import Foundation
 enum UnitCategory: String, CaseIterable, Sendable {
     case length, weight, temperature, time, area, volume, digitalStorage
     case angle, speed, pressure, dataRate
+    /// Not a physical category: a currency has no fixed size until a rate snapshot gives it one.
+    case money
 
     var displayName: String {
         switch self {
@@ -17,6 +19,7 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .speed: return "Speed"
         case .pressure: return "Pressure"
         case .dataRate: return "Data Transfer Rate"
+        case .money: return CalcCurrency.categoryName
         }
     }
 }
@@ -28,13 +31,28 @@ struct UnitDef: Equatable, Sendable {
     let category: UnitCategory
     let factor: Double
     let offset: Double
+    /// ISO code, for the one category whose factor comes from a rate snapshot. Nil everywhere else.
+    let currency: String?
 
-    init(_ symbol: String, _ name: String, _ category: UnitCategory, _ factor: Double, offset: Double = 0) {
+    init(
+        _ symbol: String, _ name: String, _ category: UnitCategory, _ factor: Double,
+        offset: Double = 0, currency: String? = nil
+    ) {
         self.symbol = symbol
         self.name = name
         self.category = category
         self.factor = factor
         self.offset = offset
+        self.currency = currency
+    }
+
+    /// This unit priced at `rates` — itself for everything but money, which has no size until a
+    /// snapshot gives it one. Nil when the snapshot doesn't quote this currency: better no card than
+    /// a rate we made up.
+    func priced(at rates: CurrencyRates) -> UnitDef? {
+        guard let currency else { return self }
+        guard let rate = rates.rate(for: currency), rate > 0, rate.isFinite else { return nil }
+        return UnitDef(symbol, name, category, 1 / rate, currency: currency)
     }
 }
 
@@ -127,7 +145,8 @@ enum CalcUnits {
         "°C": ("f", false), "°F": ("c", false), "K": ("c", false),
         // Time
         "ms": ("s", false), "s": ("ms", false), "min": ("s", false), "hr": ("min", false),
-        "day": ("hr", false), "week": ("day", false),
+        "day": ("hr", false), "week": ("day", false), "month": ("day", false),
+        "year": ("day", false),
         // Area
         "mm²": ("in2", false), "cm²": ("in2", false), "m²": ("ft2", false), "km²": ("mi2", false),
         "in²": ("cm2", false), "ft²": ("m2", false), "yd²": ("m2", false), "mi²": ("km2", false),
@@ -156,9 +175,15 @@ enum CalcUnits {
     ]
 
     /// Lookup by lowercased, `²`-folded name (the tokenizer's ident form).
-    static let byName: [String: UnitDef] = {
+    static let byName: [String: UnitDef] = catalog.byName
+    /// Declaration order, deduplicated — what `CompoundUnit.namedEquivalent` searches.
+    static let ordered: [UnitDef] = catalog.ordered
+
+    private static let catalog: (byName: [String: UnitDef], ordered: [UnitDef]) = {
         var table: [String: UnitDef] = [:]
+        var ordered: [UnitDef] = []
         func add(_ def: UnitDef, _ names: [String]) {
+            ordered.append(def)
             for name in names { table[name] = def }
         }
 
@@ -203,6 +228,12 @@ enum CalcUnits {
         add(UnitDef("hr", "Hours", .time, 3600), ["h", "hr", "hrs", "hour", "hours"])
         add(UnitDef("day", "Days", .time, 86400), ["d", "day", "days"])
         add(UnitDef("week", "Weeks", .time, 604800), ["wk", "week", "weeks"])
+        // Calendar months and years vary, so a *rate* over one can only mean the average: a Gregorian
+        // year is 365.2425 days and a month exactly a twelfth of it. That is what makes `$/month`
+        // well-defined; date math (`today + 3 months`) stays with `CalcDateTime`, which walks the real
+        // calendar.
+        add(UnitDef("month", "Months", .time, 2_629_746), ["mo", "month", "months"])
+        add(UnitDef("year", "Years", .time, 31_556_952), ["yr", "yrs", "year", "years"])
 
         // Area (base: square meter). The tokenizer folds "²" to "2", so mm²/mm2 are one name.
         add(UnitDef("mm²", "Square Millimeters", .area, 1e-6), ["mm2", "sqmm"])
@@ -285,6 +316,6 @@ enum CalcUnits {
         add(UnitDef("Gbps", "Gigabits per Second", .dataRate, 1e9), ["gbps"])
         add(UnitDef("Tbps", "Terabits per Second", .dataRate, 1e12), ["tbps"])
 
-        return table
+        return (table, ordered)
     }()
 }

@@ -183,6 +183,7 @@
 		B6C177E1358E610DC349AEE9 /* QuicklinkDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17770B91CBDBA41EDE14D8D1 /* QuicklinkDestination.swift */; };
 		B887D639E677B634106CDDAE /* FileSearchQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2271879AD97673EE12D6067 /* FileSearchQuery.swift */; };
 		B8CD029A58EEAB65DA642C84 /* CalloutShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321EECF442B373A366E05E8D /* CalloutShape.swift */; };
+		BA22D609BAD55661602B4D40 /* CalcDimension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7882639D042840229AFF440B /* CalcDimension.swift */; };
 		BB94B11676E52EB658087A3B /* ExtensionsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF677D661A2FDE9E03DADEA6 /* ExtensionsSettingsView.swift */; };
 		BBEDC76ACFB45BD4777DF916 /* ThinScrollbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BADAF972B91A088A6CDD507 /* ThinScrollbar.swift */; };
 		BC752F26A7F5768848FB45F7 /* ShortcutCaptureSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B65D4385052E445AFF267712 /* ShortcutCaptureSession.swift */; };
@@ -372,6 +373,7 @@
 		7362EEA92E6B9106345D169B /* CalcParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcParser.swift; sourceTree = "<group>"; };
 		751E032DE7058DD53B4971CA /* Smallcast.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Smallcast.entitlements; sourceTree = "<group>"; };
 		75450F8E6728A6FEB8E87C48 /* HotKeyBinding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyBinding.swift; sourceTree = "<group>"; };
+		7882639D042840229AFF440B /* CalcDimension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcDimension.swift; sourceTree = "<group>"; };
 		7B1EA263670DC55ECB046F1E /* QuicklinkLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinkLauncher.swift; sourceTree = "<group>"; };
 		7B6D02D51D43C4A749DFE899 /* Quicklink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Quicklink.swift; sourceTree = "<group>"; };
 		7BA34F28189AE41C9362BD3F /* ExtensionFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionFetcher.swift; sourceTree = "<group>"; };
@@ -1148,6 +1150,7 @@
 			children = (
 				4F48CD529AD54964A18BE526 /* CalcCurrency.swift */,
 				69738EC635A1208DB3EE6229 /* CalcDateTime.swift */,
+				7882639D042840229AFF440B /* CalcDimension.swift */,
 				8C1272A6ED697E451B56A5F2 /* CalcEngine.swift */,
 				8776ABA45B6A31DAC3F259A9 /* CalcFormatter.swift */,
 				7362EEA92E6B9106345D169B /* CalcParser.swift */,
@@ -1511,6 +1514,7 @@
 				F4CD096270DE993038546E2D /* BackupSettingsView.swift in Sources */,
 				232F8494E7ED8ED22C81E25B /* CalcCurrency.swift in Sources */,
 				14CE41888D8CDCA43355E861 /* CalcDateTime.swift in Sources */,
+				BA22D609BAD55661602B4D40 /* CalcDimension.swift in Sources */,
 				8A643362136032B56040EE7B /* CalcEngine.swift in Sources */,
 				1156B5D5B3284F08B67FB096 /* CalcFormatter.swift in Sources */,
 				7AA03752F34FE938AA554B4C /* CalcParser.swift in Sources */,

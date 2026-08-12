@@ -121,6 +121,13 @@ enum CalcCurrency {
         "SAR": ["riyal", "riyals"]  // 2
     ]
 
+    /// A currency as a unit on the money dimension, unpriced — `UnitDef.priced(at:)` stamps it with
+    /// today's rate. That is what lets money compose with everything else: `$/h`, `$/km`, `$/€`.
+    static func unit(named name: String) -> UnitDef? {
+        guard let definition = byName[name] else { return nil }
+        return UnitDef(definition.code, definition.name, .money, 1, currency: definition.code)
+    }
+
     /// Lookup by lowercased ident, generated data first so `contested` above is applied last.
     static let byName: [String: CurrencyDef] = {
         var defs: [String: CurrencyDef] = [:]
