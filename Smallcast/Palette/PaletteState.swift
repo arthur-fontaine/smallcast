@@ -33,8 +33,12 @@ final class PaletteState {
     @ObservationIgnored var menuOpen = false { didSet { onMenuOpenChanged?(menuOpen) } }
     /// Fired when `menuOpen` flips, so the panel can hide the caret without a focus swap.
     @ObservationIgnored var onMenuOpenChanged: ((Bool) -> Void)?
+    /// Fired at the *start* of every reset, while the query is still readable — the one moment a
+    /// calculation you only looked at can still be remembered.
+    @ObservationIgnored var onWillReset: (() -> Void)?
 
     func prepare(mode: PaletteMode) {
+        onWillReset?()
         self.mode = mode
         query = ""
         selection = 0

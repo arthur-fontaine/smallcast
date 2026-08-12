@@ -59,10 +59,19 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 | `.uninstall` | `UninstallScreen` | `UninstallList` (see [uninstall.md](uninstall.md)) |
 | `.quicklinks` | `QuicklinkListScreen` | `QuicklinkList` |
 | `.quicklinkArguments` | `QuicklinkArgumentsScreen` | `QuicklinkArgumentsView` (see [quicklinks.md](quicklinks.md#the-argument-prompt)) |
+| `.extensionCommand` | `ExtensionCommandScreen` | `ExtensionCommandView` (see [extensions.md](extensions.md)) |
+| `.recent` | `RecentScreen` | `RecentList` (see [launcher.md](launcher.md)) |
 
 Every mode but `.launcher` is a sub-screen that backs out to the launcher. **Tab cycles launcher ↔
 clipboard and nothing else**; the rest are reached by a command or a global hotkey, and Uninstall only
-from a launcher app's Actions menu, scoped to that app.
+from a launcher app's Actions menu, scoped to that app. `.recent` is the one exception to that too: ↑
+on an empty launcher search opens it, the way a shell prompt walks back through what you just did.
+
+**Escape empties the field before it dismisses.** With text typed, the first press clears it and the
+palette stays open; the second closes it. That first press is also where a calculation you only
+looked at is remembered — `CalculatorCoordinator.clearSearch`, which is the one discard that does not
+go through `prepare`. `prepare` itself fires `onWillReset` before it wipes the query, so a mode
+switch, a pop-to-root and a fresh summon all commit the same way.
 
 The argument screen is the one mode where the search field is not a search field: it _is_ the current
 argument's input, so its placeholder names that argument and ↵ submits rather than activating a row.

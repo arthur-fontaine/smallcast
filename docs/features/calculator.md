@@ -28,7 +28,7 @@ also **pure**: the one input it can't compute, the FX rate table, is passed in (
 4. Complete-prefix evaluation for a trailing binary operator (`10kg +` → `10 kg`)
 5. Base conversion
 6. Explicit unit conversion (`10km to mi`)
-7. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `(1hr + 30min) to s`)
+7. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `(1hr + 30min) to s`, `100km / 2hr`)
 8. **Currency conversion** (`1 euro to dollars`, `€20 to GBP`)
 9. **Bare-unit auto-conversion** (`1m` → feet + inches, `1hr` → 60 min, via
    `CalcUnits.parseBareConversion` + the `autoTargets` map)
@@ -213,6 +213,34 @@ Money rounds to two decimals (`CalcFormatter.currency`), widening to four signif
 cent — in _plain_ notation, deliberately not `%g`, so `1 IDR to USD` reads `0.00005539 USD` rather
 than `5.539e-05`.
 
+## Dimensions and compound units
+
+A unit is not a category tag: `CalcDimension` gives every `UnitCategory` exponents over seven
+fundamentals — length, mass, time, information, angle, temperature and money — and a value carries a
+`CompoundUnit`, an ordered product of powers of table units. That is what makes arithmetic close over
+units: `100km / 2hr` is length¹·time⁻¹ whether or not a "km/h" entry exists, and `$30/hr` is
+money¹·time⁻¹.
+
+Rendering prefers the table's own name over the composed form. `CompoundUnit.namedEquivalent` looks
+for a non-affine table unit with the same dimension and the same SI factor, so `km·h⁻¹` prints as
+`km/h` and `1kg/(1m·1s²)` as `Pa`; only what nothing names composes, as `kg/(m·s)`. Terms merge by
+symbol and keep the order they were written, so the answer reads back the way it was typed.
+
+Two rules keep that from surprising:
+
+- **A dimensionless compound folds into the amount.** `5kg / 500g` cancels to mass⁰, so its factor
+  (1000) multiplies the amount and the answer is a plain `10`, never "0.01 kg/g".
+- **Affine units never compose.** Temperature only adds, subtracts and converts; multiplying or
+  dividing a °C is refused, because an affine scale has no meaningful product.
+
+Money is a dimension like any other, which is what `$/km` and `$100 / €20` rest on. A currency becomes
+a `UnitDef` in the `.money` category priced at today's snapshot — `UnitDef.priced(at:)` — so a rate
+composes with time, distance or anything else. The `10 usd to eur` shape still takes its own earlier
+fast path in `CalcCurrency.parseConversion`; the dimension only carries the cases that path cannot
+express. Calendar months and years vary, so the `month` and `year` units are the Gregorian averages
+(2 629 746 s and 31 556 952 s) — the only reading under which `$/month` is well-defined. Date math
+stays with `CalcDateTime`, which walks the real calendar.
+
 ## Result and rendering
 
 `CalcResult` carries an `expression` (left), a `display` / `copyText` payload (right), and optional
@@ -221,3 +249,11 @@ than `5.539e-05`.
 When the launcher or Calculator History query evaluates to a result the card is pinned at the top of
 the list (flat selection index 0, shifting rows by one) and Enter copies the answer + records it to
 `CalculatorHistoryStore`.
+
+A calculation you only *looked at* is recorded too. `CalculatorCoordinator.commitCalculation` fires
+at exactly the moments a query stops being edited — Escape clearing the field, and every
+`PaletteState.prepare` via its `onWillReset` hook. Editing never commits, so "1+2" grown into "1+21"
+records only the latter, and re-opening within the pop-to-root grace period to keep typing replaces
+rather than saves. Re-committing the same thing is harmless: `record` drops a repeat of the newest
+entry. Only `.launcher` and `.calculatorHistory` commit — inside a running extension command the
+search bar belongs to the extension, and "1+2" typed into its filter is not a calculation you did.

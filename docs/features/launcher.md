@@ -44,7 +44,11 @@ Book. Don't reintroduce such a heuristic.
 refreshes collapse into a single trailing scan.
 
 `FuzzyMatch.score` is a tiered scorer: exact → prefix → substring / word-start → subsequence with
-consecutive / word-boundary bonuses. `LauncherRankingStore` then adds a bounded, query-specific
+consecutive / word-boundary bonuses → typo. The last is a bounded Damerau–Levenshtein from the query
+to the start of the name, or of any of its words, with trailing characters free — so "chorme" finds
+Google Chrome and "clipbrd" finds Clipboard History. Its allowance grows with the query and is zero
+below four characters, where almost everything is one edit away and the subsequence tier already
+covers initialisms. `LauncherRankingStore` then adds a bounded, query-specific
 frecency boost (frequency plus decaying recency). The boost can reorder results within a relevance
 tier but cannot make a weaker match kind beat a stronger one. Matching strips invisible Unicode
 format scalars first, since app metadata can contain bidi/zero-width markers before the visible name.
@@ -57,12 +61,19 @@ strongest one becomes the entry's base relevance:
 
 | Band | Field                                   | Match strength                                    |
 | ---- | --------------------------------------- | ------------------------------------------------- |
-| 5    | display name (plus a snippet's keyword) | literal — exact / prefix / word-start / substring |
-| 4    | Spotlight alternate names               | literal                                           |
-| 3    | display name                            | subsequence                                       |
-| 2    | Spotlight alternate names               | subsequence                                       |
-| 1    | bundle identifier                       | literal only                                      |
-| 0    | executable name (`CFBundleExecutable`)  | literal only                                      |
+| 7    | display name (plus a snippet's keyword) | literal — exact / prefix / word-start / substring |
+| 6    | Spotlight alternate names               | literal                                           |
+| 5    | display name                            | subsequence                                       |
+| 4    | Spotlight alternate names               | subsequence                                       |
+| 3    | bundle identifier                       | literal only                                      |
+| 2    | executable name (`CFBundleExecutable`)  | literal only                                      |
+| 1    | display name                            | typo                                              |
+| 0    | category (`AppEntry.kindLabel`)         | from its start only — exact / prefix / word-start / typo |
+
+The category band is what lets a whole group be pulled up by what it *is* — "window management", an
+extension's own title — without ever outranking something actually named that. Only a match from the
+start of the category counts: a mid-word substring would make "cat" list every Appli**cat**ion, and a
+subsequence match is looser still.
 
 The arithmetic is what makes that table binding. A band's offset is `rawValue * bandStride`, and:
 

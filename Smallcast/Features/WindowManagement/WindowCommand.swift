@@ -10,11 +10,21 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
         case topRightQuarter = "top-right-quarter"
         case bottomLeftQuarter = "bottom-left-quarter"
         case bottomRightQuarter = "bottom-right-quarter"
+        case topLeftSixth = "top-left-sixth"
+        case topCenterSixth = "top-center-sixth"
+        case topRightSixth = "top-right-sixth"
+        case bottomLeftSixth = "bottom-left-sixth"
+        case bottomCenterSixth = "bottom-center-sixth"
+        case bottomRightSixth = "bottom-right-sixth"
         case firstThird = "first-third"
         case centerThird = "center-third"
         case lastThird = "last-third"
         case firstTwoThirds = "first-two-thirds"
         case lastTwoThirds = "last-two-thirds"
+        case firstFourth = "first-fourth"
+        case secondFourth = "second-fourth"
+        case thirdFourth = "third-fourth"
+        case lastFourth = "last-fourth"
         case maximize
         case almostMaximize = "almost-maximize"
         case reasonableSize = "reasonable-size"
@@ -48,7 +58,9 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
     enum Group: String, CaseIterable, Sendable {
         case halves
         case quarters
+        case sixths
         case thirds
+        case fourths
         case sizing
         case moving
         case fullscreen
@@ -57,7 +69,9 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
             switch self {
             case .halves: return "Halves"
             case .quarters: return "Quarters"
+            case .sixths: return "Sixths"
             case .thirds: return "Thirds"
+            case .fourths: return "Fourths"
             case .sizing: return "Sizing"
             case .moving: return "Moving"
             case .fullscreen: return "Fullscreen"
@@ -118,11 +132,21 @@ enum WindowCommandCatalog {
         case .topRightQuarter: return "Top Right Quarter"
         case .bottomLeftQuarter: return "Bottom Left Quarter"
         case .bottomRightQuarter: return "Bottom Right Quarter"
+        case .topLeftSixth: return "Top Left Sixth"
+        case .topCenterSixth: return "Top Center Sixth"
+        case .topRightSixth: return "Top Right Sixth"
+        case .bottomLeftSixth: return "Bottom Left Sixth"
+        case .bottomCenterSixth: return "Bottom Center Sixth"
+        case .bottomRightSixth: return "Bottom Right Sixth"
         case .firstThird: return "First Third"
         case .centerThird: return "Center Third"
         case .lastThird: return "Last Third"
         case .firstTwoThirds: return "First Two Thirds"
         case .lastTwoThirds: return "Last Two Thirds"
+        case .firstFourth: return "First Fourth"
+        case .secondFourth: return "Second Fourth"
+        case .thirdFourth: return "Third Fourth"
+        case .lastFourth: return "Last Fourth"
         case .maximize: return "Maximize"
         case .almostMaximize: return "Almost Maximize"
         case .reasonableSize: return "Reasonable Size"
@@ -153,6 +177,11 @@ enum WindowCommandCatalog {
         case .topRightQuarter: return "rectangle.inset.toptrailing.filled"
         case .bottomLeftQuarter: return "rectangle.inset.bottomleading.filled"
         case .bottomRightQuarter: return "rectangle.inset.bottomtrailing.filled"
+        case .topLeftSixth, .bottomLeftSixth: return "rectangle.leadingthird.inset.filled"
+        case .topCenterSixth, .bottomCenterSixth: return "rectangle.center.inset.filled"
+        case .topRightSixth, .bottomRightSixth: return "rectangle.trailingthird.inset.filled"
+        case .firstFourth, .secondFourth, .thirdFourth, .lastFourth:
+            return "rectangle.split.3x1"
         case .firstThird, .firstTwoThirds: return "rectangle.leadingthird.inset.filled"
         case .centerThird: return "rectangle.center.inset.filled"
         case .lastThird, .lastTwoThirds: return "rectangle.trailingthird.inset.filled"
@@ -190,6 +219,11 @@ enum WindowCommandCatalog {
             return .halves
         case .topLeftQuarter, .topRightQuarter, .bottomLeftQuarter, .bottomRightQuarter:
             return .quarters
+        case .topLeftSixth, .topCenterSixth, .topRightSixth, .bottomLeftSixth, .bottomCenterSixth,
+            .bottomRightSixth:
+            return .sixths
+        case .firstFourth, .secondFourth, .thirdFourth, .lastFourth:
+            return .fourths
         case .firstThird, .centerThird, .lastThird, .firstTwoThirds, .lastTwoThirds:
             return .thirds
         case .maximize, .almostMaximize, .reasonableSize, .maximizeHeight, .maximizeWidth, .center,

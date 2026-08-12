@@ -1,7 +1,7 @@
 # Window Management
 
-Rectangle-style window actions — halves, quarters, thirds, sizing, nudging, display moves and native
-fullscreen — searchable in the palette and bindable to global shortcuts. 30 commands, no new
+Rectangle-style window actions — halves, quarters, sixths, thirds, fourths, sizing, nudging, display
+moves and native fullscreen — searchable in the palette and bindable to global shortcuts. 40 commands, no new
 dependencies and no new permission: they reuse the Accessibility grant clipboard paste already needs.
 
 Ships **off**. Settings › Window Management is the switch, and while it is off there are no launcher

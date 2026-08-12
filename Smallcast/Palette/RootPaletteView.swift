@@ -315,6 +315,11 @@ struct RootPaletteView: View {
                 core.extensionCoordinator.exitExtensionScreen()
                 return .handled
             }
+            // First Escape clears what was typed and stays open; the second one dismisses.
+            if !vm.query.isEmpty {
+                core.calculatorCoordinator.clearSearch()
+                return .handled
+            }
             core.paletteCoordinator.hidePalette()
             return .handled
         }

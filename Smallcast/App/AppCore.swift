@@ -93,7 +93,8 @@ final class AppCore {
         frequentEmoji: frequentEmoji, settings: settings, windowController: windowController,
         paletteCoordinator: paletteCoordinator)
     @ObservationIgnored private(set) lazy var calculatorCoordinator = CalculatorCoordinator(
-        calcHistory: calcHistory, paletteCoordinator: paletteCoordinator, core: self)
+        calcHistory: calcHistory, palette: palette, currencyRates: currencyRates,
+        paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var fileSearchCoordinator = FileSearchCoordinator(
         settings: settings, appIndex: appIndex, session: fileSearch, palette: palette,
         paletteCoordinator: paletteCoordinator, core: self)
@@ -155,6 +156,8 @@ final class AppCore {
             hotKeys.doubleTapMonitor.healthTicker = healthTicker
             snippetListener.healthTicker = healthTicker
 
+            // A reset is where a calculation stops being edited, so that's where it is remembered.
+            palette.onWillReset = { [weak self] in self?.calculatorCoordinator.commitCalculation() }
             hotKeys.onTogglePalette = { [weak self] in self?.paletteCoordinator.togglePalette() }
             hotKeys.onToggleClipboard = { [weak self] in self?.paletteCoordinator.toggleClipboard() }
             hotKeys.onToggleEmoji = { [weak self] in self?.paletteCoordinator.toggleEmoji() }

@@ -310,6 +310,44 @@ enum WindowLayout {
             return Fractions(
                 x0: 0.5, x1: 1, y0: 0.5, y1: 1, anchor: Anchor(horizontal: .max, vertical: .max))
 
+        case .topLeftSixth:
+            return Fractions(x0: 0, x1: oneThird, y0: 0, y1: 0.5, anchor: .topLeading)
+        case .topCenterSixth:
+            return Fractions(
+                x0: oneThird, x1: twoThirds, y0: 0, y1: 0.5,
+                anchor: Anchor(horizontal: .center, vertical: .min))
+        case .topRightSixth:
+            return Fractions(
+                x0: twoThirds, x1: 1, y0: 0, y1: 0.5,
+                anchor: Anchor(horizontal: .max, vertical: .min))
+        case .bottomLeftSixth:
+            return Fractions(
+                x0: 0, x1: oneThird, y0: 0.5, y1: 1,
+                anchor: Anchor(horizontal: .min, vertical: .max))
+        case .bottomCenterSixth:
+            return Fractions(
+                x0: oneThird, x1: twoThirds, y0: 0.5, y1: 1,
+                anchor: Anchor(horizontal: .center, vertical: .max))
+        case .bottomRightSixth:
+            return Fractions(
+                x0: twoThirds, x1: 1, y0: 0.5, y1: 1,
+                anchor: Anchor(horizontal: .max, vertical: .max))
+
+        case .firstFourth:
+            return Fractions(x0: 0, x1: 0.25, y0: 0, y1: 1, anchor: .topLeading)
+        case .secondFourth:
+            return Fractions(
+                x0: 0.25, x1: 0.5, y0: 0, y1: 1,
+                anchor: Anchor(horizontal: .center, vertical: .min))
+        case .thirdFourth:
+            return Fractions(
+                x0: 0.5, x1: 0.75, y0: 0, y1: 1,
+                anchor: Anchor(horizontal: .center, vertical: .min))
+        case .lastFourth:
+            return Fractions(
+                x0: 0.75, x1: 1, y0: 0, y1: 1,
+                anchor: Anchor(horizontal: .max, vertical: .min))
+
         case .firstThird:
             return Fractions(x0: 0, x1: oneThird, y0: 0, y1: 1, anchor: .topLeading)
         case .centerThird:

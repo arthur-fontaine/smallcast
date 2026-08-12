@@ -71,7 +71,12 @@ struct WindowCommandTests {
 
     static func testCatalog() {
         let commands = WindowCommandCatalog.all
-        expect(commands.count == 30, "catalog contains all 30 agreed commands")
+        expect(commands.count == 40, "catalog contains all 40 agreed commands")
+        // Fourths tile the width; sixths are the thirds crossed with the halves.
+        expect(
+            commands.filter { $0.group == .fourths }.count == 4, "four fourths")
+        expect(
+            commands.filter { $0.group == .sixths }.count == 6, "six sixths")
         expect(commands.map(\.id) == WindowCommand.ID.allCases, "catalog covers every ID once")
         expect(Set(commands.map(\.id)).count == commands.count, "IDs are unique")
         expect(Set(commands.map(\.entryID)).count == commands.count, "entry IDs are unique")
