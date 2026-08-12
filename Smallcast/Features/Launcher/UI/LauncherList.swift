@@ -1,0 +1,177 @@
+import SwiftUI
+
+struct LauncherList: View {
+    let results: [AppEntry]
+    let selectedID: AppEntry.ID?
+    let favoriteCount: Int
+    let showSections: Bool
+    /// Changes only when the list should scroll, so mouse selection never yanks it.
+    let scroll: ScrollIntent
+    /// The inline answer, at flat index 0 when present; needs a non-empty query.
+    var calc: CalcResult?
+    var calcSelected = false
+    var onActivateCalc: () -> Void = {}
+    var onCalcActions: () -> Void = {}
+    let onActivate: (AppEntry) -> Void
+    let onActions: (AppEntry) -> Void
+    @Environment(RunningAppsMonitor.self) private var runningApps
+
+    private nonisolated static let calcRowID = "calc-card"
+
+    private enum Row: Identifiable {
+        case header(String)
+        case calc(CalcResult)
+        case app(AppEntry)
+        var id: String {
+            switch self {
+            case .header(let title): return "header-" + title
+            case .calc: return LauncherList.calcRowID
+            case .app(let app): return app.id
+            }
+        }
+    }
+
+    /// Scroll target for the current selection.
+    private var selectedRowID: String? { calcSelected ? Self.calcRowID : selectedID }
+
+    /// Whether the selection sits on flat index 0: the calc card, else the first result.
+    private var firstRowSelected: Bool {
+        calc != nil ? calcSelected : selectedID != nil && selectedID == results.first?.id
+    }
+
+    private var rows: [Row] {
+        var calcRows: [Row] = []
+        if let calc { calcRows = [.header("Calculator"), .calc(calc)] }
+        guard showSections else {
+            guard !results.isEmpty else { return calcRows }
+            return calcRows + [.header("Results")] + results.map(Row.app)
+        }
+        var rows: [Row] = calcRows
+        let favorites = results.prefix(favoriteCount)
+        let rest = results.dropFirst(favoriteCount)
+        var grouped: [AppEntry.Kind: [AppEntry]] = [:]
+        for app in rest { grouped[app.kind, default: []].append(app) }
+        if !favorites.isEmpty {
+            rows.append(.header("Favorites"))
+            rows.append(contentsOf: favorites.map(Row.app))
+        }
+        // Publication order, so rows match the flat index.
+        let kinds: [AppEntry.Kind] = [
+            .application, .systemSettings, .quicklink, .snippet,
+            .systemAction, .windowCommand, .customCommand, .command
+        ]
+        for kind in kinds {
+            guard let group = grouped[kind], !group.isEmpty else { continue }
+            rows.append(.header(kind.descriptor.sectionTitle))
+            rows.append(contentsOf: group.map(Row.app))
+        }
+        return rows
+    }
+
+    var body: some View {
+        let rows = rows
+        return Group {
+            if results.isEmpty && calc == nil {
+                EmptyResults(text: "No apps found")
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(rows) { row in
+                                switch row {
+                                case .header(let title):
+                                    SectionHeader(title: title, isFirst: row.id == rows.first?.id)
+                                case .calc(let result):
+                                    CalculatorCard(result: result, selected: calcSelected)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture(perform: onActivateCalc)
+                                        .onRightClick(perform: onCalcActions)
+                                        .padding(.bottom, Theme.Spacing.xs)
+                                        .selectionFrame(calcSelected)
+                                case .app(let app):
+                                    AppRow(
+                                        app: app,
+                                        selected: app.id == selectedID,
+                                        running: runningApps.isRunning(app)
+                                    )
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { onActivate(app) }
+                                    .onRightClick { onActions(app) }
+                                    .selectionFrame(app.id == selectedID)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, Theme.Spacing.md)
+                        .padding(.top, Theme.Spacing.xs)
+                        .padding(.bottom, Theme.Spacing.md)
+                        .hideNativeScrollers()
+                        .scrollOriginAnchor()
+                    }
+                    .edgeDissolve()
+                    .thinScrollbar()
+                    // Snap to the origin on the first row so its header shows too.
+                    .scrollFollowsSelection(
+                        scroll, row: selectedRowID, atOrigin: firstRowSelected, proxy: proxy)
+                }
+            }
+        }
+    }
+}
+
+private struct AppRow: View {
+    let app: AppEntry
+    let selected: Bool
+    let running: Bool
+    /// Observed so a hotkey set/cleared in Settings re-renders the row's keycaps immediately.
+    @Environment(HotKeyManager.self) private var hotKeys
+    @State private var hovered = false
+
+    /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
+    private var fill: Color {
+        if selected { return Theme.Colors.selection }
+        if hovered { return Theme.Colors.rowHover }
+        return .clear
+    }
+
+    /// Keycaps for this entry's hotkey, or `nil` if none is bound.
+    private var shortcutCaps: [String]? {
+        guard let action = app.hotKeyAction else { return nil }
+        return hotKeys.binding(for: action)?.keycaps
+    }
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.lg) {
+            AppIconView(app: app)
+                .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+                .overlay(alignment: .bottom) {
+                    if running {
+                        Circle()
+                            .fill(.secondary)
+                            .frame(width: 3, height: 3)
+                            .offset(y: 3)
+                    }
+                }
+            Text(app.name)
+                .font(Theme.Typography.rowTitle)
+                .lineLimit(1)
+            if let caps = shortcutCaps {
+                HStack(spacing: Theme.Spacing.xxs) {
+                    ForEach(Array(caps.enumerated()), id: \.offset) { _, cap in
+                        KeyCapChip(text: cap, style: .outline)
+                    }
+                }
+            }
+            Spacer()
+            Text(app.kindLabel)
+                .font(Theme.Typography.rowTrailing)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                .fill(fill)
+        )
+        .armedHover($hovered)
+    }
+}
