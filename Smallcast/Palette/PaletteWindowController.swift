@@ -251,6 +251,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.onFieldEditorFocused = { [weak self] context in
             self?.core.inputSourceSwitcher.applySession(to: context)
         }
+        // The search field, not the field that lost focus: an extension's own may already be gone.
+        panel.onFieldEditorEndedEditing = { [weak self] in
+            self?.core.palette.focusToken = UUID()
+        }
         // Backspace in an empty search backs out of a sub-screen to a fresh root.
         panel.onBareBackspace = { [weak self] in
             guard let core = self?.core, core.palette.mode != .launcher, core.palette.query.isEmpty
