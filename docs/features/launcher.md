@@ -59,13 +59,24 @@ strongest one becomes the entry's base relevance:
 
 | Band | Field                                   | Match strength                                    |
 | ---- | --------------------------------------- | ------------------------------------------------- |
-| 6    | user alias (any entry kind)             | anchored literal — exact / prefix                 |
-| 5    | display name (plus a snippet's keyword) | literal — exact / prefix / word-start / substring |
-| 4    | Spotlight alternate names, plus a user alias's word-start / substring hits | literal |
-| 3    | display name                            | subsequence                                       |
-| 2    | Spotlight alternate names               | subsequence                                       |
-| 1    | bundle identifier                       | literal only                                      |
-| 0    | executable name (`CFBundleExecutable`)  | literal only                                      |
+| 7    | user alias (any entry kind)             | anchored literal — exact / prefix                 |
+| 6    | display name (plus a snippet's keyword) | literal — exact / prefix / word-start / substring |
+| 5    | Spotlight alternate names, plus a user alias's word-start / substring hits | literal |
+| 4    | display name                            | subsequence                                       |
+| 3    | Spotlight alternate names               | subsequence                                       |
+| 2    | bundle identifier                       | literal only                                      |
+| 1    | executable name (`CFBundleExecutable`)  | literal only                                      |
+| 0    | display name                            | typo — a bounded near-miss                        |
+
+### Typo tolerance
+
+Band 0 is the last resort: a query close enough to be a misspelling of the name, or of one of its
+words. It sits *below* every literal and subsequence band on purpose — a typo can never outrank a
+real match, which is what keeps the feature from reordering anything you actually typed correctly.
+
+The distance allowed scales with the word, and deliberately tightly: two edits on a six-letter word
+made `finder` a hit for *Find My*, so the bound is narrow enough that `cat` is not a typo of *Chess*
+and `wick` does not reach *WhatsApp*. `fuzz-test` pins all three.
 
 The arithmetic is what makes that table binding. A band's offset is `rawValue * bandStride`, and:
 

@@ -313,11 +313,13 @@ struct RootPaletteView: View {
         }
         .onKeyPress(keys: [.upArrow], phases: [.down, .repeat]) { press in
             if let reorder = moveFavorite(-1, modifiers: press.modifiers) { return reorder }
-            if isCollapsed { return .ignored }
             if menuOpen {
                 moveMenu(-1)
                 return .handled
             }
+            // Before the compact guard: the bar has nothing above it either, so ↑ means the same.
+            if openRecentFromTop() { return .handled }
+            if isCollapsed { return .ignored }
             moveVertically(-1)
             return .handled
         }
@@ -352,6 +354,11 @@ struct RootPaletteView: View {
             // An extension pops its own navigation stack before the command is left.
             if vm.mode == .extensionCommand {
                 core.extensionCoordinator.exitExtensionScreen()
+                return .handled
+            }
+            // First Escape clears what was typed and stays open; the second one dismisses.
+            if !vm.query.isEmpty {
+                core.calculatorCoordinator.clearSearch()
                 return .handled
             }
             core.paletteCoordinator.hidePalette()
@@ -707,6 +714,15 @@ struct RootPaletteView: View {
         }
         vm.selection = next
         scroll = ScrollIntent(kind: .follow)
+    }
+
+    /// ↑ with nothing typed and nothing above it opens what you just did, as a shell prompt would.
+    private func openRecentFromTop() -> Bool {
+        guard vm.mode == .launcher, vm.query.isEmpty, isCollapsed || vm.selection == 0 else {
+            return false
+        }
+        vm.prepare(mode: .recent)
+        return true
     }
 
     /// ←/→: consumed only by a horizontally navigating screen, else the caret keeps them.

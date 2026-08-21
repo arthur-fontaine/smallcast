@@ -25,6 +25,17 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
   source it applied, so a switch made since, by the user or another app, stands. Never applied globally:
   the panel does not activate, so a global switch would land on whichever app is still frontmost.
 
+
+## Escape
+
+Escape is two steps, not one. With something typed it clears the field and the palette stays open;
+with the field already empty it dismisses. An open menu or a running extension command takes it first
+— the menu closes, and a command pops its own navigation stack before the command is left.
+
+Clearing routes through `CalculatorCoordinator.clearSearch`, because emptying the field is also the
+moment a calculation stops being edited and can still be remembered. See
+[calculator.md](calculator.md).
+
 ## Summoning
 
 ```

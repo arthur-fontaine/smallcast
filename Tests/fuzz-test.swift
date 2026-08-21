@@ -108,11 +108,39 @@ struct FuzzTest {
         userAliases()
         alternateNameSanitizing()
         identifierFields()
+        typoTolerance()
         edgeCases()
         propertyLoop()
 
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         exit(failures == 0 ? 0 : 1)
+    }
+
+    // MARK: - Typo tolerance
+
+    static func typoTolerance() {
+        print("\n# typo tolerance")
+
+        check("'chorme' still finds Google Chrome", score("chorme", "Google Chrome") != nil)
+        check("'terminla' still finds Terminal", score("terminla", "Terminal") != nil)
+        // Matching a word start, not only the whole name.
+        check("'sharring' finds Screen Sharing", score("sharring", "Screen Sharing") != nil)
+
+        // A typo never outranks a real match — that is the whole point of the band.
+        let chess = rank("chesss")
+        check("'chesss' top is Chess", chess.first == "Chess", "got \(chess)")
+        check(
+            "an exact name beats another entry's typo",
+            score("chess", "Chess")! > score("chesss", "Chess")!)
+
+        // Short queries get no slack: at three characters almost everything is one edit away.
+        check("'cat' is not a typo of Chess", score("cat", "Chess") == nil)
+        check("'wick' does not typo-match WhatsApp", score("wick", "WhatsApp") == nil)
+        check(
+            "the allowance grows with the query",
+            FuzzyMatch.allowedDistance(forQueryLength: 3) == 0
+                && FuzzyMatch.allowedDistance(forQueryLength: 5) == 1
+                && FuzzyMatch.allowedDistance(forQueryLength: 9) == 2)
     }
 
     // MARK: - Display-name ranking (unchanged behavior)
@@ -259,9 +287,10 @@ struct FuzzTest {
         let figma = SearchRelevance.score(query: "figma", fields: app("Figma").fields)!
         check(
             "the strongest field still wins on an aliased entry",
-            figma >= 5 * SearchRelevance.bandStride && figma < 6 * SearchRelevance.bandStride)
+            figma >= 6 * SearchRelevance.bandStride && figma < 7 * SearchRelevance.bandStride)
 
-        // Anchoring: only exact and prefix hits earn band 6; inside hits rank with vendor aliases.
+        // Anchoring: only exact and prefix hits earn the userAlias band; inside hits rank with
+        // vendor aliases. Band indices are `Band`'s own order, with nameTypo at 0.
         let term = rank("term")
         check(
             "an inside alias hit does not beat another entry's own prefix",
@@ -272,7 +301,7 @@ struct FuzzTest {
             query: "ail", fields: SearchFields(names: ["\u{FFFF}"], userAlias: "mail2"))!
         check(
             "an inside alias hit ranks in the vendor-alias band",
-            inside >= 4 * SearchRelevance.bandStride && inside < 5 * SearchRelevance.bandStride)
+            inside >= 5 * SearchRelevance.bandStride && inside < 6 * SearchRelevance.bandStride)
     }
 
     // MARK: - Spotlight junk
@@ -456,7 +485,9 @@ struct FuzzTest {
                 // Every score sits inside exactly one band, and the boost cap cannot lift it out.
                 let band = score / SearchRelevance.bandStride
                 let offset = score - band * SearchRelevance.bandStride
-                if offset < 0 || offset > FuzzyMatch.maximumScore || band > 6 { bandViolations += 1 }
+                if offset < 0 || offset > FuzzyMatch.maximumScore || band >= SearchRelevance.bandCount {
+                    bandViolations += 1
+                }
                 if (score + LauncherRankingBoostCap) / SearchRelevance.bandStride != band {
                     boostCrossedBand += 1
                 }
