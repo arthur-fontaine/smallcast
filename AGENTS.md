@@ -53,6 +53,7 @@ system-wide chord, and HIToolbox's TIS APIs remain the public input-source mecha
 | add or restyle any view | [ui.md](docs/ui.md) |
 | touch one feature's internals | [features/](docs/features/) — each opens with its invariants |
 | package or ship a build | [release.md](docs/release.md) |
+| merge `base/main` — Tinycast — into this fork | [upstream.md](docs/upstream.md) |
 
 ## Non-negotiables
 
@@ -94,6 +95,10 @@ feature's doc, under its own `## Invariants`.
   `node Scripts/gen-emoji.js`, `CurrencyData.generated.swift` from `node Scripts/gen-currencies.js`, and
   `Resources/RaycastRuntime.generated.js` from `Scripts/raycast-runtime/build.mjs` — the runtime is
   committed so building the app never needs Node.
+- **Smallcast is a fork, and upstream's version wins where the two converged.** Syncing `base/main`
+  is a feature-by-feature decision, not a merge: upstream rewrites its history, and sixteen Smallcast-only
+  features hook into files upstream also owns, so taking its file silently deletes them. Never sync
+  without walking the tables in [upstream.md](docs/upstream.md).
 - **`DesignSystem/Scrolling/EdgeDissolve.swift` and `ThinScrollbar.swift` are off-limits.** Both are
   tuned by eye against the palette's floating bars, so any edit is a visual regression. Needing to touch
   one to fix a scroll bug means the real fix belongs elsewhere.
