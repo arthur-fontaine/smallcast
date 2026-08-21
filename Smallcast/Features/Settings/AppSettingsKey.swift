@@ -40,4 +40,13 @@ enum AppSettingsKey: String, CaseIterable {
     case extensionPackageManager = "extensionPackageManager"
     case extensionRegistries = "extensionRegistries"
     case extensionCustomSearchPaths = "extensionCustomSearchPaths"
+    case aiEnabled = "aiEnabled"
+    case aiProvider = "aiProvider"
+    case aiBaseURL = "aiBaseURL"
+    case aiModel = "aiModel"
+    case aiSystemPrompt = "aiSystemPrompt"
+    case aiChord = "aiChord"
+    case fallbackCommandsEnabled = "fallbackCommandsEnabled"
+    case fallbackCommands = "fallbackCommands"
+    case webSearchTemplate = "webSearchTemplate"
 }

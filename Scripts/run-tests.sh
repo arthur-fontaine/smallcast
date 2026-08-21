@@ -175,6 +175,9 @@ run ext-test               -parse-as-library \
                            Smallcast/Platform/Compression/Zlib.swift
 run settings-history-test  Smallcast/Features/Settings/SettingsTab.swift \
                            Smallcast/Features/Settings/SettingsHistory.swift
+run ai-test                Smallcast/Features/AI/Model/*.swift
+run fallback-test          $L/FallbackCommand.swift \
+                           Smallcast/Features/Quicklinks/Model/Quicklink.swift
 run updates-test           Smallcast/Features/Updates/Model/*.swift
 
 if [ "$emit_db" -eq 1 ]; then

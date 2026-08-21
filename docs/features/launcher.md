@@ -303,6 +303,40 @@ move rows are switched off rather than a store call that would act on the wrong 
 Settings › Search shows and resets what the ranking learned (`SearchSettingsView`,
 `Launcher/Settings/`); clearing there is independent of clearing the Recent list.
 
+## Fallback commands
+
+A query that matched nothing used to be a dead end. It now ends in a `Use “…” with…` section: commands
+that take whatever was typed as their input. Search the Web, Search Files, and any quicklink with an
+`{argument}` in it.
+
+**A fallback is a launcher *row*, not an `AppEntry.Kind`.** A kind owns a launcher section, a
+`VisibilityStore` category and a Settings pane, and a fallback wants none of the three — the inline
+calculator card is the precedent. `LauncherScreen.Row` gains a `.fallback` case, built in `init` only
+when the ranked results are empty and the trimmed query is not, and `LauncherList` draws its section
+last so the flat selection still maps 1:1 onto the visible rows.
+
+`Model/FallbackCommand.swift` is pure and covered by `fallback-test`: the stored spelling, the order,
+the availability filter and the web-URL templating. `FallbackCoordinator` is the one funnel that runs
+one, so the row, its ⌘K entry and its Settings row cannot disagree.
+
+- **The stored order *is* the row order.** `AppSettings.fallbackCommands` holds raw
+  `FallbackCommandID` values, and `FallbackCommands.resolved` filters without sorting.
+- **A row whose feature is off disappears from the launcher but keeps its place in Settings**, so
+  turning File Search back on doesn't lose where its row sat.
+- **Ask AI ships unlisted.** It is offered in Settings, but the chord already covers it — see
+  [ai.md](ai.md).
+- **Search the Web needs `{query}` in its template.** A template without it cannot carry a query, so it
+  reports that rather than opening a bare search page. The query is percent-encoded against
+  `.alphanumerics`, so nothing typed can rewrite the URL.
+- **Search Files carries the query across.** `showPalette` clears the field, so
+  `FileSearchCoordinator.show(query:)` puts it back and starts the search by hand.
+- **A quicklink fallback answers its first argument outright.** `openQuicklink(id:prefilledArgument:)`
+  submits the typed text after the argument screen is up, so any remaining argument lands on a live
+  form.
+
+Editing lives in Settings › Search rather than a pane of its own: it is what the launcher does when a
+search fails, which is that pane's subject.
+
 ## Favorites
 
 `FavoritesStore.keys` is the order — the array *is* the ranking, and it only shows while the query is

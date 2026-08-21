@@ -2,6 +2,12 @@ import SwiftUI
 
 struct LauncherList: View {
     let results: [AppEntry]
+    /// Offered when nothing matched; drawn last, so the flat index matches `LauncherScreen.rows`.
+    var fallbacks: [FallbackRow] = []
+    var selectedFallbackID: FallbackRow.ID?
+    /// Named in the fallback section header, so the row reads as acting on what was typed.
+    var query = ""
+    var onFallback: (FallbackRow) -> Void = { _ in }
     let selectedID: AppEntry.ID?
     let favoriteCount: Int
     let showSections: Bool
@@ -23,17 +29,29 @@ struct LauncherList: View {
         case calc(CalcResult)
         /// `slot` is the row's ⌘-digit, carried from the section build so no row has to search for it.
         case app(AppEntry, slot: Character?)
+        case fallback(FallbackRow)
         var id: String {
             switch self {
             case .header(let title): return "header-" + title
             case .calc: return LauncherList.calcRowID
             case .app(let app, _): return app.id
+            case .fallback(let row): return "fallback-" + row.id
             }
         }
     }
 
     /// Scroll target for the current selection.
-    private var selectedRowID: String? { calcSelected ? Self.calcRowID : selectedID }
+    private var selectedRowID: String? {
+        if calcSelected { return Self.calcRowID }
+        if let selectedFallbackID { return "fallback-" + selectedFallbackID }
+        return selectedID
+    }
+
+    /// The `Use "…" with` section, appended after every entry section so the two orders agree.
+    private var fallbackRows: [Row] {
+        guard !fallbacks.isEmpty else { return [] }
+        return [.header("Use “\(query)” with…")] + fallbacks.map(Row.fallback)
+    }
 
     /// Whether the selection sits on flat index 0: the calc card, else the first result.
     private var firstRowSelected: Bool {
@@ -44,8 +62,9 @@ struct LauncherList: View {
         var calcRows: [Row] = []
         if let calc { calcRows = [.header("Calculator"), .calc(calc)] }
         guard showSections else {
-            guard !results.isEmpty else { return calcRows }
+            guard !results.isEmpty else { return calcRows + fallbackRows }
             return calcRows + [.header("Results")] + results.map { .app($0, slot: nil) }
+                + fallbackRows
         }
         var rows: [Row] = calcRows
         let favorites = results.prefix(favoriteCount)
@@ -75,13 +94,13 @@ struct LauncherList: View {
             grouped.keys.allSatisfy(kinds.contains),
             "kind missing from the launcher's section order: "
                 + grouped.keys.filter { !kinds.contains($0) }.map(\.rawValue).joined(separator: ", "))
-        return rows
+        return rows + fallbackRows
     }
 
     var body: some View {
         let rows = rows
         return Group {
-            if results.isEmpty && calc == nil {
+            if results.isEmpty && calc == nil && fallbacks.isEmpty {
                 EmptyResults(text: "No apps found")
             } else {
                 ScrollViewReader { proxy in
@@ -109,6 +128,12 @@ struct LauncherList: View {
                                     .onTapGesture { onActivate(app) }
                                     .onRightClick { onActions(app) }
                                     .selectionFrame(app.id == selectedID)
+                                case .fallback(let row):
+                                    FallbackRowView(
+                                        row: row, selected: row.id == selectedFallbackID)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { onFallback(row) }
+                                        .selectionFrame(row.id == selectedFallbackID)
                                 }
                             }
                         }
@@ -207,6 +232,42 @@ struct AppRow: View {
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)
+        )
+        .armedHover($hovered)
+    }
+}
+
+/// A fallback row. Its trailing label names the section rather than a kind, because a fallback has
+/// no `AppEntry.Kind` — it is the launcher's own row, not an indexed entry.
+struct FallbackRowView: View {
+    let row: FallbackRow
+    let selected: Bool
+
+    @State private var hovered = false
+
+    private var fill: Color {
+        if selected { return Theme.Colors.selection }
+        if hovered { return Theme.Colors.rowHover }
+        return .clear
+    }
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.lg) {
+            Image(systemName: row.sfSymbol)
+                .frame(width: Theme.Size.rowIcon)
+                .foregroundStyle(.secondary)
+            Text(row.name)
+                .font(Theme.Typography.rowTitle)
+                .lineLimit(1)
+            Spacer()
+            Text("Fallback")
+                .font(Theme.Typography.rowTrailing)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous).fill(fill)
         )
         .armedHover($hovered)
     }

@@ -9,6 +9,8 @@ enum HotKeyAction: Hashable, Sendable {
     case createNote
     case searchNotes
     case searchFiles
+    case askAI
+    case searchAIChats
     case app(bundleID: String)
     case settingsPane(bundleID: String)
     case customCommand(id: UUID)
@@ -29,6 +31,8 @@ enum HotKeyAction: Hashable, Sendable {
         case .createNote: "hotkey.createNote"
         case .searchNotes: "hotkey.searchNotes"
         case .searchFiles: "hotkey.searchFiles"
+        case .askAI: "hotkey.askAI"
+        case .searchAIChats: "hotkey.searchAIChats"
         case .app(let bundleID): "hotkey.app." + bundleID
         case .settingsPane(let bundleID): "hotkey.pane." + bundleID
         case .customCommand(let id): "hotkey.customCommand." + id.uuidString.lowercased()
@@ -42,6 +46,6 @@ enum HotKeyAction: Hashable, Sendable {
     /// The fixed actions every install can bind; the per-item catalogs extend them at launch.
     static let builtInActions: [HotKeyAction] = [
         .togglePalette, .toggleClipboard, .toggleEmoji, .showNotes, .createNote, .searchNotes,
-        .searchFiles
+        .searchFiles, .askAI, .searchAIChats
     ]
 }

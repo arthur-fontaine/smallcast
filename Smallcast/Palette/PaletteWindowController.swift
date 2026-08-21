@@ -244,6 +244,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environment(core.quicklinks)
             .environment(core.quicklinkArguments)
             .environment(core.extensions)
+            .environment(core.aiSession)
+            .environment(core.aiConversations)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
         panel.paletteState = core.palette

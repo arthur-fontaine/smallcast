@@ -2,7 +2,8 @@
 
 A native macOS menu-bar launcher — a minimal Raycast: fuzzy app launcher, global and per-app hotkeys, a
 text/image clipboard history, an inline calculator, a floating note, snippets, quicklinks, window
-management and an emoji picker. It also **runs Raycast extensions** natively, in JavaScriptCore.
+management, an emoji picker and a streamed AI chat against your own provider. It also **runs Raycast
+extensions** natively, in JavaScriptCore.
 SwiftUI + AppKit, running as an accessory with no Dock icon (`LSUIElement`). Zero third-party
 dependencies.
 
@@ -89,6 +90,11 @@ feature's doc, under its own `## Invariants`.
   colour), `PopoverMenuItem` as a data shape, and `Platform/`. What is never shared: anything with
   "how an extension looks or moves" in it. `ExtensionActionsPanel` and `ExtensionGridGeometry` exist
   precisely because the palette's own menu and the emoji grid must stay free to change without them.
+- **A secret goes in the Keychain, never in `AppSettings`.** `Platform/Keychain.swift` is the one
+  accessor and is scoped to the running bundle. A settings backup enumerates `AppSettingsKey`, so a
+  credential kept there would travel to another Mac; the AI API key is the case this exists for. A flag
+  that doubles as consent — `snippetsEnabled`, `extensionsEnabled`, `aiEnabled` — is excluded from a
+  backup for the same reason.
 - **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section, per
   `VisibilityStore` category and per Settings pane — never re-derive a category by sniffing an entry ID.
 - **Generated files are never hand-edited.** `EmojiData.generated.swift` comes from

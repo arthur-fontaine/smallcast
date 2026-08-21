@@ -11,6 +11,8 @@ final class HotKeyManager {
     var onCreateNote: (() -> Void)?
     var onSearchNotes: (() -> Void)?
     var onSearchFiles: (() -> Void)?
+    var onAskAI: (() -> Void)?
+    var onSearchAIChats: (() -> Void)?
     var onRunCustomCommand: ((UUID) -> Void)?
     var onRunSystemAction: ((SystemAction.ID) -> Void)?
     var onRunWindowCommand: ((WindowCommand.ID) -> Void)?
@@ -139,7 +141,7 @@ final class HotKeyManager {
             if binding == nil { set.remove(entryID) } else { set.insert(entryID) }
             UserDefaults.standard.set(Array(set), forKey: boundExtensionCommandKey)
         case .togglePalette, .toggleClipboard, .toggleEmoji, .showNotes, .createNote, .searchNotes,
-            .searchFiles, .systemAction, .windowCommand:
+            .searchFiles, .askAI, .searchAIChats, .systemAction, .windowCommand:
             break
         }
         candidateActionsCache = nil
@@ -202,6 +204,10 @@ final class HotKeyManager {
             return CommandID.searchNotes.name
         case .searchFiles:
             return CommandID.searchFiles.name
+        case .askAI:
+            return CommandID.askAI.name
+        case .searchAIChats:
+            return CommandID.searchAIChats.name
         case .app(let bundleID), .settingsPane(let bundleID):
             return displayName?(action) ?? bundleID
         case .customCommand:
@@ -244,6 +250,8 @@ final class HotKeyManager {
         case .createNote: onCreateNote?()
         case .searchNotes: onSearchNotes?()
         case .searchFiles: onSearchFiles?()
+        case .askAI: onAskAI?()
+        case .searchAIChats: onSearchAIChats?()
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
         case .customCommand(let id): onRunCustomCommand?(id)

@@ -14,6 +14,10 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case recent
     /// A Raycast extension command rendering into the palette.
     case extensionCommand
+    /// The live AI conversation; here the search field is the composer, not a filter.
+    case aiChat
+    /// Saved AI conversations.
+    case aiChats
 
     var id: String { rawValue }
     var title: String {
@@ -28,6 +32,8 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .quicklinkArguments: return "Open Quicklink"
         case .recent: return "Recent"
         case .extensionCommand: return "Extension"
+        case .aiChat: return "Ask AI"
+        case .aiChats: return "AI Chats"
         }
     }
     var systemImage: String {
@@ -41,6 +47,8 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .quicklinks, .quicklinkArguments: return Quicklink.sfSymbol
         case .recent: return "clock.arrow.circlepath"
         case .extensionCommand: return "puzzlepiece.extension"
+        case .aiChat: return "sparkles"
+        case .aiChats: return "bubble.left.and.bubble.right"
         }
     }
     var placeholder: String {
@@ -57,6 +65,8 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .recent: return "Search what you did recently…"
         // Replaced by the command's own `searchBarPlaceholder` whenever it declares one.
         case .extensionCommand: return "Search…"
+        case .aiChat: return "Ask anything…"
+        case .aiChats: return "Search your chats…"
         }
     }
 }

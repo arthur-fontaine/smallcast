@@ -49,7 +49,7 @@ enum LegacyHotKeyRecords {
         case .toggleClipboard: "KeyboardShortcuts_toggleClipboard"
         case .toggleEmoji: "KeyboardShortcuts_toggleEmoji"
         case .showNotes, .createNote, .searchNotes: nil
-        case .searchFiles: nil
+        case .searchFiles, .askAI, .searchAIChats: nil
         case .app(let bundleID): "KeyboardShortcuts_appHotkey." + bundleID
         case .settingsPane(let bundleID): "KeyboardShortcuts_paneHotkey." + bundleID
         case .customCommand(let id):

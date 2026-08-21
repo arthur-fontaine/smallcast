@@ -21,7 +21,8 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ Uninstall{Target,SearchRoot,Rules,Protection,Plan} ·                       │
 │ Quicklink{,Destination,Store,Archive} · Notes/Model/* · Snippets/Model/* · │
 │ ShellCommandRunner · DoubleTap{Modifier,Detector} · ClipboardStore ·       │
-│ RaycastFormat · RaycastV1Decoder · AppSettingsKey · SettingsBackupCoverage │
+│ RaycastFormat · RaycastV1Decoder · AppSettingsKey ·                        │
+│ SettingsBackupCoverage · AI/Model/* · FallbackCommand                      │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ consumed by
 ┌─ EFFECT ─────────────────────────▼─────────────────────────────────────────┐
@@ -30,11 +31,12 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ IconCache · WindowMover · UninstallScanner · UninstallRunner ·             │
 │ SystemActionRunner · QuicklinkLauncher · SnippetTextInjector ·             │
 │ SnippetKeywordListener · NotesRepository · CurrencyRateStore · Paster ·    │
-│ HotKeyCenter · HyperKeyTap · DoubleTapMonitor · RunningAppsMonitor         │
+│ HotKeyCenter · HyperKeyTap · DoubleTapMonitor · RunningAppsMonitor ·       │
+│ AIClient · Keychain                                                        │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ published through
 ┌─ OBSERVABLE STATE ───────────────▼─────────────────────────────────────────┐
-│ 32 @MainActor @Observable stores, sessions, indices and State types        │
+│ 39 @MainActor @Observable stores, sessions, indices and State types        │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ rendered by
 ┌─ VIEW ───────────────────────────▼─────────────────────────────────────────┐
@@ -76,7 +78,8 @@ app: the stores (`AppIndex`, `ClipboardStore`, `SnippetsStore`, `QuicklinkStore`
 `CurrencyRateStore`, `FrequentEmojiStore`), the managers and monitors (`ClipboardManager`,
 `HotKeyManager`, `HyperKeyTap`, `RunningAppsMonitor`, `SnippetKeywordListener`), the shared state
 (`AppSettings`, `PaletteState`, `FileSearchSession`, `UninstallSession`,
-`QuicklinkArgumentSession`), `NotesStore`, the fifteen feature coordinators, and the window controllers.
+`QuicklinkArgumentSession`, `AIChatSession`), `NotesStore`, `AIConversationStore`, `AIKeyStore`, the
+feature coordinators, and the window controllers.
 
 `AppDelegate.applicationDidFinishLaunching` calls `AppCore.shared.start()` and nothing else. That is the
 one wiring point, and `start()` reads as the app's whole boot sequence in one screen.
@@ -130,7 +133,7 @@ macOS by itself. Nothing else in the app sets an appearance.
 
 ## Observation
 
-32 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
+39 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
 state through `@Environment` rather than `@EnvironmentObject`.
 
 Three things about this model are easy to get wrong:
@@ -177,7 +180,7 @@ Smallcast/
   DesignSystem/     Theme (the token source), KeyCapChip, Tooltip, SymbolImage,
                     VisualEffectView, PopoverMenu, SettingsComponents, Scrolling/, Interaction/
   Platform/         system shims: Permissions, LaunchAtLogin, InputSourceSwitcher, ScreenTarget,
-                    AppDisplayName,
+                    AppDisplayName, Keychain,
                     NotificationToken, AppPaths, Signposts, HealthTicker, Memo, ActivationPolicy,
                     Images/, Compression/
   Resources/        RaycastRuntime.generated.js, the embedded extension runtime
@@ -188,7 +191,7 @@ Smallcast/
   Features/
     PaletteRowIndex.swift   the flat selection index — palette-owned, so it sits at the top
     Launcher/ Clipboard/ Calculator/ Emoji/ FileSearch/ Notes/ Quicklinks/ Snippets/ Uninstall/
-    SystemActions/ CustomCommands/ HotKeys/ Backup/ WindowManagement/ Onboarding/ Extensions/
+    SystemActions/ CustomCommands/ HotKeys/ Backup/ WindowManagement/ Onboarding/ Extensions/ AI/
         Model/      pure — the harness inputs
         Service/    effects — stores, monitors, runners, AppKit glue
         UI/         screens, views, and the feature's coordinator

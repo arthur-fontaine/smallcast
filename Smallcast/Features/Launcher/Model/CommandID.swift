@@ -4,6 +4,8 @@ import Foundation
 enum CommandID: String, CaseIterable, Sendable {
     case calculatorHistory = "command:calculator-history"
     case clipboardHistory = "command:clipboard-history"
+    case askAI = "command:ask-ai"
+    case searchAIChats = "command:search-ai-chats"
     case searchEmoji = "command:search-emoji"
     case searchFiles = "command:search-files"
     case showNotes = "command:show-notes"
@@ -25,6 +27,8 @@ enum CommandID: String, CaseIterable, Sendable {
         switch self {
         case .calculatorHistory: return "Calculator History"
         case .clipboardHistory: return "Clipboard History"
+        case .askAI: return "Ask AI"
+        case .searchAIChats: return "Search AI Chats"
         case .searchEmoji: return "Search Emoji & Symbols"
         case .searchFiles: return "Search Files"
         case .showNotes: return "Show Notes"
@@ -48,6 +52,8 @@ enum CommandID: String, CaseIterable, Sendable {
         switch self {
         case .calculatorHistory: return "plus.forwardslash.minus"
         case .clipboardHistory: return "doc.on.clipboard"
+        case .askAI: return "sparkles"
+        case .searchAIChats: return "bubble.left.and.bubble.right"
         case .searchEmoji: return "face.smiling"
         case .searchFiles: return "doc.text.magnifyingglass"
         case .showNotes: return "text.page"
@@ -70,6 +76,8 @@ enum CommandID: String, CaseIterable, Sendable {
     /// The built-ins with a global shortcut of their own; the rest open from the launcher.
     var hotKeyAction: HotKeyAction? {
         switch self {
+        case .askAI: return .askAI
+        case .searchAIChats: return .searchAIChats
         case .searchFiles: return .searchFiles
         case .clipboardHistory: return .toggleClipboard
         case .searchEmoji: return .toggleEmoji

@@ -39,6 +39,9 @@ final class AppCore {
     let activationPolicy = ActivationPolicy()
     let uninstall = UninstallSession()
     let quicklinkArguments = QuicklinkArgumentSession()
+    let aiSession = AIChatSession()
+    let aiConversations = AIConversationStore()
+    let aiKeys = AIKeyStore()
     let notesStore: NotesStore
     let extensions: ExtensionManager
 
@@ -113,6 +116,14 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var fileSearchCoordinator = FileSearchCoordinator(
         settings: settings, appIndex: appIndex, session: fileSearch, palette: palette,
         paletteCoordinator: paletteCoordinator, core: self)
+    @ObservationIgnored private(set) lazy var aiCoordinator = AICoordinator(
+        settings: settings, appIndex: appIndex, session: aiSession,
+        conversations: aiConversations, keys: aiKeys, palette: palette,
+        paletteCoordinator: paletteCoordinator, core: self)
+    @ObservationIgnored private(set) lazy var fallbackCoordinator = FallbackCoordinator(
+        settings: settings, quicklinks: quicklinks, palette: palette,
+        paletteCoordinator: paletteCoordinator, fileSearchCoordinator: fileSearchCoordinator,
+        quicklinkCoordinator: quicklinkCoordinator, core: self)
     @ObservationIgnored private(set) lazy var updateCoordinator = UpdateCoordinator(
         store: updateChecker, core: self)
 
@@ -163,6 +174,7 @@ final class AppCore {
             extensionCoordinator.applyEnabled()
             fileSearchCoordinator.applyEnabled()
             fileSearchCoordinator.applyPolicy()
+            aiCoordinator.applyEnabled()
             notesCoordinator.applyEnabled()
             customCommands.onChange = { [weak self] _ in
                 self?.customCommandCoordinator.applyCustomCommandsPresence()
@@ -197,6 +209,8 @@ final class AppCore {
             hotKeys.onCreateNote = { [weak self] in self?.notesCoordinator.createNote() }
             hotKeys.onSearchNotes = { [weak self] in self?.notesCoordinator.searchNotes() }
             hotKeys.onSearchFiles = { [weak self] in self?.fileSearchCoordinator.show() }
+            hotKeys.onAskAI = { [weak self] in self?.aiCoordinator.newChat() }
+            hotKeys.onSearchAIChats = { [weak self] in self?.aiCoordinator.showChats() }
             hotKeys.onRunCustomCommand = { [weak self] id in
                 self?.customCommandCoordinator.runCustomCommand(id: id)
             }
@@ -273,7 +287,7 @@ final class AppCore {
         case .extensionCommand(let entryID):
             return appIndex.apps.first { $0.kind == .extensionCommand && $0.id == entryID }?.name
         case .togglePalette, .toggleClipboard, .toggleEmoji, .searchFiles, .systemAction,
-            .showNotes, .createNote, .searchNotes, .windowCommand:
+            .showNotes, .createNote, .searchNotes, .windowCommand, .askAI, .searchAIChats:
             return nil
         }
     }
@@ -310,6 +324,7 @@ final class AppCore {
                 _ = $0.quicklinksShowInLauncher
             }, reproject: { $0.quicklinkCoordinator.applyQuicklinksPresence() })
         track({ _ = $0.fileSearchEnabled }, reproject: { $0.fileSearchCoordinator.applyEnabled() })
+        track({ _ = $0.aiEnabled }, reproject: { $0.aiCoordinator.applyEnabled() })
         track({ _ = $0.notesEnabled }, reproject: { $0.notesCoordinator.applyEnabled() })
         track(
             {

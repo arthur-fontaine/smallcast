@@ -38,6 +38,15 @@ final class FileSearchCoordinator {
         paletteCoordinator.showPalette(mode: .fileSearch)
     }
 
+    /// The fallback row's path: `showPalette` clears the field, so the query is put back after it
+    /// and the search kicked off by hand — the palette only searches on its own on a fresh show.
+    func show(query: String) {
+        guard settings.fileSearchEnabled else { return }
+        paletteCoordinator.showPalette(mode: .fileSearch)
+        palette.query = query
+        session.search(query)
+    }
+
     func open(_ result: FileSearchResult) {
         paletteCoordinator.hidePalette(restoreFocus: false)
         Task {

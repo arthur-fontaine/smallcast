@@ -120,6 +120,10 @@ final class LauncherCoordinator {
             paletteCoordinator.showPalette(mode: .emoji)
         case .searchFiles:
             fileSearchCoordinator.show()
+        case .askAI:
+            core.aiCoordinator.newChat()
+        case .searchAIChats:
+            core.aiCoordinator.showChats()
         case .showNotes:
             paletteCoordinator.hidePalette(restoreFocus: false)
             notesCoordinator.show()
