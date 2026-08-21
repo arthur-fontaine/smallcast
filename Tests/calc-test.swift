@@ -349,6 +349,20 @@ struct CalcTests {
         // A combination the table does name is answered by that name; only the rest compose.
         expectDisplay("1kg / (1m * 1s * 1s)", "1 Pa")
         expectDisplay("1kg / (1m * 1s)", "1 kg/(m·s)")
+        expectDisplay("(2m)^3", "8 m³")
+        expectDisplay("10 / 2m", "5 1/m")
+        // A composed unit adds to its own dimension, answering in the last unit written.
+        expectDisplay("1kg * 1m + 2kg * 1m", "3 kg·m")
+        expectDisplay("1kg*1m - 500g*1m", "500 g·m")
+        expectDisplay("1kg * 1m + 5", "6 kg·m")
+        expectError("1kg * 1m + 1s", "Cannot add Length·Mass and Time.")
+        // And converts to anything of that dimension, by name or not.
+        expectDisplay("100km / 2hr to mph", "31.06855961 mph")
+        expectNil("1kg / (1m * 1s) to nonsense")
+        // A bare unit is only a denominator, never an answer of its own.
+        expectNil("kg")
+        expectNil("hr")
+        expectNil("2m^0.5")
         expectDisplay("5kg / 500g", "10")
         expectNil("sqrt(4kg)")
         expectNil("1kg!")

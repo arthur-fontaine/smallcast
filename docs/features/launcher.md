@@ -269,6 +269,29 @@ paths; see the command in `development.md`.
 Launcher icons use a persistent 32 MB cost-capped `NSCache`. Fitted file-row icons use a separate
 transient 8 MB cache that is purged when its palette list disappears (`IconCache`).
 
+## The Recent list
+
+↑ from the empty launcher opens `PaletteMode.recent`: what you just did, newest first, under the same
+day headers the clipboard and calculator histories use. `LaunchHistoryStore`
+(`Launcher/Model/`) is the log and `HistoryFeed` (`Launcher/Service/`) merges it with the calculator
+history into one `HistoryItem` stream, so a remembered launch and a remembered calculation sort
+together.
+
+It is a separate log from `LauncherRankingStore` on purpose, and the two record on different rules.
+Ranking learns query→entry pairs, so `LauncherCoordinator.launch` records there only when a query
+actually named the row — a category listing does not, or the row would rank under "s". The Recent
+list records **every** launch, query or not, because it is about what happened and not about what was
+typed.
+
+Rows are the launcher's and the calculator history's own views, so an entry looks exactly as it does
+where it came from. The ⌘K menu is the underlying item's own menu plus **Remove from History** and
+**Clear History**. Reordering favorites is absent there: those rows need the visible favorites order,
+which this screen does not have, so `RecentScreen` hands `AppActionsMenu` a `FavoriteActions` whose
+move rows are switched off rather than a store call that would act on the wrong index.
+
+Settings › Search shows and resets what the ranking learned (`SearchSettingsView`,
+`Launcher/Settings/`); clearing there is independent of clearing the Recent list.
+
 ## Favorites
 
 `FavoritesStore.keys` is the order — the array *is* the ranking, and it only shows while the query is

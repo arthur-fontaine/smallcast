@@ -58,6 +58,10 @@ enum CalcQuantity {
             guard parser.operationCount > 0 || preserveStandaloneUnit else { return nil }
             return measurementResult(
                 value.amount, unit: unit, expression: expressionText(split.expressionTokens))
+        case .compound(let compound):
+            return compoundResult(
+                value.amount, unit: compound,
+                expression: expressionText(split.expressionTokens))
         case .currency(let definition):
             guard parser.operationCount == 0 else {
                 return currencyResult(
@@ -92,6 +96,19 @@ enum CalcQuantity {
         switch value.kind {
         case .scalar:
             return nil
+        case .compound(let from):
+            guard let to = CalcUnits.byName[targetName] else {
+                guard CalcCurrency.byName[targetName] != nil else { return nil }
+                return conversionError(
+                    query, from: from.dimension.displayName, to: CalcCurrency.categoryName)
+            }
+            guard from.dimension == to.dimension else {
+                return conversionError(
+                    query, from: from.dimension.displayName, to: to.category.displayName)
+            }
+            let output = value.amount * from.siFactor / to.siFactor
+            guard output.isFinite else { return nil }
+            return measurementResult(output, unit: to, expression: expression)
         case .unit(let from):
             if let to = CalcUnits.byName[targetName] {
                 guard from.category == to.category else {
@@ -139,6 +156,17 @@ enum CalcQuantity {
 
     private static func measurementResult(
         _ amount: Double, unit: UnitDef, expression: String
+    ) -> CalcResult {
+        CalcResult(
+            expression: expression,
+            sourceBadge: "Expression", targetBadge: unit.name,
+            payload: .value(
+                display: "\(CalcFormatter.display(amount)) \(unit.symbol)",
+                copyText: "\(CalcFormatter.copyText(amount)) \(unit.symbol)"))
+    }
+
+    private static func compoundResult(
+        _ amount: Double, unit: CompoundUnit, expression: String
     ) -> CalcResult {
         CalcResult(
             expression: expression,
@@ -288,6 +316,8 @@ private struct QuantityValue {
         case scalar
         case unit(UnitDef)
         case currency(CurrencyDef)
+        /// A product of unit powers the table has no single name for: `kg·m`, `USD/km`, `1/kg`.
+        case compound(CompoundUnit)
     }
 
     var amount: Double
@@ -322,13 +352,18 @@ private struct QuantityParser {
         return value
     }
 
-    private mutating func parseExpression(minBindingPower: Int) -> QuantityValue? {
-        guard var left = parseOperand() else { return nil }
+    private mutating func parseExpression(
+        minBindingPower: Int, allowBareUnit: Bool = false
+    ) -> QuantityValue? {
+        guard var left = parseOperand(allowBareUnit: allowBareUnit) else { return nil }
         while let binary = peekBinary(left: left), binary.bindingPower >= minBindingPower {
             if binary.consumesToken { position += 1 }
             operationCount += 1
             guard
-                let right = parseExpression(minBindingPower: binary.rightBindingPower),
+                let right = parseExpression(
+                    minBindingPower: binary.rightBindingPower,
+                    // `60km / h` — a denominator names the unit without repeating "1".
+                    allowBareUnit: binary.op == "*" || binary.op == "/"),
                 let combined = apply(
                     binary.op, left, right, implicit: !binary.consumesToken)
             else { return nil }
@@ -378,9 +413,18 @@ private struct QuantityParser {
         case "/":
             return divide(left, right)
         case "^":
-            guard isScalar(left.kind), isScalar(right.kind) else { return nil }
+            guard isScalar(right.kind) else { return nil }
             let output = pow(left.effective, right.effective)
-            return output.isFinite ? QuantityValue(amount: output, kind: .scalar) : nil
+            guard output.isFinite else { return nil }
+            guard !isScalar(left.kind) else {
+                return QuantityValue(amount: output, kind: .scalar)
+            }
+            // Only a whole power keeps the dimension an integer product, so `2m^0.5` stays unanswered.
+            let exponent = Int(right.effective)
+            guard Double(exponent) == right.effective, let base = unitForm(left.kind),
+                let raised = base.raised(to: exponent)
+            else { return nil }
+            return narrowed(output, raised)
         default:
             return nil
         }
@@ -436,6 +480,31 @@ private struct QuantityParser {
             return fail(
                 "Cannot \(op == "+" ? "add" : "subtract") Currency and \(rhs.category.displayName)."
             )
+        // A compound adds to anything of its own dimension; a bare number takes the unit beside it.
+        case (.compound, _), (_, .compound):
+            if isScalar(left.kind) || isScalar(right.kind) {
+                guard !implicit else { return nil }
+                return isScalar(left.kind)
+                    ? QuantityValue(
+                        amount: left.effective + direction * right.amount, kind: right.kind)
+                    : QuantityValue(
+                        amount: left.amount + direction * right.effective, kind: left.kind)
+            }
+            guard let lhs = unitForm(left.kind), let rhs = unitForm(right.kind) else { return nil }
+            guard lhs.dimension == rhs.dimension else {
+                return fail(
+                    "Cannot \(op == "+" ? "add" : "subtract") \(lhs.dimension.displayName) and \(rhs.dimension.displayName)."
+                )
+            }
+            // Composite ("5 feet 3 inches") answers in its leading unit; `+`/`-` in the last.
+            if implicit {
+                let converted = right.amount * rhs.siFactor / lhs.siFactor
+                return QuantityValue(
+                    amount: left.amount + direction * converted, kind: .compound(lhs))
+            }
+            let converted = left.amount * lhs.siFactor / rhs.siFactor
+            return QuantityValue(
+                amount: converted + direction * right.amount, kind: .compound(rhs))
         // A bare number takes the unit beside it; adjacency stays silent, being a half-typed unit.
         case (.unit, .scalar), (.currency, .scalar):
             guard !implicit else { return nil }
@@ -461,7 +530,7 @@ private struct QuantityParser {
             return QuantityValue(
                 amount: left.effective * right.effective, kind: left.kind)
         default:
-            return fail("Multiplication of two unit values is not supported.")
+            return composed(left, right, dividing: false)
         }
     }
 
@@ -474,11 +543,10 @@ private struct QuantityParser {
         case (.unit, .scalar), (.currency, .scalar):
             return finiteDivision(left.effective, right.effective, kind: left.kind)
         case (.scalar, .unit), (.scalar, .currency):
-            return fail("Division by a unit value is not supported.")
+            return composed(left, right, dividing: true)
         case (.unit(let lhs), .unit(let rhs)):
             guard lhs.category == rhs.category else {
-                return fail(
-                    "Cannot divide \(lhs.category.displayName) by \(rhs.category.displayName).")
+                return composed(left, right, dividing: true)
             }
             guard lhs.category != .temperature else {
                 return fail("Division of temperature values is not supported.")
@@ -490,10 +558,10 @@ private struct QuantityParser {
             guard let denominator = convertedCurrency(right.amount, from: rhs, to: lhs)
             else { return nil }
             return finiteDivision(left.amount, denominator, kind: .scalar)
-        case (.unit(let lhs), .currency):
-            return fail("Cannot divide \(lhs.category.displayName) by Currency.")
-        case (.currency, .unit(let rhs)):
-            return fail("Cannot divide Currency by \(rhs.category.displayName).")
+        case (.unit, .currency), (.currency, .unit):
+            return composed(left, right, dividing: true)
+        default:
+            return composed(left, right, dividing: true)
         }
     }
 
@@ -504,8 +572,8 @@ private struct QuantityParser {
         return output.isFinite ? QuantityValue(amount: output, kind: kind) : nil
     }
 
-    private mutating func parseOperand() -> QuantityValue? {
-        guard var value = parsePrefix() else { return nil }
+    private mutating func parseOperand(allowBareUnit: Bool = false) -> QuantityValue? {
+        guard var value = parsePrefix(allowBareUnit: allowBareUnit) else { return nil }
         while true {
             switch current {
             case .ident(let name):
@@ -531,7 +599,7 @@ private struct QuantityParser {
         }
     }
 
-    private mutating func parsePrefix() -> QuantityValue? {
+    private mutating func parsePrefix(allowBareUnit: Bool = false) -> QuantityValue? {
         switch current {
         case .number(let value), .compactNumber(let value):
             position += 1
@@ -555,10 +623,21 @@ private struct QuantityParser {
             position += 1
             return value
         case .ident(let name):
-            guard CalcUnits.byName[name] == nil,
-                let definition = CalcCurrency.byName[name],
-                let amount = number(at: position + 1)
-            else { return nil }
+            if let unit = CalcUnits.byName[name] {
+                guard allowBareUnit else { return nil }
+                position += 1
+                dimensionCount += 1
+                return QuantityValue(amount: 1, kind: .unit(unit))
+            }
+            guard let definition = CalcCurrency.byName[name] else { return nil }
+            // Money is written sign-first (`$10`), so the amount follows its currency here.
+            guard let amount = number(at: position + 1) else {
+                guard allowBareUnit else { return nil }
+                position += 1
+                recordCurrency(definition.code)
+                dimensionCount += 1
+                return QuantityValue(amount: 1, kind: .currency(definition))
+            }
             position += 2
             recordCurrency(definition.code)
             dimensionCount += 1
@@ -566,6 +645,68 @@ private struct QuantityParser {
         default:
             return nil
         }
+    }
+
+    /// A kind as a product of unit powers, so arithmetic can combine kinds with no table entry.
+    /// Money has no size until a snapshot prices it, so a missing rate records the issue and fails.
+    private mutating func unitForm(_ kind: QuantityValue.Kind) -> CompoundUnit? {
+        switch kind {
+        case .scalar:
+            return nil
+        case .unit(let unit):
+            return CompoundUnit(unit)
+        case .compound(let compound):
+            return compound
+        case .currency(let definition):
+            recordCurrency(definition.code)
+            guard let rates else {
+                issue = "Exchange rates unavailable — check your connection."
+                return nil
+            }
+            guard let priced = definition.unitDef.priced(at: rates) else {
+                issue = "No exchange rate for \(definition.code)."
+                return nil
+            }
+            return CompoundUnit(priced)
+        }
+    }
+
+    /// Narrows a compound to the simplest kind it is: `5kg / 500g` is a number, `$30/hr * 40hr` is
+    /// money again, `100km / 2hr` is the table's own km/h. Only the scalar case moves the amount —
+    /// a named equivalent is by definition the same size, and a plain number has no unit to carry it.
+    private func narrowed(_ amount: Double, _ compound: CompoundUnit) -> QuantityValue? {
+        guard !compound.dimension.isScalar else {
+            let output = amount * compound.siFactor
+            return output.isFinite ? QuantityValue(amount: output, kind: .scalar) : nil
+        }
+        guard let unit = compound.singleUnit ?? compound.namedEquivalent else {
+            return QuantityValue(amount: amount, kind: .compound(compound))
+        }
+        // Money keeps its own kind, so the card formats it as currency and not as a measurement.
+        guard let code = unit.currency, let definition = CalcCurrency.byName[code.lowercased()]
+        else {
+            return QuantityValue(amount: amount, kind: .unit(unit))
+        }
+        return QuantityValue(amount: amount, kind: .currency(definition))
+    }
+
+    /// The fallback for every operand pair the typed cases don't answer: carry the units through as
+    /// a product of powers rather than refusing the expression.
+    private mutating func composed(
+        _ left: QuantityValue, _ right: QuantityValue, dividing: Bool
+    ) -> QuantityValue? {
+        let leftUnit = isScalar(left.kind) ? nil : unitForm(left.kind)
+        if !isScalar(left.kind), leftUnit == nil { return nil }
+        let rightUnit = isScalar(right.kind) ? nil : unitForm(right.kind)
+        if !isScalar(right.kind), rightUnit == nil { return nil }
+        guard let combined = CompoundUnit.combine(leftUnit, rightUnit, dividing: dividing) else {
+            return finiteDivision(left.effective, right.effective, kind: .scalar)
+        }
+        let amount =
+            dividing
+            ? left.effective / right.effective : left.effective * right.effective
+        guard amount.isFinite else { return nil }
+        return narrowed(amount, combined)
     }
 
     private mutating func dimension(named name: String) -> QuantityValue.Kind? {

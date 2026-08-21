@@ -80,13 +80,35 @@ answering nothing.
 Once an operator is involved the answer stays in the units written, so `2 * 5kg` is `10 kg`. Only a
 bare quantity (`50cm`, `1m`) falls through to the keyword-less auto-conversion below.
 
-Derived dimensions are deliberately not guessed: multiplying two unit values returns a clear error.
 Affine temperatures may only be added or subtracted when both operands use the same scale; treating
 an absolute Celsius/Fahrenheit value as a delta would silently produce physically incorrect answers.
 
-Errors are reserved for input that can only be a mistake — two incompatible units (`1kg + 1m`), or a
-unit against a currency. Everything else that cannot be evaluated stays silent rather than flashing a
-card mid-keystroke.
+Errors are reserved for input that can only be a mistake — two incompatible units (`1kg + 1m`), or two
+composed units of different dimensions (`1kg * 1m + 1s`). Everything else that cannot be evaluated
+stays silent rather than flashing a card mid-keystroke.
+
+### Derived units
+
+Units carry through arithmetic as a product of powers, so a combination the table has no entry for
+still has a dimension and still renders: `1kg * 1m` is `1 kg·m`, `10 / 2m` is `5 1/m`, `(2m)^3` is
+`8 m³`. `CalcDimension` (`Calculator/Model/`) holds the exponents over the fundamentals — length,
+mass, time, information, angle, temperature, and money — and `CompoundUnit` holds the units as
+written, so `km / hr` displays as `km/h` rather than in some canonical order.
+
+Every result narrows to the simplest kind it is, which is what makes the feature invisible when it
+does not apply. `100km / 2hr` finds the table's own `km/h`, so the card says `50 km/h` and badges it
+"Kilometers per Hour". `1kg / (1m * 1s * 1s)` finds `Pa`. `5kg / 500g` cancels to the plain number
+`10`. `$30/hr * 40hr` cancels the hours and is money again, so it formats as currency: `1,200.00 USD`.
+Only a combination with no name left composes — `1 kg/(m·s)`.
+
+Money is a dimension like any other here, which is what lets a rate work at all. A currency has no
+size until a snapshot prices it, so `CurrencyDef.unitDef` is sized through `UnitDef.priced(at:)` and a
+missing rate reports `No exchange rate for <CODE>.` rather than inventing one.
+
+A denominator may name its unit without repeating "1": `60km / h`. That is the only position where a
+bare unit is an operand — `parseExpression` passes `allowBareUnit` only to the right of `*` and `/`.
+Elsewhere a lone `kg` stays an app search, and a fractional power (`2m^0.5`) stays unanswered, since
+only a whole power keeps the dimension an integer product.
 
 An attached `k` is a thousands suffix (`10k` → `10,000`), while whitespace keeps Kelvin explicit
 (`10 k to c`); the established attached Kelvin conversion form remains valid when the temperature
@@ -205,6 +227,31 @@ the typed currency while the expression is still being written (`$10 +`), and a 
 amount is still an app search. Where the region names no currency, names one the table doesn't carry,
 names the currency already written, or names one the snapshot doesn't quote, the amount answers in
 the currency written rather than erroring about a code the user never typed.
+
+### Remembering a calculation you only looked at
+
+A calculation is recorded when it stops being edited, not when it is copied. `PaletteState.prepare`
+fires `onWillReset` at the *start* of every reset, while the query is still readable — the one moment
+a calculation you never acted on can still be kept — and `AppCore` wires that to
+`CalculatorCoordinator.commitCalculation`.
+
+Only the two screens that actually show the answer card commit: inside a running extension command
+the search field belongs to the extension, and `1+2` typed into its filter is not a calculation.
+Editing never commits, so `1+2` grown into `1+21` records only the latter, and re-opening within the
+grace period to keep typing replaces the entry rather than adding one.
+`CalculatorHistoryStore.record` drops a repeat of the newest entry, so committing the same thing
+twice is harmless.
+
+### Consent
+
+Nothing is contacted until the switch in Settings › Miscellaneous is on. The consent flag lives on
+`CurrencyRateStore`, not in `AppSettings`, so no settings import can grant network access. It is off
+when absent, which is the only safe default for a network feature, and it gates three places: the
+constructor does not even read a snapshot left on disk, `start()` runs no loop, and `fetchAndStore()`
+refuses. Turning it off cancels the loop, drops the in-memory table, and deletes the cache file.
+
+The sheet that turns it on names the provider, how often it is contacted, and what leaves the Mac —
+nothing you type, no account, no identifiers.
 
 ### Exchange rates
 

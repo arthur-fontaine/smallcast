@@ -178,3 +178,9 @@ enum CalcCurrency {
         return table
     }()
 }
+
+extension CurrencyDef {
+    /// As a table unit, so a compound can carry money: `$/hr` is money¹·time⁻¹. Sized only once
+    /// `UnitDef.priced(at:)` has a snapshot, since a currency has no fixed magnitude of its own.
+    var unitDef: UnitDef { UnitDef(code, name, .money, 1, currency: code) }
+}

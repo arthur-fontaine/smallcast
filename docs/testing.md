@@ -57,6 +57,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `file-search-test` | `FileSearch/Model/`, plus the shared `FuzzyMatch` scorer |
 | `file-search-session-test` | serialized query execution, debounce coalescing and cancellation |
 | `ranking-test` | `Launcher/Model/LauncherRankingStore.swift` |
+| `launch-history-test` | `Launcher/Model/LaunchHistoryStore.swift` |
 | `scopes-test` | `Launcher/Model/SearchScopes.swift` |
 | `calc-test` | all of `Calculator/Model/` |
 | `clipboard-test` | `Clipboard/Model/ClipboardStore.swift` |
