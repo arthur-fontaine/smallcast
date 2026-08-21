@@ -1,9 +1,10 @@
 # Smallcast
 
 A native macOS menu-bar launcher — a minimal Raycast: fuzzy app launcher, global and per-app hotkeys, a
-text/image clipboard history, an inline calculator, snippets, quicklinks, window management and an emoji
-picker. It also **runs Raycast extensions** natively, in JavaScriptCore. SwiftUI + AppKit, running as an
-accessory with no Dock icon (`LSUIElement`). Zero third-party dependencies.
+text/image clipboard history, an inline calculator, a floating note, snippets, quicklinks, window
+management and an emoji picker. It also **runs Raycast extensions** natively, in JavaScriptCore.
+SwiftUI + AppKit, running as an accessory with no Dock icon (`LSUIElement`). Zero third-party
+dependencies.
 
 ## Posture: latest-only, always
 
@@ -26,8 +27,9 @@ Write code as if the platform released yesterday:
   migration scaffolding, no "just in case" fallbacks. The two migrations that exist are scheduled for
   deletion; nothing new may depend on them.
 
-Carbon is the one deliberate exception, and it is a capability gap rather than inertia: nothing modern
-registers a system-wide chord. Full reasoning in [standards.md](docs/standards.md#posture).
+Carbon is a deliberate capability-gap dependency rather than inertia: nothing modern registers a
+system-wide chord, and HIToolbox's TIS APIs remain the public input-source mechanism. Full reasoning in
+[standards.md](docs/standards.md#posture).
 
 ## Where things are
 
@@ -51,6 +53,7 @@ registers a system-wide chord. Full reasoning in [standards.md](docs/standards.m
 | add or restyle any view | [ui.md](docs/ui.md) |
 | touch one feature's internals | [features/](docs/features/) — each opens with its invariants |
 | package or ship a build | [release.md](docs/release.md) |
+| merge `base/main` — Tinycast — into this fork | [upstream.md](docs/upstream.md) |
 
 ## Non-negotiables
 
@@ -65,22 +68,37 @@ feature's doc, under its own `## Invariants`.
 - **Swift 6 language mode: data-race violations are hard errors.** `@MainActor` is the default,
   cross-actor model types are `Sendable`, and heavy or IO-bound work goes off-main as `nonisolated`
   functions driven by `Task.detached`. Do not add a second actor.
-- **The app is locked to `.darkAqua` globally.** The Liquid Glass material is tuned for a deep dark
-  surface; light mode is not a switch, it is a second design.
+- **Dark is the baseline, and a colour's dark branch is the literal it always was.** `Theme.Colors`
+  resolves per appearance through `ramp`/`adaptive`; every dark value is the `Color.white.opacity(…)`
+  the forced-dark build shipped, restated rather than re-derived. Retune a light branch freely — change
+  a dark one only when the task is to change Dark. `AppAppearance` drives `NSApp.appearance`, and
+  `.system` maps to `nil` so AppKit follows macOS on its own.
 - **Smallcast presents its own dialogs — never `NSAlert`, `NSSlider` or a system popover.** A question
   goes through `DialogController`, a report through a HUD via `HUDPresenter`.
-- **Consent is structural, not a checkbox.** Every networked feature ships off behind a dialog naming
-  the provider, the cadence and what leaves the machine; the owning store re-checks consent on both
-  sides of every `await` and fetches on a private `.ephemeral`, `urlCache = nil` session. Consent flags
-  live on that store, **never** in `AppSettings`, and `snippetsEnabled` is excluded from settings
-  backups so an import cannot grant keystroke listening. `CurrencyRateStore` is the reference — copy it
-  rather than inventing a second shape.
+- **A networked feature fetches on a private `.ephemeral`, `urlCache = nil` session**, never
+  `URLSession.shared`, so its own cache file stays the only copy on disk. `CurrencyRateStore` is the
+  reference — copy it rather than inventing a second shape. A flag that grants a capability is never
+  carried by a backup: `snippetsEnabled` is excluded from settings backups so an import cannot grant
+  keystroke listening.
+- **Extensions stay inside `Features/Extensions/`.** Every view, row, menu, geometry and sizing
+  constant an extension needs is written and owned there — never added to `DesignSystem/`, never bolted
+  onto `Theme`, and never shared with another feature. An extension renders untrusted third-party code
+  whose shape we do not control, so it must never be able to force a change on a launcher surface.
+  **Duplicating a view or a piece of layout maths to keep it here is the correct trade**, and the one
+  place the no-duplication rule yields. What *is* shared: `Theme`'s base tokens (spacing, radius,
+  colour), `PopoverMenuItem` as a data shape, and `Platform/`. What is never shared: anything with
+  "how an extension looks or moves" in it. `ExtensionActionsPanel` and `ExtensionGridGeometry` exist
+  precisely because the palette's own menu and the emoji grid must stay free to change without them.
 - **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section, per
   `VisibilityStore` category and per Settings pane — never re-derive a category by sniffing an entry ID.
 - **Generated files are never hand-edited.** `EmojiData.generated.swift` comes from
   `node Scripts/gen-emoji.js`, `CurrencyData.generated.swift` from `node Scripts/gen-currencies.js`, and
   `Resources/RaycastRuntime.generated.js` from `Scripts/raycast-runtime/build.mjs` — the runtime is
   committed so building the app never needs Node.
+- **Smallcast is a fork, and upstream's version wins where the two converged.** Syncing `base/main`
+  is a feature-by-feature decision, not a merge: upstream rewrites its history, and sixteen Smallcast-only
+  features hook into files upstream also owns, so taking its file silently deletes them. Never sync
+  without walking the tables in [upstream.md](docs/upstream.md).
 - **`DesignSystem/Scrolling/EdgeDissolve.swift` and `ThinScrollbar.swift` are off-limits.** Both are
   tuned by eye against the palette's floating bars, so any edit is a visual regression. Needing to touch
   one to fix a scroll bug means the real fix belongs elsewhere.

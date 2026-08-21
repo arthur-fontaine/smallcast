@@ -20,6 +20,28 @@ Apple Developer ID — so macOS quarantines a directly-downloaded DMG. The Homeb
 automatically; direct downloaders run `xattr -dr com.apple.quarantine "…/Smallcast.app"` once. Full
 details in [signing.md](signing.md).
 
+## How the in-app updater consumes a release
+
+Every release publishes two assets from one build: `Smallcast-<version>.dmg`, which people download by
+hand and which the cask installs, and `Smallcast-<version>.zip`, which the in-app updater installs. The
+zip is produced with `ditto -c -k --keepParent --sequesterRsrc` — the only zip that leaves the code
+signature verifiable, which matters because the updater refuses any bundle whose leaf certificate does
+not match the running app's.
+
+Three things a release must keep true, or the updater skips it:
+
+- **It carries a `.zip` asset.** A DMG-only release is not installable and is not offered.
+- **The tag parses as `vMAJOR.MINOR.PATCH` or `vMAJOR.MINOR.PATCH-beta.N`,** and agrees with the
+  `prerelease` flag. `v0.9.7-sequoia` deliberately parses as neither, which is what keeps beta
+  installs off the macOS 15 build.
+- **It is not a draft.**
+
+**Both casks declare `auto_updates true`.** That is Homebrew's flag for an app that manages its own
+version, and it is what keeps `brew update && brew upgrade` from fighting an app that updated itself:
+brew never reports Smallcast outdated, never re-downloads it, and never rolls a self-updated copy back.
+Removing that line would reintroduce exactly those three problems. See
+[features/updates.md](features/updates.md).
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every PR, on a `macos-26` runner with Xcode 26 (the same selection
@@ -66,10 +88,15 @@ on the tap repo. Without the secret the step logs a warning and skips; the relea
 
 ## Website
 
-`.github/workflows/website.yml` builds `website/` (Vite + React + TS) and deploys it to GitHub Pages at
-`https://abue-ammar.github.io/tinycast/` on every push to `main` that touches `website/`. Enable it
-once via **Settings → Pages → Source = GitHub Actions**.
+`.github/workflows/website.yml` builds `website/` (Next.js static export + Tailwind, with Fumadocs for
+the docs section) and deploys it to GitHub Pages at `https://arthur-fontaine.github.io/smallcast/` on every
+push to `main` that touches `website/`. Enable it once via
+**Settings → Pages → Source = GitHub Actions**.
 
 ```sh
 cd website && npm install && npm run dev     # local preview
 ```
+
+The workflow uploads `website/out` — a Next.js export lands there, not in `dist/`. `public/.nojekyll`
+must stay: GitHub Pages runs Jekyll, which ignores `_`-prefixed directories, so without it every
+asset under `_next/` 404s. See [website/README.md](../website/README.md).

@@ -263,7 +263,7 @@ export function bootConfig(overrides = {}) {
       assetsPath: "/tmp",
       supportPath: "/tmp",
       isDevelopment: false,
-      raycastVersion: "1.104.0",
+      raycastVersion: "2.0.3",
       textSize: "medium",
       appearance: "dark",
       launchType: "userInitiated",

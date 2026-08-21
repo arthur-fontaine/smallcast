@@ -4,7 +4,6 @@ import AppKit
 @MainActor
 final class LauncherCoordinator {
     private let ranking: LauncherRankingStore
-    private let launchHistory: LaunchHistoryStore
     private let windowController: PaletteWindowController
     private let paletteCoordinator: PaletteCoordinator
     private let settingsCoordinator: SettingsCoordinator
@@ -14,6 +13,8 @@ final class LauncherCoordinator {
     private let windowCommandCoordinator: WindowCommandCoordinator
     private let snippetExpansion: SnippetExpansionCoordinator
     private let fileSearchCoordinator: FileSearchCoordinator
+    private let launchHistory: LaunchHistoryStore
+    private let notesCoordinator: NotesCoordinator
     private let extensionCoordinator: ExtensionCoordinator
     /// The backup commands only, which need the live stores to gather from and apply to.
     private unowned let core: AppCore
@@ -30,11 +31,11 @@ final class LauncherCoordinator {
         windowCommandCoordinator: WindowCommandCoordinator,
         snippetExpansion: SnippetExpansionCoordinator,
         fileSearchCoordinator: FileSearchCoordinator,
+        notesCoordinator: NotesCoordinator,
         extensionCoordinator: ExtensionCoordinator,
         core: AppCore
     ) {
         self.ranking = ranking
-        self.launchHistory = launchHistory
         self.windowController = windowController
         self.paletteCoordinator = paletteCoordinator
         self.settingsCoordinator = settingsCoordinator
@@ -44,6 +45,8 @@ final class LauncherCoordinator {
         self.windowCommandCoordinator = windowCommandCoordinator
         self.snippetExpansion = snippetExpansion
         self.fileSearchCoordinator = fileSearchCoordinator
+        self.launchHistory = launchHistory
+        self.notesCoordinator = notesCoordinator
         self.extensionCoordinator = extensionCoordinator
         self.core = core
     }
@@ -53,7 +56,8 @@ final class LauncherCoordinator {
     func launch(
         _ app: AppEntry, searchQuery: String? = nil, arguments: [String: String] = [:]
     ) {
-        if let searchQuery {
+        // A category listing is not a search for the row that ran; learning it would rank it under "s".
+        if let searchQuery, AppEntry.Kind.named(by: searchQuery) == nil {
             ranking.record(itemKey: app.preferenceKey, query: searchQuery)
         }
         // Every launch, query or not: the Recent list is about what happened, not what was typed.
@@ -116,6 +120,15 @@ final class LauncherCoordinator {
             paletteCoordinator.showPalette(mode: .emoji)
         case .searchFiles:
             fileSearchCoordinator.show()
+        case .showNotes:
+            paletteCoordinator.hidePalette(restoreFocus: false)
+            notesCoordinator.show()
+        case .createNote:
+            paletteCoordinator.hidePalette(restoreFocus: false)
+            notesCoordinator.createNote()
+        case .searchNotes:
+            paletteCoordinator.hidePalette(restoreFocus: false)
+            notesCoordinator.searchNotes()
         case .searchQuicklinks:
             paletteCoordinator.showPalette(mode: .quicklinks)
         case .createQuicklink:
@@ -136,6 +149,9 @@ final class LauncherCoordinator {
         case .importFromRaycast:
             paletteCoordinator.hidePalette(restoreFocus: false)
             settingsCoordinator.showBackupSettings()
+        case .checkForUpdates:
+            paletteCoordinator.hidePalette(restoreFocus: false)
+            core.updateCoordinator.checkForUpdates()
         case .settings:
             paletteCoordinator.hidePalette(restoreFocus: false)
             settingsCoordinator.showSettings()

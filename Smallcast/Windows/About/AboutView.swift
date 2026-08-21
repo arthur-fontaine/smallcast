@@ -2,6 +2,8 @@ import AppKit
 import SwiftUI
 
 struct AboutView: View {
+    @Environment(AppCore.self) private var core
+
     private static var version: String {
         let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
@@ -62,6 +64,9 @@ struct AboutView: View {
                     .overlay(
                         Capsule().strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
                     )
+                Button("Check for Updates…") { core.updateCoordinator.checkForUpdates() }
+                    .buttonStyle(.link)
+                    .font(.caption)
             }
 
             Text("A tiny, native macOS launcher.")
@@ -123,8 +128,8 @@ private struct AboutLink: Identifiable {
     static let all: [AboutLink] = [
         AboutLink(
             id: "website", glyph: .symbol("globe"), title: "Website",
-            detail: "abue-ammar.github.io/tinycast",
-            url: URL(string: "https://abue-ammar.github.io/tinycast/")!),
+            detail: "arthur-fontaine.github.io/smallcast",
+            url: URL(string: "https://arthur-fontaine.github.io/smallcast/")!),
         AboutLink(
             id: "github", glyph: .brand("BrandGitHub"), title: "GitHub",
             detail: "github.com/arthur-fontaine/smallcast",

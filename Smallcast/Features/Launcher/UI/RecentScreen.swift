@@ -86,8 +86,15 @@ enum RecentActionsMenu {
     ) -> PopoverMenuContent {
         switch item {
         case .entry(let app, _):
+            // Reordering needs the visible favorites order, which this screen does not have.
             let content = AppActionsMenu.content(
-                app: app, searchQuery: "", core: core, favorites: favorites, running: running,
+                app: app, searchQuery: "", core: core, running: running,
+                favorites: AppActionsMenu.FavoriteActions(
+                    isFavorite: favorites.isFavorite(app),
+                    canMoveUp: false,
+                    canMoveDown: false,
+                    toggle: { favorites.toggle(app) },
+                    move: { _ in }),
                 onResetRanking: { core.launcherRanking.reset(itemKey: app.preferenceKey) })
             let forget = PopoverMenuItem(
                 title: "Remove from History", systemImage: "trash", isDestructive: true

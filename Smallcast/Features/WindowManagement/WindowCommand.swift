@@ -42,6 +42,8 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
         case nextDisplay = "next-display"
         case previousDisplay = "previous-display"
         case toggleFullscreen = "toggle-fullscreen"
+        case previousSpace = "previous-space"
+        case nextSpace = "next-space"
     }
 
     /// What the mover has to do, so its dispatch stays exhaustive over the catalog.
@@ -52,6 +54,8 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
         case restore
         /// No geometry at all — the native `AXFullScreen` toggle.
         case fullscreen
+        /// No window at all — a synthetic Dock gesture that moves between Spaces.
+        case space
     }
 
     /// The launcher section a command belongs to, and the order the Settings panel lists them in.
@@ -64,6 +68,7 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
         case sizing
         case moving
         case fullscreen
+        case spaces
 
         var title: String {
             switch self {
@@ -75,6 +80,7 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
             case .sizing: return "Sizing"
             case .moving: return "Moving"
             case .fullscreen: return "Fullscreen"
+            case .spaces: return "Spaces"
             }
         }
     }
@@ -164,6 +170,8 @@ enum WindowCommandCatalog {
         case .nextDisplay: return "Move to Next Display"
         case .previousDisplay: return "Move to Previous Display"
         case .toggleFullscreen: return "Toggle Fullscreen"
+        case .previousSpace: return "Switch to Previous Space"
+        case .nextSpace: return "Switch to Next Space"
         }
     }
 
@@ -202,6 +210,8 @@ enum WindowCommandCatalog {
         case .nextDisplay: return "rectangle.on.rectangle.angled"
         case .previousDisplay: return "rectangle.on.rectangle.angled"
         case .toggleFullscreen: return "arrow.up.left.and.arrow.down.right.square"
+        case .previousSpace: return "chevron.backward.2"
+        case .nextSpace: return "chevron.forward.2"
         }
     }
 
@@ -209,6 +219,7 @@ enum WindowCommandCatalog {
         switch id {
         case .restore: return .restore
         case .toggleFullscreen: return .fullscreen
+        case .previousSpace, .nextSpace: return .space
         default: return .geometry
         }
     }
@@ -233,6 +244,8 @@ enum WindowCommandCatalog {
             return .moving
         case .toggleFullscreen:
             return .fullscreen
+        case .previousSpace, .nextSpace:
+            return .spaces
         }
     }
 }

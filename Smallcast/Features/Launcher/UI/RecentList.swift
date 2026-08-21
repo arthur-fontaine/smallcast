@@ -83,7 +83,8 @@ private struct RecentRow: View {
     var body: some View {
         switch item {
         case .entry(let app, _):
-            AppRow(app: app, selected: selected, running: runningApps.isRunning(app))
+            AppRow(
+                app: app, selected: selected, running: runningApps.isRunning(app), slot: nil)
         case .calculation(let entry):
             CalcHistoryRow(entry: entry, selected: selected)
         }

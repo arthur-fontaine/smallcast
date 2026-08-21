@@ -1,11 +1,21 @@
 import SwiftUI
 
 /// Maps Raycast's `Icon` / `Color` / `Image.ImageLike` values onto what the palette can draw.
+extension EnvironmentValues {
+    /// Derived rather than stored, so a view that reads it re-renders when the appearance flips —
+    /// which is what keeps a `{light, dark}` icon following the surface it is drawn on.
+    var isDarkAppearance: Bool { colorScheme == .dark }
+}
+
 enum ExtensionImage {
-    /// A resolved icon: an SF Symbol, a file on disk, a remote URL, or a bare emoji/text glyph.
+    /// A resolved icon: an SF Symbol, an image file, the Finder icon of a path, a remote URL, or a
+    /// bare emoji/text glyph.
     enum Source: Equatable {
         case symbol(String)
         case file(String)
+        /// Raycast's `{ fileIcon }` — the path names a bundle or document to ask `NSWorkspace` about,
+        /// not an image to decode.
+        case fileIcon(String)
         case remote(URL)
         case glyph(String)
     }
@@ -16,44 +26,63 @@ enum ExtensionImage {
         var isCircular = false
     }
 
-    /// Resolve an `ImageLike` prop: a plain string (icon enum value, file name or emoji), or an object
-    /// `{source, tintColor, mask, fallback}` whose `source` may itself be `{light, dark}`.
-    static func resolve(_ value: RenderValue?, assetsPath: String?) -> Resolved? {
+    /// An `ImageLike`: a string, or `{source, tintColor, mask, fallback}` with a themed `source`.
+    static func resolve(_ value: RenderValue?, assetsPath: String?, isDark: Bool) -> Resolved? {
         guard let value else { return nil }
         switch value {
         case .string(let text):
             guard let source = source(from: text, assetsPath: assetsPath) else { return nil }
             return Resolved(source: source)
         case .object(let fields):
-            // `{ value, tooltip }` is Raycast's icon-with-tooltip form: the real `ImageLike` is one
-            // level down. Only unwrap when it looks like one, so a themed `{ value: {light, dark} }`
-            // still falls through to the flat path below.
+            // Raycast's icon-with-tooltip form; unwrap only when it looks like one, not when themed.
             if let wrapped = fields["value"]?.objectValue,
-                wrapped["source"] != nil || wrapped["value"] != nil
+                wrapped["source"] != nil || wrapped["value"] != nil || wrapped["fileIcon"] != nil
             {
-                return resolve(.object(wrapped), assetsPath: assetsPath)
+                return resolve(.object(wrapped), assetsPath: assetsPath, isDark: isDark)
             }
-            let raw = fields["source"] ?? fields["value"]
-            let text = string(from: raw)
-            guard let text, let source = source(from: text, assetsPath: assetsPath) else {
+            // Falling back to the object itself covers the two forms that are a source rather than
+            // carry one: `{fileIcon}` and a bare `{light, dark}` pair.
+            let raw = fields["source"] ?? fields["value"] ?? .object(fields)
+            guard let source = source(from: raw, assetsPath: assetsPath, isDark: isDark) else {
                 // A tinted icon with no usable source still deserves the fallback tile.
                 return nil
             }
             return Resolved(
                 source: source,
-                tint: color(fields["tintColor"]),
+                tint: color(fields["tintColor"], isDark: isDark),
                 isCircular: fields["mask"]?.stringValue == "circle")
         default:
             return nil
         }
     }
 
-    /// `{light, dark}` themed sources collapse to the dark variant — the app is locked to dark.
-    private static func string(from value: RenderValue?) -> String? {
+    /// A `{light, dark}` themed source picks the side the host is rendering, falling back to the
+    /// other when an extension supplies only one.
+    private static func string(from value: RenderValue?, isDark: Bool) -> String? {
         switch value {
         case .string(let text): return text
-        case .object(let fields): return fields["dark"]?.stringValue ?? fields["light"]?.stringValue
+        case .object(let fields):
+            let preferred = fields[isDark ? "dark" : "light"]?.stringValue
+            return preferred ?? fields[isDark ? "light" : "dark"]?.stringValue
         default: return nil
+        }
+    }
+
+    /// An `Image.Source`: a string, a `{fileIcon}`, or a `{light, dark}` pair naming either.
+    private static func source(
+        from value: RenderValue, assetsPath: String?, isDark: Bool
+    ) -> Source? {
+        switch value {
+        case .string(let text):
+            return source(from: text, assetsPath: assetsPath)
+        case .object(let fields):
+            if let path = fields["fileIcon"]?.stringValue, !path.isEmpty {
+                return .fileIcon((path as NSString).expandingTildeInPath)
+            }
+            let preferred = fields[isDark ? "dark" : "light"] ?? fields[isDark ? "light" : "dark"]
+            return preferred.flatMap { source(from: $0, assetsPath: assetsPath, isDark: isDark) }
+        default:
+            return nil
         }
     }
 
@@ -78,11 +107,11 @@ enum ExtensionImage {
         return text.count <= 4 ? .glyph(text) : nil
     }
 
-    static func color(_ value: RenderValue?) -> Color? {
+    static func color(_ value: RenderValue?, isDark: Bool) -> Color? {
         guard let value else { return nil }
         if let text = value.stringValue { return color(named: text) }
         if let fields = value.objectValue {
-            return color(named: fields["dark"]?.stringValue ?? fields["light"]?.stringValue ?? "")
+            return color(named: string(from: .object(fields), isDark: isDark) ?? "")
         }
         return nil
     }
@@ -122,8 +151,7 @@ enum ExtensionImage {
         return Color(red: red, green: green, blue: blue, opacity: alpha)
     }
 
-    /// `Icon.Number00`…`Icon.Number99` are digits, and SF only enumerates 0…50 — draw them as a glyph
-    /// so all hundred look alike.
+    /// SF only enumerates 0…50, so draw all hundred as glyphs and they look alike.
     private static func numberGlyph(forIcon icon: String) -> String? {
         guard icon.hasPrefix("number-") else { return nil }
         let digits = icon.dropFirst("number-".count).dropLast(3)
@@ -131,13 +159,11 @@ enum ExtensionImage {
         return String(value)
     }
 
-    /// Raycast icon → SF Symbol. Only the icons that carry meaning in a list get a hand-picked mapping;
-    /// the rest fall back to a generic shape, which reads better than an empty slot.
+    /// Only icons carrying meaning are hand-mapped; a generic shape beats an empty slot.
     private static func symbolName(forIcon icon: String) -> String? {
         let name = String(icon.dropLast(3))
         if let mapped = symbolMap[name] { return mapped }
-        // Many Raycast names are already close to an SF Symbol; try the obvious transforms before
-        // settling for the fallback.
+        // Many names are already close to a symbol; try the obvious transforms before the fallback.
         let candidates = [name, name.replacingOccurrences(of: "-", with: ".")]
         for candidate in candidates
         where NSImage(systemSymbolName: candidate, accessibilityDescription: nil) != nil {
@@ -203,8 +229,7 @@ enum ExtensionImage {
         "window": "macwindow", "wrench-screwdriver": "wrench.and.screwdriver", "xmark": "xmark",
         "xmark-circle": "xmark.circle", "xmark-circle-filled": "xmark.circle.fill",
         "xmark-top-right-square": "xmark.square",
-        // Names with no plausible SF Symbol transform. Every value here was checked against
-        // `NSImage(systemSymbolName:)` — an unknown name draws the placeholder tile instead.
+        // No plausible transform; every value was checked, since an unknown name draws a placeholder.
         "airplane-filled": "airplane", "airplane-landing": "airplane.arrival",
         "airplane-takeoff": "airplane.departure",
         "alarm-ringing": "bell.and.waves.left.and.right.fill", "align-centre": "text.aligncenter",
@@ -286,12 +311,12 @@ enum ExtensionImage {
     ]
 }
 
-/// Draws a resolved extension icon at the palette's row-icon size. Remote images load once and are
-/// cached by `IconCache`; a missing or unresolvable icon renders the same faint tile a warming app row
-/// uses, so rows never jump.
+/// A resolved icon at row size; an unresolvable one draws the faint tile, so rows never jump.
 struct ExtensionIconView: View {
     let resolved: ExtensionImage.Resolved?
     var size: CGFloat = Theme.Size.rowIcon
+    /// Opt-in, and off for row icons: a playing GIF at 24pt is noise, and a list is hundreds of rows.
+    var animates = false
     @State private var loaded: NSImage?
 
     var body: some View {
@@ -314,9 +339,14 @@ struct ExtensionIconView: View {
             Text(text)
                 .font(.system(size: size * 0.72))
                 .frame(width: size, height: size)
-        case .file, .remote:
+        case .file, .fileIcon, .remote:
             if let loaded {
-                Image(nsImage: loaded).resizable().aspectRatio(contentMode: .fit)
+                // Only a multi-frame image pays for `NSImageView`; a still stays on SwiftUI's path.
+                if animates, loaded.isAnimated {
+                    AnimatedImageView(image: loaded)
+                } else {
+                    Image(nsImage: loaded).resizable().aspectRatio(contentMode: .fit)
+                }
             } else {
                 placeholder
             }
@@ -327,7 +357,7 @@ struct ExtensionIconView: View {
 
     private var placeholder: some View {
         RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-            .fill(Color.white.opacity(0.06))
+            .fill(Theme.Colors.iconPlaceholder)
     }
 
     private var shape: AnyShape {
@@ -339,17 +369,26 @@ struct ExtensionIconView: View {
     private var cacheKey: String {
         switch resolved?.source {
         case .file(let path): return "file:" + path
+        case .fileIcon(let path): return "fileIcon:" + path
         case .remote(let url): return "remote:" + url.absoluteString
         default: return ""
         }
     }
 
+    /// An animating tile takes the image as shipped; the fitted path would hand back one frame.
     private func load() async {
         switch resolved?.source {
         case .file(let path):
-            loaded = await IconCache.loadImageAsync(atPath: path)
+            loaded =
+                animates
+                ? await ExtensionIconCache.loadOriginalAsync(atPath: path)
+                : await ExtensionIconCache.loadAsync(atPath: path)
+        case .fileIcon(let path):
+            // Fitted rather than raw: a `fileIcon` list mixes app bundles with documents and folders,
+            // and only the normalized draw keeps them the same optical size down the column.
+            loaded = await IconCache.loadFittedAsync(forFile: path)
         case .remote(let url):
-            loaded = await IconCache.loadRemoteAsync(url)
+            loaded = await ExtensionIconCache.loadRemoteAsync(url, asIcon: !animates)
         default:
             loaded = nil
         }

@@ -34,6 +34,14 @@ the pure-layer boundary real: a harness that stops *compiling* means AppKit or S
 `Model/` folder, or an effect has leaked into a decision. That is a more common failure than a broken
 assertion, and it is the more important one.
 
+A harness also runs in your own login session against the real system, with no sandbox and no fixture
+world, so it must never mutate state the machine shares with the apps you use. `NSPasteboard.general`
+is the trap: a running Smallcast records every write to it as a genuine copy, so a fixture left there
+lands in clipboard history looking like something the user copied. `notes-editor-test` seeded one on
+every run from #232 onward by calling the native `copy:`/`cut:`/`paste:` actions; it now drives the
+`writeSelection(to:types:)` and `readSelection(from:)` primitives those actions delegate to, against
+`NSPasteboard.withUniqueName()`. Same AppKit path, no shared side effect.
+
 Never join a compile to its run with `&&` in a `set -e` script. `set -e` is specified to ignore a
 failing command in a non-final AND-OR list member, so `swiftc … && /tmp/x` swallows a compile error and
 the script sails on. CI reported success over a harness that had not compiled for twenty-five phases
@@ -49,13 +57,14 @@ If a change touches anything in the right column, the harness on the left is man
 | `file-search-test` | `FileSearch/Model/`, plus the shared `FuzzyMatch` scorer |
 | `file-search-session-test` | serialized query execution, debounce coalescing and cancellation |
 | `ranking-test` | `Launcher/Model/LauncherRankingStore.swift` |
+| `launch-history-test` | `Launcher/Model/LaunchHistoryStore.swift` |
 | `scopes-test` | `Launcher/Model/SearchScopes.swift` |
 | `calc-test` | all of `Calculator/Model/` |
 | `clipboard-test` | `Clipboard/Model/ClipboardStore.swift` |
 | `emoji-test` | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data |
 | `palette-selection-test` | `Features/PaletteRowIndex.swift` |
 | `palette-placement-test` | `DesignSystem/Theme.swift`, `Palette/PalettePlacement.swift` |
-| `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift` |
+| `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `HyperKey.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
 | `callout-test` | `DesignSystem/Theme.swift`, `HotKeys/UI/CalloutPlacement.swift` |
 | `system-action-test` | `SystemActions/Model/SystemAction.swift` |
 | `volume-test` | `SystemActions/Model/VolumeLevel.swift` |
@@ -64,10 +73,16 @@ If a change touches anything in the right column, the harness on the left is man
 | `uninstall-test` | all five pure files in `Uninstall/Model/` |
 | `quicklink-test` | all four files in `Quicklinks/Model/` |
 | `snippets-test` | all of `Snippets/Model/` and `Snippets/Service/`, plus `Platform/HealthTicker.swift` |
+| `notes-test` | all of `Notes/Model/` and `Notes/Service/`, plus the real fuzzy matcher and signposts |
+| `notes-editor-test` | the literal Notes editor with real TextKit 2 and AppKit editing objects |
 | `raycast-test` | `Backup/Model/RaycastFormat.swift`, `RaycastV1Decoder.swift`, `Platform/Compression/Zlib.swift` |
 | `symbols-test` | `Extensions/Service/SymbolCatalog.swift`, against this machine's CoreGlyphs |
+| `ext-store-test` | `Extensions/Model/` — the registry model and both registry APIs' parsers |
 | `ext-test` | the extension runtime end to end — boots a real bundle in JavaScriptCore and renders it |
+| `ext-icon-test` | `Extensions/Service/ExtensionIconCache.swift` — artwork sizing and its fallback |
+| `entry-icon-test` | `EntryIcon` — that each case draws, caches and prints apart from the others |
 | `settings-backup-test` | `Settings/AppSettingsKey.swift`, `Backup/Model/SettingsBackupCoverage.swift` |
+| `updates-test` | `Updates/Model/` — version precedence, channel filtering, install route, readiness |
 
 A harness that passed before a change passes after it. There is no "I'll fix it next commit" and no
 commenting out a case. If a change genuinely invalidates an assertion, the assertion is rewritten in the
@@ -120,15 +135,14 @@ find ~/Library/Developer/Xcode/DerivedData -name "Smallcast*.app" -maxdepth 6 -p
 SwiftLint owns the rules that catch defects, including the two checkable comment rules — the
 100-character cap and the ban on stacked comment lines. Errors block; warnings do not. There is no
 formatter, deliberately — the configuration and the measurements behind that are in
-[development.md](development.md#linting).
+[development.md](development.md#formatting).
 
 ## Performance measurement
 
-`Platform/Signposts.swift` emits seven intervals on the `com.smallcast.perf` subsystem: `AppCore.start`,
+`Platform/Signposts.swift` emits eight intervals on the `com.smallcast.perf` subsystem: `AppCore.start`,
 `AppIndex.scan`, `AppIndex.rank`, `PaletteWindowController.show`, `UninstallScanner.discover` and
-`UninstallScanner.measure`, plus `FileSearchService.search`. Open the
-Time Profiler or `os_signpost` instrument in Instruments and filter to that subsystem; nothing needs
-recompiling.
+`UninstallScanner.measure`, `FileSearchService.search`, and `Notes.search`. Open the Time Profiler or
+`os_signpost` instrument in Instruments and filter to that subsystem; nothing needs recompiling.
 
 Run the real Spotlight-backed file-search benchmark separately from the deterministic harnesses:
 
@@ -185,6 +199,9 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Palette hotkey opens the launcher; pressing it again closes it; Escape closes it; clicking away closes it
 - Reopening focuses the search field with an empty query, in the same position and at the same size
 - Compact mode: typing expands it, and the search bar does **not** shift vertically during the swap
+- With a CJK IME: the placeholder clears as soon as composition starts and the composing text never
+  overlaps it; cancelling composition brings the placeholder back, and the list filters only once the
+  candidate is committed — check on a second summon too, where first responder never moved
 - Typing filters instantly; ↑/↓ move the highlight and scroll it into view without yanking the list
 - ⌃N/⌃P move the highlight as ↓/↑ do; ⌃F/⌃B step the emoji grid's selection, and the caret elsewhere
 - The highlight always sits on the row the footer pill describes
@@ -202,7 +219,7 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 - A copy appears at the top within about a second; an image copy records a thumbnail
 - Search is correct both under and over three characters
-- ⌘P pins and the highlight follows the row into Pinned; ⌘⌫ deletes; ⌘↵ copies without pasting
+- ⌘. pins and the highlight follows the row into Pinned; ⌘⌫ deletes; ⌘↵ copies without pasting
 - ⌃X deletes the selected entry and ⌃⇧X clears the history, from the list and from an open ⌘K menu
 - ⌃⇧X asks first, through Smallcast's own dialog; Cancel and Esc both leave every entry in place
 - ↵ pastes into the previous app; ⌥↵ pastes without closing the palette
@@ -218,7 +235,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 ### Hotkeys
 
-- The palette, clipboard and emoji shortcuts fire; a per-app shortcut still toggles that app
+- The palette, clipboard, emoji, File Search, and all three Notes shortcuts fire; a per-app shortcut
+  toggles that app
 - Recording captures a shortcut, and the old binding does not fire while recording
 - A conflicting binding is rejected and names its current owner
 - A double-tap binding fires; Hyper Key remaps and its status dot is green
@@ -262,6 +280,45 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - The pane's checkbox and the Search Files row in Settings ▸ Commands move together
 - Export, clear both lists and the shortcut, re-import: all three return, defaults undo not duplicated
 
+### Notes
+
+- With Notes **off**: all three commands are absent, their shortcuts no-op, and the Notes directory is
+  not created
+- Enabling in Settings projects Show Notes, Create Note, and Search Notes immediately; the pane's
+  visibility checkboxes and recorders match Settings > Commands
+- Show Notes opens the last active note and focuses an already visible window without hiding it
+- Create Note makes one unique Untitled file, including as the first action in an empty channel
+- Command-P and the Browse button focus search, arrows move selection, Return opens, and Command-N
+  creates
+- Empty switcher search reads the complete recent list; title and body searches rank correctly and a
+  superseded query never publishes
+- Inline rename updates the Markdown filename without changing source; collisions receive a suffix
+- Delete confirms through Smallcast, moves the file to Trash, and selecting another note never loses an
+  unsaved edit
+- An existing `Floating Note.md` appears as an ordinary note without conversion
+- Markdown source remains completely literal: markers stay visible, links are not activated, and task
+  syntax is ordinary text; there is no preview, formatting menu, or task overlay
+- Return, Tab, Delete, and formatting-looking shortcuts retain native plain-text behavior
+- Edit one note, switch to a shorter note, then Undo and Redo: the new note remains intact and the app
+  does not terminate
+- Marked-text input, emoji, combining marks, Copy, Cut, Paste, Select All, Undo, Redo, and Find preserve
+  exact source
+- An empty note shows `Start writing…`; the footer count is right after typing, pasting and undoing
+- Traffic lights sit top-left, the title is centred **on the window**, and the capsule is top-right, all
+  on one line; the yellow light is disabled and green zooms
+- Each capsule button shows a hover capsule and a native tooltip, and fires its action
+- Dragging the title bar moves the window and dragging an edge resizes it; both survive relaunch
+- Clicking another app leaves the panel visible; Escape, Command-W, and the red light hide it
+- Command-Q does nothing anywhere; with Settings in front, Command-W closes Settings
+- Hiding restores the previous external app or Smallcast window
+- Open Notes Folder opens Finder with the active Markdown file selected, or the folder with no note
+- Deleting every note closes the browse list and leaves one clean empty state with no character count;
+  Command-N from there creates and selects one note
+- The browse list fades only at its bottom edge and rests opaque once it reaches the end
+- Quitting inside the debounce window saves the last edit
+- Over a light desktop, the corner matches the palette's, the shadow follows it, and no dark edge shows
+  around the glass controls
+
 ### Snippets
 
 - With snippets **off**: no launcher entries, no keyword expansion, and no permission prompt at launch
@@ -274,8 +331,11 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 - `2+2` shows a card; ↵ copies and records to history; unit and date conversions work
 - In Calculator History, ⌃X deletes a row and ⌃⇧X clears the history behind a confirmation
-- With currency conversion **off**, a currency query produces no card and **no network request**
-- Turning it on shows the consent sheet, naming the provider, first
+- A currency query answers from the cached snapshot; with the cache cleared and no network it reports
+  rates unavailable rather than guessing
+- A bare amount (`1 usd`) answers in the Mac's region currency, and follows a change to
+  System Settings ▸ General ▸ Language & Region without a relaunch — and nothing prompts for location
+- A crypto query (`1 btc`, `0.5 sol to eur`) answers, and `1 usd to btc` stays in plain notation
 
 ### System actions and window management
 
@@ -307,6 +367,7 @@ tccutil reset Accessibility com.smallcast.app.dev 2>/dev/null || true
 - Launches with every store directory absent — no crash, no hang; onboarding runs
 - Palette opens and lists apps; clipboard, quicklinks, snippets and calculator history are all empty
   and all accept a first entry
+- Notes creates no directory until Show, Create, or Search is first used, then accepts its first edit
 - **Every setting shows its intended default.** Walk the panes: this is what catches a broken
   absence-versus-`false` read
 - Quit and relaunch: everything created above persisted

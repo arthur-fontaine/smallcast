@@ -90,7 +90,7 @@ enum WindowLayout {
     /// The target placement, or `nil` when the mover should write nothing at all.
     static func placement(for input: Input) -> Placement? {
         guard let command = WindowCommandCatalog.command(id: input.command),
-            command.kind != .fullscreen,
+            command.kind == .geometry || command.kind == .restore,
             !input.screens.isEmpty
         else { return nil }
 

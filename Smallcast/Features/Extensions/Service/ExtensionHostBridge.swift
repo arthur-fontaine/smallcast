@@ -1,8 +1,7 @@
 import AppKit
 import Foundation
 
-/// What the bridge needs from whoever is running the command. Kept as a protocol so the bridge has no
-/// hard dependency on `ExtensionManager` (which owns it).
+/// A protocol, so the bridge has no hard dependency on the `ExtensionManager` that owns it.
 @MainActor
 protocol ExtensionHostContext: AnyObject {
     /// The extension whose command is running — the namespace for storage, cache and preferences.
@@ -154,6 +153,12 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         switch method {
         case "copy", "paste":
             let content = arguments.first?.objectValue ?? [:]
+            // A file goes on the pasteboard as a file, so it pastes as the picture it is.
+            if let path = content["file"]?.stringValue, !path.isEmpty {
+                writeFileToPasteboard(path)
+                if method == "paste" { Paster.postCommandV() }
+                return nil
+            }
             guard let text = clipboardText(from: content) else { return nil }
             if method == "copy" {
                 Paster.copyString(text)
@@ -180,10 +185,18 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         }
     }
 
-    /// Raycast's `Clipboard.Content` is `{text}`, `{file}` or `{html}`; Smallcast writes plain text.
+    /// The file and its picture both: Finder takes the URL, a chat box takes the image data.
+    private func writeFileToPasteboard(_ path: String) {
+        let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        var items: [NSPasteboardWriting] = [url as NSURL]
+        if let image = NSImage(contentsOf: url) { items.append(image) }
+        pasteboard.writeObjects(items)
+    }
+
     private func clipboardText(from content: [String: RenderValue]) -> String? {
         if let text = content["text"]?.stringValue { return text }
-        if let file = content["file"]?.stringValue { return file }
         if let html = content["html"]?.stringValue { return html }
         return nil
     }
@@ -369,9 +382,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         let url =
             URL(string: target).flatMap { $0.scheme == nil ? nil : $0 }
             ?? URL(fileURLWithPath: (target as NSString).expandingTildeInPath)
-        // Extensions address Raycast by scheme — 1Password's `open("raycast://")` to bring the window
-        // back after a password prompt is the common case. Handing that to the workspace would launch
-        // Raycast; keep it inside Smallcast.
+        // Extensions address Raycast by scheme; handing that to the workspace would launch Raycast.
         if let scheme = url.scheme, scheme == "raycast" || scheme == "raycastinternal" {
             openRaycastURL(url)
             return
@@ -393,9 +404,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             completionHandler: nil)
     }
 
-    /// `raycast://extensions/<author>/<extension>/<command>` runs that command when it is installed;
-    /// every other Raycast URL just brings the palette back, which is what extensions use the bare
-    /// scheme for.
+    /// A command URL runs it when installed; every other Raycast URL just brings the palette back.
     private func openRaycastURL(_ url: URL) {
         let path = url.pathComponents.filter { $0 != "/" }
         if url.host == "extensions", path.count >= 3,
@@ -429,38 +438,39 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         ]
     }
 
-    /// Raycast reads the selection out of the focused app; Smallcast reuses the Accessibility grant the
-    /// paste path already needs.
+    /// Reads the app the palette displaced, never the system-wide focus, which is our own field here.
     private func selectedText() throws -> String {
         guard Permissions.ensureAccessibility() else {
             throw ExtensionHostError.unsupported("getSelectedText without the Accessibility permission")
         }
-        let system = AXUIElementCreateSystemWide()
-        var focused: AnyObject?
-        guard
-            AXUIElementCopyAttributeValue(system, kAXFocusedUIElementAttribute as CFString, &focused)
-                == .success,
-            let element = focused as! AXUIElement?
-        else { throw ExtensionHostError.unsupported("getSelectedText (no focused element)") }
+        guard let target = context?.pasteTarget,
+            target.processIdentifier != NSRunningApplication.current.processIdentifier
+        else { throw ExtensionHostError.unsupported("getSelectedText (no target application)") }
 
-        var value: AnyObject?
-        guard
-            AXUIElementCopyAttributeValue(element, kAXSelectedTextAttribute as CFString, &value)
-                == .success, let text = value as? String
-        else { throw ExtensionHostError.unsupported("getSelectedText (no selection)") }
+        guard let text = AccessibilityText.selection(in: target), !text.isEmpty else {
+            throw ExtensionHostError.unsupported("getSelectedText (no selection)")
+        }
         return text
     }
 
+    /// Joined on a linefeed, which Finder forbids in a name; the comma AppleScript defaults to would
+    /// cut any path that contains one into two paths that exist nowhere.
     private func finderSelection() throws -> [[String: String]] {
         let script = """
-            tell application "Finder" to return POSIX path of (get selection as alias list)
+            set AppleScript's text item delimiters to linefeed
+            tell application "Finder" to set chosen to (get selection as alias list)
+            set paths to {}
+            repeat with one in chosen
+                set end of paths to POSIX path of one
+            end repeat
+            return paths as text
             """
         guard let apple = NSAppleScript(source: script) else { return [] }
         var error: NSDictionary?
         let result = apple.executeAndReturnError(&error)
         guard error == nil else { return [] }
         return result.stringValue?
-            .split(separator: ",")
-            .map { ["path": $0.trimmingCharacters(in: .whitespaces)] } ?? []
+            .split(separator: "\n")
+            .map { ["path": String($0)] } ?? []
     }
 }

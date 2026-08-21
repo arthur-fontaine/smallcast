@@ -1,7 +1,7 @@
 name: Website
 
-# Builds the Vite site in website/ and deploys it to GitHub Pages at
-# https://abue-ammar.github.io/tinycast/. Requires: repo Settings → Pages →
+# Builds the Next.js site in website/ and deploys it to GitHub Pages at
+# https://arthur-fontaine.github.io/smallcast/. Requires: repo Settings → Pages →
 # Source = "GitHub Actions" (one-time setup).
 on:
   push:
@@ -38,7 +38,7 @@ jobs:
           npm run build
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: website/dist
+          path: website/out
 
   deploy:
     needs: build

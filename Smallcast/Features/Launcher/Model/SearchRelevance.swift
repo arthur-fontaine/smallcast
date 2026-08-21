@@ -12,6 +12,8 @@ enum FuzzyMatch {
         case typo
 
         var isLiteral: Bool { self != .subsequence && self != .typo }
+        /// Anchored at the candidate's start: what a short, deliberate field must match to win its band.
+        var isAnchored: Bool { self == .exact || self == .prefix }
     }
 
     struct Match: Sendable {
@@ -210,6 +212,8 @@ enum FuzzyMatch {
 struct SearchFields: Sendable {
     /// The display name, plus anything identifying the entry just as strongly.
     var names: [String]
+    /// The user's own alias for the entry; deliberate, so it outranks every vendor field.
+    var userAlias: String?
     /// Spotlight's `kMDItemAlternateNames`: `iBooks`, `Codex`, `浏览器`.
     var alternateNames: [String] = []
     var bundleID: String?
@@ -217,20 +221,19 @@ struct SearchFields: Sendable {
     /// What the entry *is* — "Window Management", "Application", an extension's title. Matched only
     /// from its start, in the weakest band of all, so a whole group can be pulled up by its kind
     /// without ever outranking something actually named that.
-    var category: String?
 }
 
 enum SearchRelevance {
     /// One band per field and match strength; a literal hit on a weaker field still wins.
     private enum Band: Int {
-        case category = 0
-        case nameTypo = 1
-        case executableName = 2
-        case bundleID = 3
-        case alternateNameSubsequence = 4
-        case nameSubsequence = 5
-        case alternateNameLiteral = 6
-        case nameLiteral = 7
+        case nameTypo = 0
+        case executableName = 1
+        case bundleID = 2
+        case alternateNameSubsequence = 3
+        case nameSubsequence = 4
+        case alternateNameLiteral = 5
+        case nameLiteral = 6
+        case userAlias = 7
 
         var offset: Int { rawValue * SearchRelevance.bandStride }
     }
@@ -238,7 +241,7 @@ enum SearchRelevance {
     /// Wide enough that a learned boost reorders inside a band, never out of one.
     static let bandStride = 10 * FuzzyMatch.maximumScore
     /// How many bands there are; `fuzz-test` asserts no score ever lands outside them.
-    static let bandCount = Band.nameLiteral.rawValue + 1
+    static let bandCount = Band.userAlias.rawValue + 1
 
     /// Base relevance from the strongest matching field, or nil when no field matches.
     static func score(query: String, fields: SearchFields) -> Int? {
@@ -260,6 +263,13 @@ enum SearchRelevance {
             best = max(best ?? Int.min, band.offset + match.score)
         }
 
+        // Only a hit from the alias's start earns the top band; one inside it ranks like a vendor alias.
+        if let alias = fields.userAlias, let match = FuzzyMatch.match(query, candidate: alias),
+            match.tier.isLiteral
+        {
+            let band: Band = match.tier.isAnchored ? .userAlias : .alternateNameLiteral
+            best = max(best ?? Int.min, band.offset + match.score)
+        }
         for name in fields.names {
             consider(name, literal: .nameLiteral, subsequence: .nameSubsequence, typo: .nameTypo)
         }
@@ -275,16 +285,6 @@ enum SearchRelevance {
         }
         if let executableName = fields.executableName {
             consider(executableName, literal: .executableName, subsequence: nil)
-        }
-        // A category has to be named from its start (or be a near-miss of it): a mid-word substring
-        // would make "cat" list every Appli**cat**ion, and a subsequence match is looser still.
-        if let category = fields.category, let match = FuzzyMatch.match(query, candidate: category) {
-            switch match.tier {
-            case .exact, .prefix, .wordStart, .typo:
-                best = max(best ?? Int.min, Band.category.offset + match.score)
-            case .substring, .subsequence:
-                break
-            }
         }
         return best
     }

@@ -34,7 +34,7 @@ final class CalculatorCoordinator {
         // search bar belongs to the extension, and "1+2" typed into its filter is not a calculation.
         guard palette.mode == .launcher || palette.mode == .calculatorHistory,
             !palette.query.trimmingCharacters(in: .whitespaces).isEmpty,
-            let result = CalcMemo.evaluate(palette.query, currency: currencyRates.source),
+            let result = CalcMemo.evaluate(palette.query, rates: currencyRates.rates),
             case .value(let display, _) = result.payload
         else { return }
         calcHistory.record(expression: result.expression, result: display)

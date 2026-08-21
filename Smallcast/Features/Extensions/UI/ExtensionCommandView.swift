@@ -166,7 +166,7 @@ enum ExtensionActionsMenu {
         guard !actions.isEmpty else { return nil }
         let header =
             screen.items.indices.contains(selection)
-            ? screen.items[selection].string("title") : screen.navigationTitle
+            ? screen.items[selection].node.string("title") : screen.navigationTitle
         return PopoverMenuContent(
             header: header,
             items: actions.map { action in
@@ -184,7 +184,10 @@ enum ExtensionActionsMenu {
     /// The popover menu draws SF Symbols, so an extension icon resolves to one; a file-based icon falls
     /// back to a neutral glyph rather than an empty slot.
     private static func symbolName(for action: ExtensionAction) -> String {
-        guard let resolved = ExtensionImage.resolve(action.iconValue, assetsPath: nil),
+        // Read rather than injected: a menu is rebuilt each time it opens, so it never goes stale.
+        guard
+            let resolved = ExtensionImage.resolve(
+                action.iconValue, assetsPath: nil, isDark: NSApp.effectiveAppearance.isDark),
             case .symbol(let name) = resolved.source
         else { return action.isDestructive ? "trash" : "bolt" }
         return name

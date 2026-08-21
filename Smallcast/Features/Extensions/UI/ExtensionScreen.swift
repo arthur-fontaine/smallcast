@@ -1,11 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// Flattens one rendered extension screen into the row order the palette draws.
-///
-/// This is the single source of truth for that order, so the flat `selection` index the rest of the
-/// palette relies on maps 1:1 onto visible rows — the same invariant the launcher, clipboard and emoji
-/// screens hold (see docs/palette.md).
+/// The one source of row order, so the palette's flat `selection` maps 1:1 onto visible rows.
 struct ExtensionScreen: Equatable {
     enum Kind: Equatable {
         case list
@@ -16,14 +12,24 @@ struct ExtensionScreen: Equatable {
         case unsupported(String)
     }
 
+    /// One selectable row. `index` is the flat `selection` index, and `id` is what a `LazyVStack` or
+    /// `LazyVGrid` registers as its scroll target — an `.id()` applied inside a row only exists once
+    /// the row has been realized, which is exactly when scrolling to it isn't needed.
+    struct Item: Equatable, Identifiable {
+        let node: RenderNode
+        let index: Int
+
+        var id: String { "item:\(node.id)" }
+    }
+
     enum Row: Equatable, Identifiable {
         case header(title: String, subtitle: String?, id: String)
-        case item(RenderNode)
+        case item(Item)
 
         var id: String {
             switch self {
             case .header(_, _, let id): return "header:" + id
-            case .item(let node): return "item:\(node.id)"
+            case .item(let item): return item.id
             }
         }
     }
@@ -32,7 +38,7 @@ struct ExtensionScreen: Equatable {
     let root: RenderNode?
     let rows: [Row]
     /// Selectable rows in visible order — what `selection` indexes.
-    let items: [RenderNode]
+    let items: [Item]
     /// Fields of a Form, in order.
     let fields: [RenderNode]
     let isLoading: Bool
@@ -50,14 +56,29 @@ struct ExtensionScreen: Equatable {
     /// An `EmptyView` to show when there are no rows.
     let emptyView: RenderNode?
 
+    /// Selectable rows per section: what grid navigation needs to keep a column across a heading.
+    var sectionCounts: [Int] {
+        var counts: [Int] = []
+        for row in rows {
+            switch row {
+            case .header:
+                counts.append(0)
+            case .item:
+                if counts.isEmpty { counts.append(0) }
+                counts[counts.count - 1] += 1
+            }
+        }
+        // An empty section is drawn but holds nothing to land on, so it isn't a row of the grid.
+        return counts.filter { $0 > 0 }
+    }
+
     static let empty = ExtensionScreen(
         kind: .unsupported(""), root: nil, rows: [], items: [], fields: [], isLoading: false,
         navigationTitle: nil, searchPlaceholder: nil, filtersLocally: false, searchTextHandler: nil,
         selectionHandler: nil, searchBarAccessory: nil, showsDetail: false, screenActions: nil,
         emptyView: nil)
 
-    /// Build from the active screen of a render tree, filtering rows by `query` when the extension
-    /// hasn't taken over the search text.
+    /// Filters rows by `query` only when the extension hasn't taken the search text over.
     init(tree: RenderTree, query: String) {
         guard let root = tree.activeRoot else {
             self = .empty
@@ -95,7 +116,14 @@ struct ExtensionScreen: Equatable {
             emptyView = root.children.first { $0.type == emptyType }
             let needle = filtersLocally ? query.trimmingCharacters(in: .whitespaces) : ""
             var rows: [Row] = []
-            var items: [RenderNode] = []
+            var items: [Item] = []
+            // Numbering as the rows are built is what keeps `selection` and the drawn order in step;
+            // a row that has to search `items` for its own place can only get that wrong.
+            func append(_ node: RenderNode) {
+                let item = Item(node: node, index: items.count)
+                items.append(item)
+                rows.append(.item(item))
+            }
             for child in root.children {
                 if child.type == sectionType {
                     let matching = child.children
@@ -106,11 +134,9 @@ struct ExtensionScreen: Equatable {
                         .header(
                             title: child.string("title") ?? "",
                             subtitle: child.string("subtitle"), id: String(child.id)))
-                    rows.append(contentsOf: matching.map(Row.item))
-                    items.append(contentsOf: matching)
+                    matching.forEach(append)
                 } else if child.type == itemType, ExtensionScreen.matches(child, needle) {
-                    rows.append(.item(child))
-                    items.append(child)
+                    append(child)
                 }
             }
             self.rows = rows
@@ -132,7 +158,7 @@ struct ExtensionScreen: Equatable {
     }
 
     private init(
-        kind: Kind, root: RenderNode?, rows: [Row], items: [RenderNode], fields: [RenderNode],
+        kind: Kind, root: RenderNode?, rows: [Row], items: [Item], fields: [RenderNode],
         isLoading: Bool, navigationTitle: String?, searchPlaceholder: String?, filtersLocally: Bool,
         searchTextHandler: String?, selectionHandler: String?, searchBarAccessory: RenderNode?,
         showsDetail: Bool, screenActions: RenderNode?, emptyView: RenderNode?
@@ -176,7 +202,9 @@ struct ExtensionScreen: Equatable {
 
     /// The `ActionPanel` that applies to the current selection: the item's own, else the screen's.
     func actionPanel(forItemAt index: Int) -> RenderNode? {
-        if items.indices.contains(index), let panel = items[index].node("actions") { return panel }
+        if items.indices.contains(index), let panel = items[index].node.node("actions") {
+            return panel
+        }
         return screenActions
     }
 

@@ -1,7 +1,7 @@
 enum SettingsTab: CaseIterable, Identifiable {
-    case general, applications, search, systemSettings, systemActions, commands, quicklinks, fileSearch,
-        snippets, windowManagement, clipboard, emoji, extensions, permissions, backup,
-        miscellaneous, about
+    case general, applications, search, systemSettings, systemActions, commands, quicklinks,
+        fileSearch, notes, snippets, windowManagement, clipboard, emoji, extensions, permissions,
+        backup, miscellaneous, about
     /// The case, never an index: a selectable `List` flattens section and row IDs together.
     var id: Self { self }
 
@@ -15,6 +15,7 @@ enum SettingsTab: CaseIterable, Identifiable {
         case .commands: return "Commands"
         case .quicklinks: return "Quicklinks"
         case .fileSearch: return "File Search"
+        case .notes: return "Notes"
         case .snippets: return "Snippets"
         case .windowManagement: return "Window Management"
         case .clipboard: return "Clipboard"
@@ -37,6 +38,7 @@ enum SettingsTab: CaseIterable, Identifiable {
         case .commands: return "terminal"
         case .quicklinks: return "link"
         case .fileSearch: return "doc.text.magnifyingglass"
+        case .notes: return "text.page"
         case .snippets: return "curlybraces"
         case .windowManagement: return "macwindow"
         case .clipboard: return "doc.on.clipboard"
@@ -70,10 +72,12 @@ enum SettingsSection: CaseIterable, Identifiable {
         case .general: return [.general, .permissions]
         case .launcher:
             return [
-                .applications, .search, .systemSettings, .systemActions, .commands, .quicklinks
+                .applications, .search, .systemSettings, .systemActions, .commands, .quicklinks,
             ]
         case .features:
-            return [.fileSearch, .snippets, .windowManagement, .clipboard, .emoji, .extensions]
+            return [
+                .fileSearch, .notes, .snippets, .windowManagement, .clipboard, .emoji, .extensions
+            ]
         case .advanced: return [.backup, .miscellaneous, .about]
         }
     }

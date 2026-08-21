@@ -8,11 +8,48 @@ final class PalettePanel: NSPanel {
     var onBareBackspace: (() -> Bool)?
     /// Command chords the field editor swallows, plus the ones no main menu handles.
     var onCommandShortcut: ((NSEvent) -> Bool)?
+    /// The palette's typing context, handed over each time a field takes focus.
+    var onFieldEditorFocused: ((NSTextInputContext) -> Void)?
     /// Arms hover from `sendEvent`, the one place both event streams pass through.
     weak var paletteState: PaletteState? {
         didSet {
             paletteState?.onMenuOpenChanged = { [weak self] open in self?.setSearchCaretHidden(open) }
         }
+    }
+
+    /// Nil until a field takes focus; a non-activating panel can only scope input to this.
+    var fieldEditorContext: NSTextInputContext? { fieldEditor?.inputContext }
+
+    /// SwiftUI's text fields all edit through the window's one shared field editor.
+    private var fieldEditor: NSTextView? { firstResponder as? NSTextView }
+
+    /// Mirrors the field editor's marked text. docs/features/palette.md#ime-composition
+    private var compositionObserver: NotificationToken?
+
+    override func makeFirstResponder(_ responder: NSResponder?) -> Bool {
+        guard super.makeFirstResponder(responder) else { return false }
+        trackComposition()
+        if let context = fieldEditorContext { onFieldEditorFocused?(context) }
+        return true
+    }
+
+    /// Selection is the only notification a marked-text change posts; `didChange` waits for commit.
+    func trackComposition() {
+        guard let editor = fieldEditor else {
+            compositionObserver = nil
+            paletteState?.isComposing = false
+            return
+        }
+        paletteState?.isComposing = editor.hasMarkedText()
+        let center = NotificationCenter.default
+        let token = center.addObserver(
+            forName: NSTextView.didChangeSelectionNotification, object: editor, queue: .main
+        ) { [weak self, weak editor] _ in
+            MainActor.assumeIsolated {
+                self?.paletteState?.isComposing = editor?.hasMarkedText() ?? false
+            }
+        }
+        compositionObserver = NotificationToken(token, center: center)
     }
 
     /// Keys driving an open menu; they reach `onKeyPress` even while editing is frozen.
@@ -50,8 +87,8 @@ final class PalettePanel: NSPanel {
 
     /// Caret hiding on SwiftUI's own field editor. docs/features/palette.md#menu-open-input-freeze
     private func setSearchCaretHidden(_ hidden: Bool) {
-        guard let editor = firstResponder as? NSTextView else { return }
-        editor.insertionPointColor = hidden ? .clear : .white
+        guard let editor = fieldEditor else { return }
+        editor.insertionPointColor = hidden ? .clear : NSColor(Theme.Colors.textPrimary)
         // Force a redraw so the caret flips at once rather than waiting out the blink timer.
         editor.updateInsertionPointStateAndRestartTimer(!hidden)
     }
@@ -93,6 +130,8 @@ final class PalettePanel: NSPanel {
         // Keys and scrolling both slide rows under the pointer without it choosing any of them.
         case .keyDown, .scrollWheel:
             paletteState?.disarmHoverHighlight(pointerAt: NSEvent.mouseLocation)
+        case .flagsChanged:
+            paletteState?.noteCommandHeld(event.modifierFlags.contains(.command))
         default: break
         }
         defer { applyCursorPolicy(for: event) }
@@ -151,6 +190,12 @@ final class PalettePanel: NSPanel {
         // The controller owns the frame; without this the top edge drifts on the swap.
         hosting.sizingOptions = []
         contentView = hosting
+    }
+
+    /// Losing the keyboard is the last modifier news the panel gets; a re-show may skip `prepare`.
+    override func resignKey() {
+        super.resignKey()
+        paletteState?.noteCommandHeld(false)
     }
 
     override var canBecomeKey: Bool { true }

@@ -2,6 +2,13 @@ import AppKit
 import Carbon.HIToolbox
 import SwiftUI
 
+/// Why the palette is closing. A dismissal leaves the typed search *pending* — worth holding on to
+/// for a moment — while an action consumed it, so the next summon should start clean.
+enum PaletteHideReason {
+    case dismissed
+    case actionTaken
+}
+
 @MainActor
 final class PaletteWindowController: NSObject, NSWindowDelegate {
     private unowned let core: AppCore
@@ -55,6 +62,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             positionPanel(panel, collapsed: core.paletteCoordinator.paletteIsCollapsed)
             // Flush first-mount layout off-screen, so the safe-area settle isn't visible.
             panel.contentView?.layoutSubtreeIfNeeded()
+            core.inputSourceSwitcher.beginSession(
+                preferredInputSourceID: core.settings.autoSwitchInputSourceID)
             // Non-activating, so summoning never raises our own aux windows behind it.
             panel.makeKeyAndOrderFront(nil)
             panel.orderFrontRegardless()
@@ -66,8 +75,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    func hide(restoreFocus: Bool) {
+    func hide(restoreFocus: Bool, reason: PaletteHideReason) {
         panel?.orderOut(nil)
+        core.inputSourceSwitcher.endSession()
         // Drop the anchor, so the next summon re-resolves for the screen in use then.
         anchor = nil
         // The guides must never outlive the panel they point at.
@@ -76,7 +86,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         // Drop the multi-MB preview bitmaps, so idle RAM returns near baseline.
         ImageThumbnail.purgePreviews()
         IconCache.purgeFitted()
-        schedulePopToRoot()
+        schedulePopToRoot(reason: reason)
         guard restoreFocus else { return }
         // Our own window first: it is still open, and activating another app would bury it.
         if let own = previousOwnWindow, own.isVisible {
@@ -86,15 +96,25 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    /// Pop to Root Search: reset now, or after the delay unless a reopen consumes it.
-    private func schedulePopToRoot() {
+    /// How long a typed search survives a close, whatever Pop to Root Search is set to. Glancing at
+    /// the window behind and coming back is the common case, and retyping is the annoying one.
+    private static let typedQueryGrace: TimeInterval = 30
+
+    /// Pop to Root Search: reset now, or after the delay unless a reopen consumes it. A query that was
+    /// actually typed and then dismissed always gets at least the grace period.
+    private func schedulePopToRoot(reason: PaletteHideReason) {
         popToRootTimer?.invalidate()
-        let timeout = core.settings.popToRootTimeout
-        guard timeout != .immediately else {
+        let typed =
+            reason == .dismissed && !core.palette.query.trimmingCharacters(in: .whitespaces).isEmpty
+        let interval =
+            typed
+            ? max(core.settings.popToRootTimeout.interval, Self.typedQueryGrace)
+            : core.settings.popToRootTimeout.interval
+        guard interval > 0 else {
             core.palette.prepare(mode: .launcher)
             return
         }
-        popToRootTimer = Timer.scheduledTimer(withTimeInterval: timeout.interval, repeats: false) {
+        popToRootTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) {
             [weak self] _ in
             MainActor.assumeIsolated {
                 self?.popToRootTimer = nil
@@ -124,16 +144,25 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     // MARK: - NSWindowDelegate
 
-    /// Dismiss when the palette loses key status (click-away, ⌘-Tab, app switch).
+    /// Dismiss when the palette loses key status (click-away, ⌘-Tab, app switch). One of our own
+    /// dialogs is none of those: hiding would pop to root, which tears down an extension command
+    /// while its `confirmAlert` is still waiting for the answer.
     func windowDidResignKey(_ notification: Notification) {
-        guard isVisible else { return }
-        core.paletteCoordinator.hidePalette(restoreFocus: false)
+        guard isVisible, !core.isShowingDialog else { return }
+        // Clicking away to look at what's behind is the whole reason the grace period exists.
+        core.paletteCoordinator.hidePalette(restoreFocus: false, reason: .dismissed)
     }
 
     /// Re-bump a turn later: on the first show a synchronous bump lands before `onChange`.
     func windowDidBecomeKey(_ notification: Notification) {
         DispatchQueue.main.async { [weak self] in
-            self?.core.palette.focusToken = UUID()
+            guard let self else { return }
+            core.palette.focusToken = UUID()
+            // A re-summon leaves first responder where it was, so neither of these gets an event.
+            panel?.trackComposition()
+            if let context = panel?.fieldEditorContext {
+                core.inputSourceSwitcher.applySession(to: context)
+            }
         }
     }
 
@@ -202,21 +231,26 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environment(core.clipboardStore)
             .environment(core.favorites)
             .environment(core.visibility)
+            .environment(core.aliases)
             .environment(core.calcHistory)
             .environment(core.currencyRates)
             .environment(core.emojiIndex)
             .environment(core.frequentEmoji)
             .environment(core.fileSearch)
             .environment(core.runningApps)
+            .environment(core.launchHistory)
             .environment(core.hotKeys)
             .environment(core.uninstall)
             .environment(core.quicklinks)
             .environment(core.quicklinkArguments)
             .environment(core.extensions)
-            .environment(core.launchHistory)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
         panel.paletteState = core.palette
+        // The switch is scoped to the palette's own editing context, never applied globally.
+        panel.onFieldEditorFocused = { [weak self] context in
+            self?.core.inputSourceSwitcher.applySession(to: context)
+        }
         // Backspace in an empty search backs out of a sub-screen to a fresh root.
         panel.onBareBackspace = { [weak self] in
             guard let core = self?.core, core.palette.mode != .launcher, core.palette.query.isEmpty
@@ -248,6 +282,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             case ",":
                 self.core.settingsCoordinator.showSettings()
                 return true
+            // Pin. Swallowed on every screen, since ⌘. only ever means cancel to a search field.
+            case ".":
+                self.core.palette.notePinChord()
+                return true
             case "w":
                 self.core.paletteCoordinator.hidePalette()
                 return true
@@ -274,12 +312,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.setFrame(frame, display: true)
     }
 
-    /// The display to anchor to; `NSScreen.main` would give the menu-bar one instead.
+    /// The display to anchor to; never `NSScreen.main`, which follows the focused window either way.
     private func targetScreen() -> NSScreen? {
-        guard core.settings.openOnCursorScreen else { return NSScreen.main }
-        let mouse = NSEvent.mouseLocation
-        // NSMouseInRect, not `contains`: the topmost row otherwise reads as the display above.
-        return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
+        core.settings.openOnCursorScreen ? NSScreen.underCursor : NSScreen.primary
     }
 
     /// The session anchor, cached until hide so both placements read one `visibleFrame`. A

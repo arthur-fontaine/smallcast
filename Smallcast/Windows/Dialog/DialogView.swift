@@ -19,9 +19,11 @@ struct DialogView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
             HStack(alignment: .top, spacing: Theme.Spacing.lg) {
-                SymbolImage(name: request.symbol, size: Theme.Size.dialogIcon)
-                    .foregroundStyle(request.tone.tint)
-                    .frame(width: Theme.Size.dialogIcon)
+                if let symbol = request.symbol {
+                    SymbolImage(name: symbol, size: Theme.Size.dialogIcon)
+                        .foregroundStyle(request.tone.tint)
+                        .frame(width: Theme.Size.dialogIcon)
+                }
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Text(request.title)
                         .font(.headline)
@@ -52,7 +54,7 @@ struct DialogView: View {
         }
         .padding(Theme.Spacing.xxl)
         .frame(width: Theme.Size.dialogWidth, alignment: .leading)
-        .background(Color.black.opacity(Theme.Colors.panelDimming))
+        .background(Theme.Colors.panelScrim)
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.dialog, style: .continuous))
         .panelEntrance()
