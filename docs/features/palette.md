@@ -26,11 +26,22 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
   the panel does not activate, so a global switch would land on whichever app is still frontmost.
 
 
-## Escape
+## Dismissal and the typed query
 
-Escape is two steps, not one. With something typed it clears the field and the palette stays open;
-with the field already empty it dismisses. An open menu or a running extension command takes it first
-— the menu closes, and a command pops its own navigation stack before the command is left.
+A half-written search is worth more than a keystroke, so closing the palette treats it as pending work:
+
+- **Escape with text** clears the field and leaves the palette open; a second Escape closes it. An open
+  menu takes Escape first, and inside a running extension command it pops that command's own stack —
+  the extension owns its search bar.
+- **Escape with an empty field** closes, as it always did.
+- **Dismissing with text** — the toggle hotkeys, Escape, or clicking away — keeps the query for
+  `PaletteWindowController.typedQueryGrace` (30 s), whatever Pop to Root Search is set to, so glancing
+  at the window behind and coming back doesn't lose it. The next summon consumes the preserved state
+  exactly as a within-timeout reopen already did.
+
+`PaletteHideReason` is what keeps that honest: closing because an action *ran* (`.actionTaken`, the
+default) resets as before, since the search already did its job — only `.dismissed` holds on. The three
+dismissal sites name themselves; everything else inherits the safe default.
 
 Clearing routes through `CalculatorCoordinator.clearSearch`, because emptying the field is also the
 moment a calculation stops being edited and can still be remembered. See

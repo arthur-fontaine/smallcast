@@ -2,6 +2,13 @@ import AppKit
 import Carbon.HIToolbox
 import SwiftUI
 
+/// Why the palette is closing. A dismissal leaves the typed search *pending* — worth holding on to
+/// for a moment — while an action consumed it, so the next summon should start clean.
+enum PaletteHideReason {
+    case dismissed
+    case actionTaken
+}
+
 @MainActor
 final class PaletteWindowController: NSObject, NSWindowDelegate {
     private unowned let core: AppCore
@@ -68,7 +75,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    func hide(restoreFocus: Bool) {
+    func hide(restoreFocus: Bool, reason: PaletteHideReason) {
         panel?.orderOut(nil)
         core.inputSourceSwitcher.endSession()
         // Drop the anchor, so the next summon re-resolves for the screen in use then.
@@ -79,7 +86,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         // Drop the multi-MB preview bitmaps, so idle RAM returns near baseline.
         ImageThumbnail.purgePreviews()
         IconCache.purgeFitted()
-        schedulePopToRoot()
+        schedulePopToRoot(reason: reason)
         guard restoreFocus else { return }
         // Our own window first: it is still open, and activating another app would bury it.
         if let own = previousOwnWindow, own.isVisible {
@@ -89,15 +96,25 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    /// Pop to Root Search: reset now, or after the delay unless a reopen consumes it.
-    private func schedulePopToRoot() {
+    /// How long a typed search survives a close, whatever Pop to Root Search is set to. Glancing at
+    /// the window behind and coming back is the common case, and retyping is the annoying one.
+    private static let typedQueryGrace: TimeInterval = 30
+
+    /// Pop to Root Search: reset now, or after the delay unless a reopen consumes it. A query that was
+    /// actually typed and then dismissed always gets at least the grace period.
+    private func schedulePopToRoot(reason: PaletteHideReason) {
         popToRootTimer?.invalidate()
-        let timeout = core.settings.popToRootTimeout
-        guard timeout != .immediately else {
+        let typed =
+            reason == .dismissed && !core.palette.query.trimmingCharacters(in: .whitespaces).isEmpty
+        let interval =
+            typed
+            ? max(core.settings.popToRootTimeout.interval, Self.typedQueryGrace)
+            : core.settings.popToRootTimeout.interval
+        guard interval > 0 else {
             core.palette.prepare(mode: .launcher)
             return
         }
-        popToRootTimer = Timer.scheduledTimer(withTimeInterval: timeout.interval, repeats: false) {
+        popToRootTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) {
             [weak self] _ in
             MainActor.assumeIsolated {
                 self?.popToRootTimer = nil
@@ -132,7 +149,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// while its `confirmAlert` is still waiting for the answer.
     func windowDidResignKey(_ notification: Notification) {
         guard isVisible, !core.isShowingDialog else { return }
-        core.paletteCoordinator.hidePalette(restoreFocus: false)
+        // Clicking away to look at what's behind is the whole reason the grace period exists.
+        core.paletteCoordinator.hidePalette(restoreFocus: false, reason: .dismissed)
     }
 
     /// Re-bump a turn later: on the first show a synchronous bump lands before `onChange`.

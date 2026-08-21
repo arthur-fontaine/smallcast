@@ -361,7 +361,7 @@ struct RootPaletteView: View {
                 core.calculatorCoordinator.clearSearch()
                 return .handled
             }
-            core.paletteCoordinator.hidePalette()
+            core.paletteCoordinator.hidePalette(reason: .dismissed)
             return .handled
         }
         .onKeyPress(.tab) {
