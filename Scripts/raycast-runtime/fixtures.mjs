@@ -94,6 +94,26 @@ export default function Command() {
 }
 `;
 
+const fragmentDetailSource = `
+import { List } from "@raycast/api";
+
+export default function Command() {
+  return (
+    <List>
+      <List.Item
+        title="TOTP"
+        detail={
+          <>
+            <List.Item.Detail markdown="30s remaining" />
+            <List.Item.Detail metadata={<List.Item.Detail.Metadata><List.Item.Detail.Metadata.Label title="Code" text="123456" /></List.Item.Detail.Metadata>} />
+          </>
+        }
+      />
+    </List>
+  );
+}
+`;
+
 const formSource = `
 import { Form, ActionPanel, Action } from "@raycast/api";
 
@@ -156,6 +176,28 @@ export default function Command() {
     new TextDecoder().decode(new TextEncoder().encode("héllo")),
   ];
   return <Detail markdown={parts.join("\\n")} />;
+}
+`;
+
+// Bundled HTTP clients (axios) construct and probe a Response at module scope, before any component
+// mounts — a host-shaped constructor took the whole command down with them.
+const responseSource = `
+export default async function Command() {
+  const probe = new Response();
+  const created = new Response(JSON.stringify({ id: 7 }), {
+    status: 201,
+    statusText: "Created",
+    headers: { "Content-Type": "application/json" },
+  });
+  const clone = created.clone();
+  globalThis.__response = {
+    probe: [probe.status, probe.ok, probe.statusText, await probe.text()],
+    readers: ["text", "arrayBuffer", "blob"].every((name) => typeof probe[name] === "function"),
+    created: [created.status, created.statusText, created.headers.get("content-type"), (await created.json()).id],
+    clone: [clone.status, clone.headers.get("content-type"), await clone.text()],
+    bytes: Array.from(await new Response(new Uint8Array([104, 105])).bytes()),
+    byteLength: (await new Response("héllo").arrayBuffer()).byteLength,
+  };
 }
 `;
 
@@ -240,6 +282,12 @@ export async function runFixtures() {
     );
   });
 
+  await run("List.Item.Detail split across a Fragment", fragmentDetailSource, "view", async (harness) => {
+    const detail = findNode(harness.state.trees.at(-1), "List.Item").props.detail;
+    check("keeps the markdown from the first sibling", detail.props.markdown === "30s remaining", JSON.stringify(detail.props));
+    check("keeps the metadata from the second sibling", detail.props.metadata?.type === "Detail.Metadata", JSON.stringify(detail.props));
+  });
+
   await run("Form fields and submit", formSource, "view", async (harness) => {
     const tree = harness.state.trees.at(-1);
     const form = findNode(tree, "Form");
@@ -299,6 +347,17 @@ export async function runFixtures() {
       "héllo",
     ];
     expected.forEach((value, index) => check(`shim ${index}: ${value}`, markdown[index] === value, markdown[index]));
+  });
+
+  await run("Response takes the Web spec's constructor", responseSource, "no-view", async (harness) => {
+    const result = harness.call("globalThis.__response");
+    const equals = (actual, expected) => JSON.stringify(actual) === JSON.stringify(expected);
+    check("a zero-arg Response is a 200 with an empty body", equals(result.probe, [200, true, "", ""]), JSON.stringify(result.probe));
+    check("exposes the body readers a feature probe looks for", result.readers === true);
+    check("reads status, headers and JSON back", equals(result.created, [201, "Created", "application/json", 7]), JSON.stringify(result.created));
+    check("clone carries status, headers and body", equals(result.clone, [201, "application/json", '{"id":7}']), JSON.stringify(result.clone));
+    check("keeps a binary body intact", equals(result.bytes, [104, 105]), JSON.stringify(result.bytes));
+    check("encodes a text body as UTF-8", result.byteLength === 6, String(result.byteLength));
   });
 
   await run("no-view command", noViewSource, "no-view", async (harness) => {

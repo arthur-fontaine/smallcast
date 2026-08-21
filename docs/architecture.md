@@ -19,7 +19,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ SystemAction · VolumeLevel ·                                               │
 │ WindowCommand · WindowLayout · WindowActionMemory · PaletteRowIndex ·      │
 │ Uninstall{Target,SearchRoot,Rules,Protection,Plan} ·                       │
-│ Quicklink{,Destination,Store,Archive} · Snippets/Model/* · CustomCommand · │
+│ Quicklink{,Destination,Store,Archive} · Notes/Model/* · Snippets/Model/* · │
 │ ShellCommandRunner · DoubleTap{Modifier,Detector} · ClipboardStore ·       │
 │ RaycastFormat · RaycastV1Decoder · AppSettingsKey · SettingsBackupCoverage │
 └──────────────────────────────────┬─────────────────────────────────────────┘
@@ -29,12 +29,12 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ AppIndex · SpotlightNames · FileSearchService · SettingsPaneScanner ·      │
 │ IconCache · WindowMover · UninstallScanner · UninstallRunner ·             │
 │ SystemActionRunner · QuicklinkLauncher · SnippetTextInjector ·             │
-│ SnippetKeywordListener · CurrencyRateStore · Paster · HotKeyCenter ·       │
-│ HyperKeyTap · DoubleTapMonitor · RunningAppsMonitor                        │
+│ SnippetKeywordListener · NotesRepository · CurrencyRateStore · Paster ·    │
+│ HotKeyCenter · HyperKeyTap · DoubleTapMonitor · RunningAppsMonitor         │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ published through
 ┌─ OBSERVABLE STATE ───────────────▼─────────────────────────────────────────┐
-│ 27 @MainActor @Observable stores, sessions, indices and State types        │
+│ 32 @MainActor @Observable stores, sessions, indices and State types        │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ rendered by
 ┌─ VIEW ───────────────────────────▼─────────────────────────────────────────┐
@@ -59,9 +59,9 @@ The rule is checkable, which is the point: **a file under `Model/` may not impor
 because the harnesses compile the shipped sources rather than a copy. A harness that stops compiling is
 the signal that a decision leaked into the effect layer, or an effect into the decision layer.
 
-The boundary is drawn so the *safe* state is the default. `CalcEngine.evaluate`'s `currency:` parameter
-defaults to `.off`, so forgetting to pass a consented source disables the feature rather than enabling
-it. Confirmation gates live in the coordinator, never in the runner — which is why `ShellCommandRunner`
+The boundary keeps effects out of decisions: `CalcEngine.evaluate` is handed a finished
+`CurrencyRates?` rather than reaching for one, which is what keeps it Foundation-only and testable.
+Confirmation gates live in the coordinator, never in the runner — which is why `ShellCommandRunner`
 and `SystemActionRunner` stay harness-compilable while the "are you sure?" step still cannot be bypassed.
 
 Two things sit deliberately outside a feature folder: `Features/PaletteRowIndex.swift`, because the
@@ -72,11 +72,11 @@ the shared primitives and system shims every feature draws on. Neither may depen
 
 `AppCore.shared` (`App/AppCore.swift`) is a `@MainActor` singleton owning every long-lived thing in the
 app: the stores (`AppIndex`, `ClipboardStore`, `SnippetsStore`, `QuicklinkStore`, `CustomCommandStore`,
-`FavoritesStore`, `VisibilityStore`, `LauncherRankingStore`, `CalculatorHistoryStore`,
+`FavoritesStore`, `VisibilityStore`, `AliasStore`, `LauncherRankingStore`, `CalculatorHistoryStore`,
 `CurrencyRateStore`, `FrequentEmojiStore`), the managers and monitors (`ClipboardManager`,
 `HotKeyManager`, `HyperKeyTap`, `RunningAppsMonitor`, `SnippetKeywordListener`), the shared state
 (`AppSettings`, `PaletteState`, `FileSearchSession`, `UninstallSession`,
-`QuicklinkArgumentSession`), the fourteen feature coordinators, and the window controllers.
+`QuicklinkArgumentSession`), `NotesStore`, the fifteen feature coordinators, and the window controllers.
 
 `AppDelegate.applicationDidFinishLaunching` calls `AppCore.shared.start()` and nothing else. That is the
 one wiring point, and `start()` reads as the app's whole boot sequence in one screen.
@@ -85,7 +85,7 @@ one wiring point, and `start()` reads as the app's whole boot sequence in one sc
 into a store to mutate it.** That is the rule; `AppCore` holds only the closure wiring that connects a
 hotkey to a coordinator. Views inject `AppCore` through `@Environment` and use it as the *locator* for
 those coordinators — `core.quicklinkCoordinator.deleteQuicklink(…)` is the shape, and the alternative
-is injecting fourteen coordinators separately for no gain. Reading a store off `AppCore` to render it is
+is injecting fifteen coordinators separately for no gain. Reading a store off `AppCore` to render it is
 fine too; deciding something with one is what the rule forbids. `showNotice`, `confirm`,
 `reportFailure`, `showMessage` and `pickVolume` are forwarders on `AppCore` itself, so
 `DialogController` and `MessageHUDController` stay single-owned.
@@ -108,6 +108,11 @@ imperatively from AppKit.
   by `SettingsCoordinator` and `OnboardingCoordinator`. SwiftUI `Settings` and `Window` scenes are
   unreliable for accessory apps, so this is deliberate. Their lifecycles are independent of the
   palette's in both directions.
+- **Notes** — a persistent, titled, non-activating `NotesPanel` managed by `NotesWindowController`.
+  The user owns its size and AppKit autosaves the frame; its literal-source TextKit 2 editor switches
+  among local Markdown files and stays visible on focus loss. The displayed string is the canonical
+  file source; Notes has no parser, rendered preview, or source/display mapping.
+  See [features/notes.md](features/notes.md).
 - **The main menu** — shaped by `SmallcastApp`'s `.commands`, which rebinds ⌘Q to Close Settings. It is
   only ever on screen while a titled window is open, so it is Settings' menu bar. It must stay
   declarative.
@@ -119,11 +124,13 @@ imperatively from AppKit.
   `VolumeHUDController` (the level box), both over a shared `HUDPresenter` that owns the
   one-at-a-time, auto-dismiss and fade policy. See [ui.md](ui.md#dialogs--hud).
 
-`NSAlert` is never used, and the app forces `.darkAqua` globally. Both are load-bearing.
+`NSAlert` is never used, and that is load-bearing. Appearance is a setting: `AppCore.applyAppearance()`
+assigns `NSApp.appearance` from `AppSettings.appearance`, and `.system` assigns `nil` so AppKit follows
+macOS by itself. Nothing else in the app sets an appearance.
 
 ## Observation
 
-27 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
+32 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
 state through `@Environment` rather than `@EnvironmentObject`.
 
 Three things about this model are easy to get wrong:
@@ -169,17 +176,19 @@ Smallcast/
   App/              @main, AppDelegate, AppCore — the composition root
   DesignSystem/     Theme (the token source), KeyCapChip, Tooltip, SymbolImage,
                     VisualEffectView, PopoverMenu, SettingsComponents, Scrolling/, Interaction/
-  Platform/         system shims: Permissions, LaunchAtLogin, CursorScreen, AppDisplayName,
+  Platform/         system shims: Permissions, LaunchAtLogin, InputSourceSwitcher, ScreenTarget,
+                    AppDisplayName,
                     NotificationToken, AppPaths, Signposts, HealthTicker, Memo, ActivationPolicy,
-                    Images/
+                    Images/, Compression/
+  Resources/        RaycastRuntime.generated.js, the embedded extension runtime
   Palette/          the palette shell: PalettePanel, PaletteWindowController, RootPaletteView,
                     the PaletteScreen protocol, PaletteCoordinator, PaletteState, PaletteMode
   Windows/          the non-palette AppKit surfaces: AppWindowController, Dialog/, HUD/, About/
   Assets.xcassets/  the app icon and the bundled image sets some catalog symbols resolve to
   Features/
     PaletteRowIndex.swift   the flat selection index — palette-owned, so it sits at the top
-    Launcher/ Clipboard/ Calculator/ Emoji/ FileSearch/ Quicklinks/ Snippets/ Uninstall/
-    SystemActions/ CustomCommands/ HotKeys/ Backup/ WindowManagement/ Onboarding/
+    Launcher/ Clipboard/ Calculator/ Emoji/ FileSearch/ Notes/ Quicklinks/ Snippets/ Uninstall/
+    SystemActions/ CustomCommands/ HotKeys/ Backup/ WindowManagement/ Onboarding/ Extensions/
         Model/      pure — the harness inputs
         Service/    effects — stores, monitors, runners, AppKit glue
         UI/         screens, views, and the feature's coordinator

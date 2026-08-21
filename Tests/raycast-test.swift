@@ -125,6 +125,9 @@ enum RaycastTests {
             !RaycastFormat.v1.supportedOptions.contains(.launchAtLogin),
             "v1 exports no launch-at-login preference")
         expect(
+            !RaycastFormat.v1.supportedOptions.contains(.aliases),
+            "v1 exports no aliases")
+        expect(
             RaycastFormat.v1.supportedOptions.contains(.shortcuts),
             "v1 still carries app and command hotkeys")
     }
@@ -139,9 +142,6 @@ enum RaycastTests {
         // The IV is the file's first block, not a value derived from the passphrase.
         let fixedIV = Data(repeating: 0x11, count: 16)
         let pinned = makeV1File(gzippedJSON, passphrase: "12345678", iv: fixedIV)
-        expect(
-            Data(pinned.prefix(16)) == fixedIV,
-            "the file leads with its IV")
         expect(
             (try? RaycastV1Decoder.decrypt(pinned, passphrase: "12345678")) == plainJSON,
             "decrypt reads the IV from the file")

@@ -2056,5 +2056,51 @@ $|dollar sign|xc|0|usd money currency
 №|numero sign|xs|0|number
 ¡|inverted exclamation mark|xs|0|spanish punctuation
 ¿|inverted question mark|xs|0|spanish punctuation
+※|reference mark|xj|0|kome komejirushi note footnote annotation
+〃|ditto mark|xj|0|same repeat above
+〄|japanese industrial standard symbol|xj|0|jis
+〆|ideographic closing mark|xj|0|shime close seal
+〇|ideographic number zero|xj|0|maru circle zero
+〒|postal mark|xj|0|post yubin mail address
+〓|geta mark|xj|0|tofu missing glyph
+〶|circled postal mark|xj|0|post yubin mail
+〷|ideographic telegraph line feed separator symbol|xj|0|telegraph
+〻|vertical ideographic iteration mark|xj|0|repeat
+〼|masu mark|xj|0|square
+〜|wave dash|xj|0|tilde range approximately
+～|fullwidth tilde|xj|0|wave dash range
+・|katakana middle dot|xj|0|nakaguro separator interpunct
+―|horizontal bar|xj|0|quotation dash long
+‥|two dot leader|xj|0|ellipsis dots
+々|ideographic iteration mark|xj|0|noma kurikaeshi repeat
+ゝ|hiragana iteration mark|xj|0|repeat
+ゞ|hiragana voiced iteration mark|xj|0|repeat dakuten
+ヽ|katakana iteration mark|xj|0|repeat
+ヾ|katakana voiced iteration mark|xj|0|repeat dakuten
+゠|katakana-hiragana double hyphen|xj|0|double hyphen
+ヵ|katakana letter small ka|xj|0|counter months
+ヶ|katakana letter small ke|xj|0|counter months ka
+〳|vertical kana repeat mark upper half|xj|0|repeat vertical
+〴|voiced vertical kana repeat mark upper half|xj|0|repeat dakuten
+〵|vertical kana repeat mark lower half|xj|0|repeat vertical
+〈|left angle bracket|xj|0|quote open
+〉|right angle bracket|xj|0|quote close
+《|left double angle bracket|xj|0|quote title open
+》|right double angle bracket|xj|0|quote title close
+「|left corner bracket|xj|0|kagi quote open
+」|right corner bracket|xj|0|kagi quote close
+『|left white corner bracket|xj|0|quote title open
+』|right white corner bracket|xj|0|quote title close
+【|left black lenticular bracket|xj|0|heading open
+】|right black lenticular bracket|xj|0|heading close
+︱|vertical em dash|xj|0|tategaki presentation form
+︵|vertical left parenthesis|xj|0|tategaki presentation form open
+︶|vertical right parenthesis|xj|0|tategaki presentation form close
+︻|vertical left black lenticular bracket|xj|0|tategaki heading open
+︼|vertical right black lenticular bracket|xj|0|tategaki heading close
+﹁|vertical left corner bracket|xj|0|tategaki kagi quote open
+﹂|vertical right corner bracket|xj|0|tategaki kagi quote close
+﹃|vertical left white corner bracket|xj|0|tategaki quote open
+﹄|vertical right white corner bracket|xj|0|tategaki quote close
 """
 }

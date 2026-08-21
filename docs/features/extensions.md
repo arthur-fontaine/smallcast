@@ -5,7 +5,8 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
 
 - [How it works](#how-it-works) · [The JS runtime](#the-js-runtime) ·
   [The Swift host](#the-swift-host) · [Rendering](#rendering)
-- [Installing extensions](#installing-extensions) · [What's supported](#whats-supported) ·
+- [Turning it on](#turning-it-on) · [Installing extensions](#installing-extensions) ·
+  [Registries](#registries) · [Shortcuts](#shortcuts) · [What's supported](#whats-supported) ·
   [What isn't](#what-isnt-supported-yet) · [Working on the runtime](#working-on-the-runtime)
 
 ## Invariants
@@ -23,6 +24,10 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
   committed — never edit it by hand; change `Scripts/raycast-runtime/src/` and rebuild.
 - **`ExtensionScreen` is the only place extension row order is decided**, so the flat palette selection
   keeps matching the visible rows — the same invariant every other palette screen holds.
+- **Off means off.** `extensionsEnabled` is opt-in, and `ExtensionManager.setEnabled(false)` stops the
+  running command, discards the JS context, empties the installed set and clears the launcher rows;
+  `refresh()` returns early while it is off, so nothing is scanned and nothing is held. Enabling is also
+  consent to run third-party code, so it confirms first and never rides a settings backup.
 - **`SymbolCatalog` reads a system bundle, not API.** The list comes from `CoreGlyphs.bundle` at
   runtime; every read stays optional and falls back to `SymbolCatalog.suggested`, and Apple's restricted
   marks are never offered.
@@ -108,6 +113,7 @@ Two host-call flavours:
 | `Service/ExtensionFetcher.swift` | `fetch` over `URLSession`, plus the async `exec` and the shared PATH resolver |
 | `Service/ExtensionStorage.swift` | per-extension `LocalStorage`, `Cache` and preference values (one JSON file each) |
 | `Service/ExtensionCatalog.swift` | discovery on disk, install, uninstall, import-from-Raycast |
+| `Service/ExtensionCleanup.swift` | the build workspace's name, the launch sweep, and reclaiming orphans |
 | `Service/ExtensionManager.swift` | the single owner: installed set, the one running session, launcher entries |
 | `Model/ExtensionManifest.swift` | `package.json` → commands, preferences, arguments |
 | `Model/RenderNode.swift` | the decoded render tree (`RenderTree` / `RenderNode` / `RenderValue`) |
@@ -146,16 +152,30 @@ screens hold (see [palette.md](palette.md)).
 - **List / Grid** — sections and items flattened in render order. When `filtering` is on (Raycast's
   default unless the command supplies `onSearchTextChange`) rows are filtered with the launcher's own
   `FuzzyMatch` over title, subtitle and keywords, and a section whose items all drop loses its header
-  too. `isShowingDetail` splits the screen into rows plus a detail pane.
+  too. `isShowingDetail` splits the screen into rows plus a detail pane. `ExtensionScreen.Item`
+  carries both the flat `selection` index and the scroll id, and is the `ForEach` identity of the row
+  and the grid cell alike — see the scroll-id rule in [ui.md](../ui.md#rows-selection-hover).
 - **Detail** — markdown rendered block-by-block (headings, lists, code fences, quotes, rules, remote
   images) with `AttributedString` handling inline styling, plus `Detail.Metadata`.
+- **Appearance** — `environment.appearance` reports the real one, so an extension that branches on it
+  is told the truth. It is an injected field on `ExtensionLaunchContext` (a `Model/` type owns no
+  environment), which means a **running command keeps the appearance it booted with**; a change
+  reaches it on the next launch. A `{light, dark}` icon or colour is picked by
+  `ExtensionImage.resolve(_:assetsPath:isDark:)`, whose `isDark` comes from the view's
+  `\.isDarkAppearance` so the pick re-renders when the surface flips; either side stands in when an
+  extension supplies only one. `{fileIcon: path}` is its own source: the path names a bundle or
+  document whose Finder icon is wanted, so it goes to `NSWorkspace` rather than being decoded as an
+  image file — an `.app` has no bitmap to read. The feature's own fills live in `ExtensionColors` — never in `Theme`.
 - **Form** — label-left/control-right rows. Field values live in the extension (React owns them); every
   edit dispatches `onSmallcastChange` and the resulting re-render is what updates the control, so
   `defaultValue`, a controlled `value`, and `ref.reset()` all behave.
 - **ActionPanel** — flattened (sections and submenus included) into the palette's ⌘K menu. The first
   action is the primary ↵ action; an action's own `shortcut` is matched against modified keystrokes.
-- **Feedback** — `showToast` stacks above the footer, `showHUD` is a centred pill, `confirmAlert` is an
-  `NSAlert`.
+- **Feedback** — `showToast` stacks above the footer, `showHUD` is a centred pill, and `confirmAlert`
+  goes through `DialogController` like every other question the app asks. Its dialog sits at
+  `.modalPanel`, above the palette's `.floating`, so a view command keeps its screen behind it — and
+  the palette does not dismiss while it is up (`AppCore.isShowingDialog`), because dismissing pops to
+  root, which would tear the command down before its `await confirmAlert(…)` ever returns.
 - **Command arguments** — a command declaring `arguments` shows inline fields sized to their
   placeholders, right after the typed text, exactly as Raycast does. Tab walks search field → each
   argument → back; ↵ from any of them runs the command with the values as `props.arguments`; a blank
@@ -171,6 +191,16 @@ screens hold (see [palette.md](palette.md)).
 Escape and a bare backspace pop the extension's own navigation stack first, and only leave the command
 once it's at its root. Pushed screens stay mounted, so popping back restores their state.
 
+## Turning it on
+
+Extensions are **off until asked for**, and the switch is a real one rather than a filter: while it is
+off no directory is scanned, no launcher row is published and no JavaScript context exists. Turning it
+on confirms first — it is consent to run third-party code, and a running command holds a JavaScript
+engine in memory until you leave it, which is the one standing cost this app has.
+
+`Show in launcher` is separate, and independent: it decides whether the commands reach launcher search
+at all, without unloading anything.
+
 ## Installing extensions
 
 Extensions live in `~/Library/Application Support/<bundle id>/extensions/<name>/`, keyed by bundle id
@@ -178,18 +208,83 @@ like everything else, so a Debug build never shares installs with a release chan
 `package.json`, `assets/` and one `<command>.js` per command — byte-for-byte the layout Raycast's own
 build produces.
 
-Settings → Extensions offers two routes:
+Settings → Extensions offers three routes, under **Install New**:
 
-1. **Import from Raycast** — copies the already-built bundles out of `~/.config/raycast/extensions`.
-   Nothing is compiled, so no Node, npm or network is involved.
-2. **Add Extension Folder…** — pick any directory with a manifest and built command files, e.g. an
-   extension you just ran `ray build` in.
+1. **Search Registries…** — searches every enabled registry and installs from any of them. See below.
+2. **Import from Raycast** — copies the already-built bundles out of a local Raycast. Nothing is
+   compiled, so no Node, npm or network is involved. The pane also scans whenever it opens, and says
+   so when Raycast has something Smallcast doesn't — installing in Raycast otherwise leaves no trace
+   here. **Both channels are searched**: `~/.config/raycast` and `~/.config/raycast-x`, the latter
+   being Raycast Beta v2. Checking only the first reported "no Raycast install" to every Beta user,
+   whose stable directory is present but empty. The same extension in both is offered once.
+3. **Add Folder…** — pick any directory with a manifest and built command files, e.g. an extension you
+   just ran `ray build` in.
 
 Only `package.json`, the built commands and `assets/` are copied — never `node_modules` or the
 multi-megabyte `.js.map` Raycast writes beside each bundle.
 
-Smallcast does **not** bundle extensions itself. That is the deliberate boundary: bundling needs a
-JavaScript toolchain and a dependency installer, which would dwarf the app.
+## Registries
+
+A registry is a place extensions are searched for and fetched from. Two kinds, because the two sources
+hand back different things:
+
+| | Raycast Store | A GitHub repository |
+| --- | --- | --- |
+| What it serves | The bundle Raycast already built | Source |
+| Installing needs | Nothing | Node, and a package manager |
+| How it's found | `raycast.com/frontend_api/extensions/search`, the endpoint the store's own site uses — unofficial, hence the fallback | The Git trees API, then a `package.json` read per candidate |
+
+Both ship enabled, and anyone can add their own GitHub registry — a repository laid out like
+`raycast/extensions`, one folder per extension.
+
+**Only the extension's own folder is ever fetched.** `raycast/extensions` is gigabytes; cloning it to
+install one extension would be absurd.
+
+**Listings come from the Git trees API, not the contents API.** Contents caps a directory at 1000
+entries and says nothing about having done so, and `raycast/extensions` holds over three thousand —
+under contents, everything alphabetically past the cap was simply unfindable.
+
+Installing from a source registry runs `<package manager> install --ignore-scripts`, then
+**`node_modules/.bin/ray build -e dist -o <build dir>` directly — never the manifest's `build`
+script.** That script is `ray build`, whose default environment is `dev`, and dev mode *installs into
+the local Raycast* rather than emitting anything. The build reported success and exited 0 while
+writing nothing beside the manifest, so every source install failed afterwards with "no built command
+bundles", and each attempt quietly added the extension to the user's own Raycast.
+
+**`-o` points at a sibling `build/` directory, never at the source.** `ray` clears its output
+directory first, so aiming it at the source deleted `assets/` before the install could copy it — the
+extension arrived with no icon. Building into its own directory leaves the source intact and yields
+exactly the layout `ExtensionCatalog.install` expects: `package.json`, one `<command>.js` each, and
+`assets/`. What it installs from is that directory, not the source.
+
+`-e dist` also type-checks, so an extension that does not compile now fails at the build rather than
+at the copy. An extension without `ray` falls back to its own build script and installs from the
+source, which is the only contract such an extension offers. Lifecycle scripts are skipped on purpose: the
+build script is the contract, a `postinstall` is code nobody asked to run. The package manager is
+`Automatic` by default, which takes the first of pnpm, Bun, Yarn and npm that is installed — a GUI app
+inherits none of a login shell's `PATH`, so `ExtensionPackageManager.searchPaths` is where they are
+looked for, version managers included (Homebrew, Volta, asdf, mise, fnm, nvm, Yarn).
+
+That hardcoded list can never cover every toolchain layout — Nix among them — so the Registries sheet
+also has "Custom search paths": a `:`-separated list, `extensionCustomSearchPaths` in `AppSettings`,
+checked *before* the built-in list wherever it resolves a package manager or Node. Set once, it applies
+to every future install; nothing about it needs entering per-install. `ExtensionInstaller` takes it as
+`additionalSearchPaths` rather than reading settings itself, keeping the Model/Service split intact.
+
+Neither the registry list, the package manager, nor the custom search paths ride a settings backup:
+the first two name a tool or a source of code the machine an import lands on may not have or want, and
+the last is a set of paths specific to this Mac's toolchain layout.
+
+## Shortcuts
+
+A global shortcut binds to a **command**, not to an extension — a shortcut has to land on one thing to
+run, and an extension is a set of commands. `HotKeyAction.extensionCommand` is keyed by the launcher
+entry id (`extension:<extension>/<command>`).
+
+Its index is not pruned at launch the way the UUID-keyed ones are: the installed set is scanned
+asynchronously and only while extensions are on, so at launch "not installed yet" and "gone" look
+identical, and pruning there would quietly drop a working binding. Uninstalling clears its own instead,
+along with the extension's stored preferences and its chosen icon.
 
 ## What's supported
 
@@ -234,6 +329,7 @@ extensions / 114 of 147 view commands** boot and render. `Scripts/raycast-runtim
 | **`menu-bar` commands** | The launcher lists them and explains why they don't open. |
 | **`AI`, `BrowserExtension`, `WindowManagement`** | Raycast services with no local equivalent. Importing them works; calling one throws with a clear reason. |
 | **WebSocket** | No polyfill yet; `URLSessionWebSocketTask` could back one. |
+| **Aborting a `fetch` already in flight** | `AbortSignal` is complete — `timeout`, `abort` and `any` included — and `fetch` checks it on both sides of the host call, so a caller gets its `AbortError`. The request itself still runs to completion: the signal isn't carried across the bridge, so nothing cancels the `URLSessionTask`. A timeout bounds the caller, not the network. |
 | **Streaming `child_process.spawn`** | `spawn` runs the child to completion and emits its output as one chunk (async-iterable, which is what `get-stream`/`execa` consume). True duplex streaming would need a bidirectional channel across the bridge. Extensions built on `execa`'s deeper stream API can still fail. |
 | **`http` / `https` / `net` / `tls`** | Resolve but throw on use. `fetch` is the supported path; `axios`'s Node adapter is not. |
 | **`stream`** | Only `PassThrough` and `pipeline` are real — enough for `@raycast/utils`' `useExec`, which pipes a child's stdout through them. The rest of the module still throws. |
@@ -281,11 +377,73 @@ Two JavaScriptCore differences that have already bitten and are worth rememberin
 contains frames only (V8 repeats the message, so the headline has to be prepended by hand), and
 `MessageChannel` is absent, so React's scheduler falls back to `setTimeout`.
 
+## Where things are stored, and what uninstall removes
+
+Everything is under `~/Library/Application Support/<bundle id>/`, keyed by bundle id so a Debug run
+never shares with an installed copy.
+
+| What | Where | Gone on uninstall |
+| --- | --- | --- |
+| The extension | `extensions/<name>/` | yes |
+| `LocalStorage`, `Cache`, preferences | `extension-data/<safe name>.json` | yes |
+| `environment.supportPath` | `extension-support/<safe name>/` | yes |
+| Icon override | `UserDefaults` → `extensionAppearances` | yes |
+| Command shortcuts | `UserDefaults` → `hotkey.extensionCommand.<entry id>` | yes |
+| Favorites, hidden items | `UserDefaults` → `favoriteApps`, `hiddenItemKeys` | yes |
+| User alias | `UserDefaults` → `launcherAliases` | yes |
+| Launch ranking | `Caches/<bundle id>/launcher-ranking.json` | yes |
+
+`ExtensionCatalog.safeName` maps an npm-style name onto one path segment, and is the **only** copy of
+that mapping — a second one that drifts orphans every file the first one wrote.
+
+The last four rows are pruned by `ExtensionCoordinator.removeExtensionReferences`, reached through
+`ExtensionManager.onDidUninstall`. An extension's `preferenceKey` is its entry id, because it has no
+bundle id, so `extension:<name>/<command>` is what those stores are keyed by. `CustomCommandCoordinator`
+and `QuicklinkCoordinator` prune the same stores the same way; extensions are not a special case.
+
+**Builds happen in `$TMPDIR/smallcast-install-<UUID>/`**, named by `ExtensionCleanup.workspace` so the
+sweep below cannot disagree about what a workspace is called. A `defer` removes it on every exit an
+install can take. A crash mid-build is the one it cannot cover, so `ExtensionManager.start` sweeps
+strays once at launch — deliberately not gated on `extensionsEnabled`, because a stranded
+`node_modules` is ours either way.
+
+`$TMPDIR` is kept on purpose over a directory of our own: it is the same APFS volume, equally excluded
+from Time Machine, and `com.apple.tmp_cleaner` reclaims it as a second backstop. `~/Library/Caches`
+has no such daemon, so a leak there would be permanent.
+
+**Settings › Extensions › Storage** measures the same strays and offers them back, so a leak from an
+older build is recoverable without a terminal. It sits outside the enabled group deliberately: the
+files are on disk whether or not extensions are on. The row is empty in normal use — an install
+cleans up after itself — and the scan runs off-main, because measuring walks a `node_modules`.
+
+**Nothing here touches `~/Library/pnpm` or `~/.npm`.** Those belong to the package manager and are
+shared with every other project on the machine.
+
 ## Making one look native
 
 An imported extension draws whatever icon it shipped, which rarely matches the rest of the launcher.
 **Settings › Extensions › Configure › Launcher icon** replaces it with an SF Symbol on a tinted tile —
 the same tile `IconCache` draws for the built-in commands, so the row reads as part of the app.
+
+### `ExtensionIconCache`, and why extension artwork draws smaller
+
+An extension's own artwork has its own cache — `Service/ExtensionIconCache.swift` — rather than
+living in `IconCache`. That split is the point: `IconCache` stays the app-and-symbol layer and knows
+nothing about extensions. It lends out only the pixel work (`displayPixel`, `artworkExtent`,
+`paintedExtent`, `rasterized`), so there is one definition of how an icon is measured and drawn.
+
+`ExtensionIconCache.extent` fits that artwork to **0.76** of the canvas, where an app icon and a
+symbol tile both sit at `IconCache.artworkExtent` **0.83**. The gap is deliberate and optical, not a
+size correction — measured, all three paths already produce an identical 40pt box.
+
+Every macOS 26 app icon is a squircle with a glyph inside it, and the ground disappears into the
+palette, so only the glyph reads. A Raycast icon is a flat, fully saturated tile,
+so every pixel of it reads. At equal geometry the extension shouts, and fitting it smaller is what
+makes the two match by eye. Shipped and fetched images take the same target, so an icon doesn't
+change size depending on where it came from.
+
+Change the number only against a rendered strip of real icons; it means nothing on its own.
+`ext-icon-test` guards the invariant: padding in the source cannot change the drawn size.
 
 - `ExtensionAppearance` (symbol + `ExtensionTint`) is stored per extension by manifest name in
   `ExtensionAppearanceStore`, and applies to **every command** of that extension — the same inheritance

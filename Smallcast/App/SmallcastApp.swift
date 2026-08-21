@@ -20,6 +20,7 @@ struct SmallcastApp: App {
                 AppCore.shared.paletteCoordinator.showPalette(mode: .clipboard)
             }
             Divider()
+            Button("Check for Updates...") { AppCore.shared.updateCoordinator.checkForUpdates() }
             Button("Settings...") { AppCore.shared.settingsCoordinator.showSettings() }
                 .keyboardShortcut(",")
             Divider()
@@ -34,6 +35,7 @@ struct SmallcastApp: App {
     private var menuBarCommands: some Commands {
         CommandGroup(replacing: .appInfo) {
             Button("About \(appName)") { AppCore.shared.settingsCoordinator.showAbout() }
+            Button("Check for Updates…") { AppCore.shared.updateCoordinator.checkForUpdates() }
         }
         CommandGroup(replacing: .appSettings) {
             Button("Settings…") { AppCore.shared.settingsCoordinator.showSettings() }

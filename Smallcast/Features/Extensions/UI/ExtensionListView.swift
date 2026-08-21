@@ -3,6 +3,7 @@ import SwiftUI
 /// The List / Grid screen of a running extension command. Row order comes from `ExtensionScreen` so the
 /// flat selection index the palette owns always matches what's drawn.
 struct ExtensionListView: View {
+    @Environment(\.isDarkAppearance) private var isDark
     let screen: ExtensionScreen
     let selection: Int
     let assetsPath: String?
@@ -38,7 +39,8 @@ struct ExtensionListView: View {
         } else if let empty = screen.emptyView {
             VStack(spacing: Theme.Spacing.md) {
                 ExtensionIconView(
-                    resolved: ExtensionImage.resolve(empty.props["icon"], assetsPath: assetsPath),
+                    resolved: ExtensionImage.resolve(
+                        empty.props["icon"], assetsPath: assetsPath, isDark: isDark),
                     size: 42)
                 Text(empty.string("title") ?? "Nothing here")
                     .font(Theme.Typography.rowTitle)
@@ -67,20 +69,18 @@ struct ExtensionListView: View {
                                 title: [title, subtitle].compactMap { $0 }.filter { !$0.isEmpty }
                                     .joined(separator: "  ·  "),
                                 isFirst: row.id == screen.rows.first?.id)
-                        case .item(let node):
-                            let index = screen.items.firstIndex(of: node) ?? 0
+                        case .item(let item):
                             ExtensionItemRow(
-                                node: node, selected: index == selection, assetsPath: assetsPath,
-                                compact: screen.showsDetail
+                                node: item.node, selected: item.index == selection,
+                                assetsPath: assetsPath, compact: screen.showsDetail
                             )
-                            .id(String(node.id))
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                onSelect(index)
+                                onSelect(item.index)
                                 onActivate()
                             }
-                            .onRightClick { onActions(index) }
-                            .selectionFrame(index == selection)
+                            .onRightClick { onActions(item.index) }
+                            .selectionFrame(item.index == selection)
                         }
                     }
                 }
@@ -99,7 +99,7 @@ struct ExtensionListView: View {
 
     /// Scroll id of the selected item, or nil when the selection is out of range.
     private var selectedRowID: String? {
-        screen.items.indices.contains(selection) ? String(screen.items[selection].id) : nil
+        screen.items.indices.contains(selection) ? screen.items[selection].id : nil
     }
 
     private func gridBody(columns: Int) -> some View {
@@ -110,18 +110,18 @@ struct ExtensionListView: View {
                         repeating: GridItem(.flexible(), spacing: Theme.Spacing.sm), count: columns),
                     spacing: Theme.Spacing.sm
                 ) {
-                    ForEach(Array(screen.items.enumerated()), id: \.element.id) { index, node in
+                    ForEach(screen.items) { item in
                         ExtensionGridCell(
-                            node: node, selected: index == selection, assetsPath: assetsPath
+                            node: item.node, selected: item.index == selection,
+                            assetsPath: assetsPath
                         )
-                        .id(String(node.id))
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            onSelect(index)
+                            onSelect(item.index)
                             onActivate()
                         }
-                        .onRightClick { onActions(index) }
-                        .selectionFrame(index == selection)
+                        .onRightClick { onActions(item.index) }
+                        .selectionFrame(item.index == selection)
                     }
                 }
                 .padding(.horizontal, Theme.Spacing.md)
@@ -140,7 +140,7 @@ struct ExtensionListView: View {
     @ViewBuilder
     private var detailPane: some View {
         if screen.items.indices.contains(selection),
-            let detail = screen.items[selection].node("detail")
+            let detail = screen.items[selection].node.node("detail")
         {
             ExtensionDetailBody(
                 markdown: detail.string("markdown"), metadata: detail.node("metadata"),
@@ -153,6 +153,7 @@ struct ExtensionListView: View {
 
 /// One `List.Item`: icon, title, subtitle, then its accessories right-aligned.
 private struct ExtensionItemRow: View {
+    @Environment(\.isDarkAppearance) private var isDark
     let node: RenderNode
     let selected: Bool
     let assetsPath: String?
@@ -168,7 +169,7 @@ private struct ExtensionItemRow: View {
     var body: some View {
         HStack(spacing: Theme.Spacing.lg) {
             ExtensionIconView(
-                resolved: ExtensionImage.resolve(node.props["icon"], assetsPath: assetsPath))
+                resolved: ExtensionImage.resolve(node.props["icon"], assetsPath: assetsPath, isDark: isDark))
             Text(node.string("title") ?? "")
                 .font(Theme.Typography.rowTitle)
                 .lineLimit(1)
@@ -195,6 +196,7 @@ private struct ExtensionItemRow: View {
 
 /// `List.Item.Accessory` values: text, a tag, a date, an icon, or a combination.
 struct ExtensionAccessoriesView: View {
+    @Environment(\.isDarkAppearance) private var isDark
     let accessories: [RenderValue]
     let assetsPath: String?
 
@@ -213,7 +215,7 @@ struct ExtensionAccessoriesView: View {
         HStack(spacing: Theme.Spacing.xs) {
             if let icon = fields["icon"] {
                 ExtensionIconView(
-                    resolved: ExtensionImage.resolve(icon, assetsPath: assetsPath), size: 13)
+                    resolved: ExtensionImage.resolve(icon, assetsPath: assetsPath, isDark: isDark), size: 13)
             }
             if let tag = fields["tag"] {
                 tagView(tag)
@@ -222,7 +224,7 @@ struct ExtensionAccessoriesView: View {
                 Text(text)
                     .font(Theme.Typography.rowTrailing)
                     .foregroundStyle(
-                        ExtensionImage.color(fields["text"]?.objectValue?["color"])
+                        ExtensionImage.color(fields["text"]?.objectValue?["color"], isDark: isDark)
                             ?? Theme.Colors.textSecondary
                     )
                     .lineLimit(1)
@@ -247,7 +249,7 @@ struct ExtensionAccessoriesView: View {
                 $0.formatted(date: .abbreviated, time: .omitted)
             }
         if let text {
-            let color = ExtensionImage.color(fields?["color"]) ?? Theme.Colors.textSecondary
+            let color = ExtensionImage.color(fields?["color"], isDark: isDark) ?? Theme.Colors.textSecondary
             Text(text)
                 .font(Theme.Typography.rowTrailing)
                 .foregroundStyle(color)
@@ -277,6 +279,7 @@ struct ExtensionAccessoriesView: View {
 
 /// One `Grid.Item`: a large content tile with its title underneath.
 private struct ExtensionGridCell: View {
+    @Environment(\.isDarkAppearance) private var isDark
     let node: RenderNode
     let selected: Bool
     let assetsPath: String?
@@ -285,12 +288,12 @@ private struct ExtensionGridCell: View {
     /// `content` is an `ImageLike`, or `{value, tooltip}` wrapping one, or `{color}` — all three are
     /// `ExtensionImage.resolve`'s job.
     private var resolved: ExtensionImage.Resolved? {
-        ExtensionImage.resolve(node.props["content"], assetsPath: assetsPath)
+        ExtensionImage.resolve(node.props["content"], assetsPath: assetsPath, isDark: isDark)
     }
 
     var body: some View {
         VStack(spacing: Theme.Spacing.xs) {
-            ExtensionIconView(resolved: resolved, size: 56)
+            ExtensionIconView(resolved: resolved, size: 56, animates: true)
                 .frame(maxWidth: .infinity)
                 .padding(Theme.Spacing.sm)
                 .background(
@@ -298,7 +301,7 @@ private struct ExtensionGridCell: View {
                         .fill(
                             selected
                                 ? Theme.Colors.selection
-                                : (hovered ? Theme.Colors.rowHover : Color.white.opacity(0.03)))
+                                : (hovered ? Theme.Colors.rowHover : ExtensionColors.gridItemFill))
                 )
             if let title = node.string("title") {
                 Text(title)

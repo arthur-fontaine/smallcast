@@ -10,23 +10,14 @@ struct AppIconView: View {
         _image = State(initialValue: Self.cached(app))
     }
 
-    /// Cache-only, so a warm icon paints on the same frame. An extension command is the one entry
-    /// whose icon is neither its file's nor a plain symbol: a chosen appearance tints the tile, and
-    /// otherwise it draws whatever image the extension ships.
+    /// Cache-only, so a warm icon paints on the same frame. Which of the four kinds of glyph an entry
+    /// wants is `iconSource`'s answer, not this view's.
     private static func cached(_ app: AppEntry) -> NSImage? {
-        if app.isSymbolIcon {
-            return IconCache.cachedSymbol(named: app.symbolIconName, tint: app.symbolTint)
-        }
-        if let path = app.imageIconPath { return IconCache.cachedImage(atPath: path) }
-        return IconCache.cached(forFile: app.url.path)
+        IconCache.cached(app.iconSource, fileURL: app.url)
     }
 
     private static func load(_ app: AppEntry) async -> NSImage? {
-        if app.isSymbolIcon {
-            return await IconCache.loadSymbolAsync(named: app.symbolIconName, tint: app.symbolTint)
-        }
-        if let path = app.imageIconPath { return await IconCache.loadImageAsync(atPath: path) }
-        return await IconCache.loadAsync(forFile: app.url.path)
+        await IconCache.loadAsync(app.iconSource, fileURL: app.url)
     }
 
     var body: some View {
@@ -35,11 +26,11 @@ struct AppIconView: View {
                 Image(nsImage: image).resizable()
             } else {
                 RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                    .fill(Color.white.opacity(0.06))
+                    .fill(Theme.Colors.iconPlaceholder)
             }
         }
         // Keyed on the icon, not the entry: re-skinning an extension leaves `id` untouched.
-        .task(id: app.iconKey) {
+        .task(id: IconRequest(app.iconKey)) {
             if let warm = Self.cached(app) {
                 image = warm
                 return

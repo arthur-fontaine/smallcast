@@ -48,6 +48,7 @@ enum LegacyHotKeyRecords {
         case .togglePalette: "KeyboardShortcuts_togglePalette"
         case .toggleClipboard: "KeyboardShortcuts_toggleClipboard"
         case .toggleEmoji: "KeyboardShortcuts_toggleEmoji"
+        case .showNotes, .createNote, .searchNotes: nil
         case .searchFiles: nil
         case .app(let bundleID): "KeyboardShortcuts_appHotkey." + bundleID
         case .settingsPane(let bundleID): "KeyboardShortcuts_paneHotkey." + bundleID
@@ -57,6 +58,8 @@ enum LegacyHotKeyRecords {
         case .windowCommand(let id): "KeyboardShortcuts_windowCommandHotkey." + id.rawValue
         case .quicklink(let id):
             "KeyboardShortcuts_quicklinkHotkey." + id.uuidString.lowercased()
+        // Newer than the package it adopts records from, so there is nothing to adopt.
+        case .extensionCommand: nil
         }
     }
 }

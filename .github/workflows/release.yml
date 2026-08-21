@@ -56,6 +56,7 @@ jobs:
             echo "bundle_id=${BUNDLE}"
             echo "cask_name=${CASK}"
             echo "dmg_file=Smallcast-${FULL}.dmg"
+            echo "zip_file=Smallcast-${FULL}.zip"
             echo "prerelease=${PRERELEASE}"
           } >> "$GITHUB_OUTPUT"
 
@@ -97,22 +98,28 @@ jobs:
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             build
 
-      # Pack the .app + an /Applications symlink into a compressed DMG under dist/.
-      - name: Package DMG
+      # Two artifacts from one build: the DMG people download and the cask installs, and the zip
+      # the in-app updater installs — it expands with `ditto` instead of mounting a volume.
+      - name: Package DMG and ZIP
         env:
           DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
           DMG_FILE: ${{ steps.meta.outputs.dmg_file }}
+          ZIP_FILE: ${{ steps.meta.outputs.zip_file }}
         run: |
+          APP="$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
           STAGE="$(mktemp -d)"
-          cp -R "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app" "$STAGE/"
+          cp -R "$APP" "$STAGE/"
           ln -s /Applications "$STAGE/Applications"
           mkdir -p dist
           diskutil image create from "$STAGE" --format UDZO --volumeName "$DISPLAY_NAME" "dist/${DMG_FILE}"
+          # `ditto -c -k --keepParent --sequesterRsrc` is the only zip that leaves the code
+          # signature verifiable; plain `zip` drops symlinks and breaks the seal.
+          ditto -c -k --keepParent --sequesterRsrc "$APP" "dist/${ZIP_FILE}"
 
       - uses: actions/upload-artifact@v7
         with:
           name: Smallcast-${{ steps.meta.outputs.full_version }}
-          path: dist/${{ steps.meta.outputs.dmg_file }}
+          path: dist/
 
       - name: Publish GitHub Release
         env:
@@ -125,6 +132,7 @@ jobs:
           fi
           gh release create "$TAG" \
             "dist/${{ steps.meta.outputs.dmg_file }}" \
+            "dist/${{ steps.meta.outputs.zip_file }}" \
             --title "${{ steps.meta.outputs.display_name }} ${{ steps.meta.outputs.full_version }}" \
             --notes "**Channel:** ${{ github.event.inputs.channel }}
           **Version:** ${{ steps.meta.outputs.full_version }}

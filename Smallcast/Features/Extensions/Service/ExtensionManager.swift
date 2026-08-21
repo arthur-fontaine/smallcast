@@ -11,12 +11,7 @@ enum ExtensionSessionState: Equatable {
     case finished
 }
 
-/// Owns the installed set, the JS runtime and the one running command.
-///
-/// **One command at a time.** Starting a command stops whatever was running first. Host calls carry no
-/// session id, so `activeExtensionName` is what namespaces storage, cache and preferences — an
-/// invariant the single-session rule is what makes safe. It also matches the UI: the palette shows one
-/// extension screen.
+/// Owns the installed set, the runtime and the one running command. See docs/features/extensions.md.
 @MainActor
 @Observable
 final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
@@ -29,14 +24,21 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     /// Depth of the extension's own navigation stack; >1 means Escape should pop rather than close.
     private(set) var navigationDepth = 1
 
+    /// Off means nothing scanned, published or held: the feature costs an unused stored property.
+    private(set) var isEnabled = false
+    /// Whether the commands reach the launcher at all; independent of `isEnabled`.
+    private(set) var showsInLauncher = true
+
     let storage: ExtensionStorage
-    /// Per-extension icon overrides, owned here alongside `storage` for the same reason: both are
-    /// extension-scoped state the launcher and Settings read through this manager.
+    /// Extension-scoped state the launcher and Settings read through here, like `storage`.
     let appearances = ExtensionAppearanceStore()
     @ObservationIgnored private let runtime: ExtensionRuntime
     @ObservationIgnored private let bridge: ExtensionHostBridge
     @ObservationIgnored private weak var appIndex: AppIndex?
     @ObservationIgnored private weak var coordinator: ExtensionCoordinator?
+
+    /// The entry ids an uninstall invalidated, so another feature can drop what it keyed to them.
+    @ObservationIgnored var onDidUninstall: (([String]) -> Void)?
 
     @ObservationIgnored private var sessionID: String?
     @ObservationIgnored private var nextToastID = 1
@@ -48,16 +50,41 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         bridge.context = self
     }
 
+    /// Wires collaborators only; the coordinator applies the switches, deciding whether anything scans.
     func start(appIndex: AppIndex, coordinator: ExtensionCoordinator) {
         self.appIndex = appIndex
         self.coordinator = coordinator
         runtime.setDelegate(self)
-        Task { await refresh() }
+        // Not gated on `isEnabled`: a stranded workspace is ours whether or not the feature is on.
+        let temp = FileManager.default.temporaryDirectory
+        Task.detached(priority: .utility) { ExtensionCleanup.sweepWorkspaces(in: temp) }
+    }
+
+    // MARK: - The switches
+
+    /// Idempotent both ways, so applying settings on launch is the same call as flipping the switch.
+    func setEnabled(_ enabled: Bool) async {
+        guard enabled != isEnabled else { return }
+        isEnabled = enabled
+        guard enabled else {
+            await stop()
+            installed = []
+            appIndex?.setExtensionCommands([])
+            return
+        }
+        await refresh()
+    }
+
+    func setShowsInLauncher(_ shows: Bool) {
+        guard shows != showsInLauncher else { return }
+        showsInLauncher = shows
+        publishLauncherEntries()
     }
 
     // MARK: - Installed set
 
     func refresh() async {
+        guard isEnabled else { return }
         let found = await Task.detached(priority: .utility) { ExtensionCatalog.scan() }.value
         guard found != installed else { return }
         installed = found
@@ -68,34 +95,44 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         installed.first { $0.manifest.name == name }
     }
 
-    /// Surface every runnable command as a launcher row. Menu-bar commands are listed too — activating
-    /// one explains why it can't run, which beats silently hiding it.
+    /// Built from the installed set, not `AppIndex`: a shortcut can fire before a row ever exists.
+    func launcherEntry(forEntryID entryID: String) -> AppEntry? {
+        guard let reference = ExtensionCommandRef(entryID: entryID),
+            let owner = extensionNamed(reference.extensionName),
+            let command = owner.command(named: reference.commandName)
+        else { return nil }
+        return entry(for: command, in: owner)
+    }
+
+    /// Menu-bar commands are listed too: activating one explains itself, which beats hiding it.
     private func publishLauncherEntries() {
-        let entries = installed.flatMap { installedExtension -> [AppEntry] in
-            let iconPath = installedExtension.iconPath
-            // A chosen appearance replaces the shipped icon for every command of the extension.
-            let appearance = appearances.appearance(for: installedExtension.manifest.name)
-            return installedExtension.manifest.commands.compactMap { command -> AppEntry? in
-                let reference = ExtensionCommandRef(
-                    extensionName: installedExtension.manifest.name, commandName: command.name)
-                return AppEntry(
-                    id: reference.entryID,
-                    name: command.title,
-                    url: installedExtension.directory,
-                    bundleID: nil,
-                    kind: .extensionCommand,
-                    imageIconPath: appearance == nil
-                        ? (commandIconPath(command, in: installedExtension) ?? iconPath) : nil,
-                    kindLabelOverride: installedExtension.title,
-                    appearance: appearance)
-            }
+        guard isEnabled, showsInLauncher else {
+            appIndex?.setExtensionCommands([])
+            return
         }
-        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        let entries =
+            installed
+            .flatMap { owner in owner.manifest.commands.map { entry(for: $0, in: owner) } }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         appIndex?.setExtensionCommands(entries)
     }
 
-    /// Settings picked (or cleared) an icon: persist it and re-publish, so the launcher rows change
-    /// under the user rather than on the next scan.
+    /// One command as a row; a chosen appearance replaces the shipped icon for all of them.
+    private func entry(for command: ExtensionCommand, in owner: InstalledExtension) -> AppEntry {
+        let appearance = appearances.appearance(for: owner.manifest.name)
+        let reference = ExtensionCommandRef(
+            extensionName: owner.manifest.name, commandName: command.name)
+        return AppEntry(
+            id: reference.entryID,
+            name: command.title,
+            url: owner.directory,
+            bundleID: nil,
+            kind: .extensionCommand,
+            iconOverride: icon(for: command, in: owner, appearance: appearance),
+            labelOverride: owner.title)
+    }
+
+    /// Persist and re-publish, so rows change under the user rather than on the next scan.
     func setAppearance(_ appearance: ExtensionAppearance?, for extensionName: String) {
         appearances.set(appearance, for: extensionName)
         publishLauncherEntries()
@@ -105,6 +142,20 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     func replaceAppearances(_ overrides: [String: ExtensionAppearance]) {
         appearances.replace(overrides)
         publishLauncherEntries()
+    }
+
+    /// An appearance wins, else the shipped artwork: the launcher is handed the answer, not the why.
+    private func icon(
+        for command: ExtensionCommand, in owner: InstalledExtension,
+        appearance: ExtensionAppearance?
+    ) -> EntryIcon {
+        if let appearance {
+            return .tintedSymbol(name: appearance.symbol, tint: appearance.tint.symbolTint)
+        }
+        guard let path = commandIconPath(command, in: owner) ?? owner.iconPath else {
+            return .symbol("puzzlepiece.extension")
+        }
+        return .artwork(path: path, extent: ExtensionIconCache.extent)
     }
 
     private func commandIconPath(_ command: ExtensionCommand, in owner: InstalledExtension) -> String? {
@@ -120,10 +171,59 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         await refresh()
     }
 
+    /// Scanned off-main: it reads a manifest per directory, and a full Raycast install is dozens.
+    func raycastImportCandidates() async -> [RaycastImportCandidate] {
+        let candidates = await Task.detached(priority: .userInitiated) {
+            ExtensionCatalog.importableFromRaycast()
+        }.value
+        let have = Set(installed.map(\.manifest.name))
+        return candidates.map {
+            RaycastImportCandidate(installed: $0, isInstalled: have.contains($0.manifest.name))
+        }
+    }
+
+    /// Progress is reported per step: building from source can take minutes.
+    func install(
+        listing: ExtensionListing, packageManager: ExtensionPackageManager,
+        additionalSearchPaths: [String] = [],
+        onProgress: @Sendable @escaping (ExtensionInstaller.Progress) -> Void
+    ) async throws {
+        let installer = ExtensionInstaller(
+            packageManager: packageManager, additionalSearchPaths: additionalSearchPaths)
+        try await installer.install(listing, onProgress: onProgress)
+        await refresh()
+    }
+
+    /// Refreshes once at the end, and returns what failed so the pane can name it.
+    @discardableResult
+    func importAllFromRaycast(
+        _ candidates: [InstalledExtension], onProgress: (Int) -> Void = { _ in }
+    ) async -> [String] {
+        var failed: [String] = []
+        for (index, candidate) in candidates.enumerated() {
+            do {
+                _ = try ExtensionCatalog.install(from: candidate.directory)
+            } catch {
+                failed.append(candidate.title)
+            }
+            onProgress(index + 1)
+        }
+        await refresh()
+        return failed
+    }
+
+    /// Takes everything keyed to it: files, storage, icon, and through `onDidUninstall` its shortcuts.
     func uninstall(_ installedExtension: InstalledExtension) async {
         if running?.extensionName == installedExtension.manifest.name { await stop() }
+        let entryIDs = installedExtension.manifest.commands.map {
+            ExtensionCommandRef(
+                extensionName: installedExtension.manifest.name, commandName: $0.name
+            ).entryID
+        }
         try? ExtensionCatalog.uninstall(installedExtension)
         storage.removeAll(extension: installedExtension.manifest.name)
+        appearances.set(nil, for: installedExtension.manifest.name)
+        onDidUninstall?(entryIDs)
         await refresh()
     }
 
@@ -229,7 +329,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
                 extension: owner.manifest.name, schemas: schemas),
             caches: storage.caches(extension: owner.manifest.name),
             arguments: command.completeArguments(arguments),
-            fallbackText: nil)
+            fallbackText: nil,
+            isDarkAppearance: NSApp.effectiveAppearance.isDark)
 
         await runtime.start(
             session: session, code: code, file: bundle, mode: command.mode, context: context)
@@ -263,8 +364,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         Task { await runtime.dispatch(session: sessionID, handler: handler, payload: payload) }
     }
 
-    /// Escape inside a pushed screen pops the extension's stack; returns false when there's nothing to
-    /// pop and the palette should close instead.
+    /// Pops the extension's stack; false when there is nothing to pop and the palette should close.
     func popNavigation() async -> Bool {
         guard let sessionID, navigationDepth > 1 else { return false }
         return await runtime.popNavigation(session: sessionID)
@@ -372,13 +472,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     }
 
     func confirmAlert(_ alert: ExtensionAlert) async -> Bool {
-        let panel = NSAlert()
-        panel.messageText = alert.title
-        if let message = alert.message { panel.informativeText = message }
-        panel.alertStyle = alert.isDestructive ? .warning : .informational
-        panel.addButton(withTitle: alert.primaryTitle)
-        panel.addButton(withTitle: alert.dismissTitle)
-        return panel.runModal() == .alertFirstButtonReturn
+        await coordinator?.confirmExtensionAlert(alert) ?? false
     }
 
     func openWithPicker(path: String) async {

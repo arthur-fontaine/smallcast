@@ -55,6 +55,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             positionPanel(panel, collapsed: core.paletteCoordinator.paletteIsCollapsed)
             // Flush first-mount layout off-screen, so the safe-area settle isn't visible.
             panel.contentView?.layoutSubtreeIfNeeded()
+            core.inputSourceSwitcher.beginSession(
+                preferredInputSourceID: core.settings.autoSwitchInputSourceID)
             // Non-activating, so summoning never raises our own aux windows behind it.
             panel.makeKeyAndOrderFront(nil)
             panel.orderFrontRegardless()
@@ -68,6 +70,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     func hide(restoreFocus: Bool) {
         panel?.orderOut(nil)
+        core.inputSourceSwitcher.endSession()
         // Drop the anchor, so the next summon re-resolves for the screen in use then.
         anchor = nil
         // The guides must never outlive the panel they point at.
@@ -124,16 +127,24 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     // MARK: - NSWindowDelegate
 
-    /// Dismiss when the palette loses key status (click-away, ⌘-Tab, app switch).
+    /// Dismiss when the palette loses key status (click-away, ⌘-Tab, app switch). One of our own
+    /// dialogs is none of those: hiding would pop to root, which tears down an extension command
+    /// while its `confirmAlert` is still waiting for the answer.
     func windowDidResignKey(_ notification: Notification) {
-        guard isVisible else { return }
+        guard isVisible, !core.isShowingDialog else { return }
         core.paletteCoordinator.hidePalette(restoreFocus: false)
     }
 
     /// Re-bump a turn later: on the first show a synchronous bump lands before `onChange`.
     func windowDidBecomeKey(_ notification: Notification) {
         DispatchQueue.main.async { [weak self] in
-            self?.core.palette.focusToken = UUID()
+            guard let self else { return }
+            core.palette.focusToken = UUID()
+            // A re-summon leaves first responder where it was, so neither of these gets an event.
+            panel?.trackComposition()
+            if let context = panel?.fieldEditorContext {
+                core.inputSourceSwitcher.applySession(to: context)
+            }
         }
     }
 
@@ -202,21 +213,26 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environment(core.clipboardStore)
             .environment(core.favorites)
             .environment(core.visibility)
+            .environment(core.aliases)
             .environment(core.calcHistory)
             .environment(core.currencyRates)
             .environment(core.emojiIndex)
             .environment(core.frequentEmoji)
             .environment(core.fileSearch)
             .environment(core.runningApps)
+            .environment(core.launchHistory)
             .environment(core.hotKeys)
             .environment(core.uninstall)
             .environment(core.quicklinks)
             .environment(core.quicklinkArguments)
             .environment(core.extensions)
-            .environment(core.launchHistory)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
         panel.paletteState = core.palette
+        // The switch is scoped to the palette's own editing context, never applied globally.
+        panel.onFieldEditorFocused = { [weak self] context in
+            self?.core.inputSourceSwitcher.applySession(to: context)
+        }
         // Backspace in an empty search backs out of a sub-screen to a fresh root.
         panel.onBareBackspace = { [weak self] in
             guard let core = self?.core, core.palette.mode != .launcher, core.palette.query.isEmpty
@@ -248,6 +264,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             case ",":
                 self.core.settingsCoordinator.showSettings()
                 return true
+            // Pin. Swallowed on every screen, since ⌘. only ever means cancel to a search field.
+            case ".":
+                self.core.palette.notePinChord()
+                return true
             case "w":
                 self.core.paletteCoordinator.hidePalette()
                 return true
@@ -274,12 +294,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.setFrame(frame, display: true)
     }
 
-    /// The display to anchor to; `NSScreen.main` would give the menu-bar one instead.
+    /// The display to anchor to; never `NSScreen.main`, which follows the focused window either way.
     private func targetScreen() -> NSScreen? {
-        guard core.settings.openOnCursorScreen else { return NSScreen.main }
-        let mouse = NSEvent.mouseLocation
-        // NSMouseInRect, not `contains`: the topmost row otherwise reads as the display above.
-        return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
+        core.settings.openOnCursorScreen ? NSScreen.underCursor : NSScreen.primary
     }
 
     /// The session anchor, cached until hide so both placements read one `visibleFrame`. A

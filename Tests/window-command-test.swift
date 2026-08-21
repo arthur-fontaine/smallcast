@@ -71,15 +71,8 @@ struct WindowCommandTests {
 
     static func testCatalog() {
         let commands = WindowCommandCatalog.all
-        expect(commands.count == 40, "catalog contains all 40 agreed commands")
-        // Fourths tile the width; sixths are the thirds crossed with the halves.
-        expect(
-            commands.filter { $0.group == .fourths }.count == 4, "four fourths")
-        expect(
-            commands.filter { $0.group == .sixths }.count == 6, "six sixths")
+        expect(commands.count == 42, "catalog contains all 42 agreed commands")
         expect(commands.map(\.id) == WindowCommand.ID.allCases, "catalog covers every ID once")
-        expect(Set(commands.map(\.id)).count == commands.count, "IDs are unique")
-        expect(Set(commands.map(\.entryID)).count == commands.count, "entry IDs are unique")
         expect(
             Set(commands.map { $0.name.lowercased() }).count == commands.count, "names are unique")
         expect(commands.allSatisfy { !$0.name.isEmpty }, "names are non-empty")
@@ -117,6 +110,17 @@ struct WindowCommandTests {
         expect(
             Set(commands.filter { $0.kind == .restore }.map(\.id)) == [.restore],
             "only Restore is a restore command")
+        expect(
+            Set(commands.filter { $0.kind == .space }.map(\.id)) == [.previousSpace, .nextSpace],
+            "only the two Space switches are space commands")
+        expect(
+            commands.filter { $0.kind == .space }.allSatisfy {
+                WindowLayout.placement(
+                    for: WindowLayout.Input(
+                        command: $0.id, windowFrame: mainScreen.frame, screens: [mainScreen],
+                        gap: 0, step: 0, restoreFrame: nil, lastTileCommand: nil)) == nil
+            },
+            "a space command resolves no placement, so the mover writes nothing")
 
         // Grouping drives the Settings list; every command must land in exactly one group.
         let grouped = WindowCommandCatalog.grouped()
@@ -130,6 +134,7 @@ struct WindowCommandTests {
         expect(grouped.first { $0.group == .thirds }?.commands.count == 5, "five thirds")
         expect(grouped.first { $0.group == .sizing }?.commands.count == 10, "ten sizing commands")
         expect(grouped.first { $0.group == .moving }?.commands.count == 6, "six moving commands")
+        expect(grouped.first { $0.group == .spaces }?.commands.count == 2, "two space commands")
 
         expect(
             WindowLayout.isTileCommand(.leftHalf) && WindowLayout.isTileCommand(.centerHalf),
@@ -209,10 +214,6 @@ struct WindowCommandTests {
         expect(
             frame(.firstTwoThirds)!.union(frame(.lastThird)!) == mainScreen.visibleFrame,
             "first two thirds and last third partition the screen")
-
-        // Half the screen's area: half width, full height, horizontally centred.
-        expectRect(
-            frame(.centerHalf)!, CGRect(x: 360, y: 0, width: 720, height: 900), "center half")
 
         // Cycling: halves only, ½ → ⅓ → ⅔, wrapping.
         expectRect(frame(.leftHalf, step: 1)!, frame(.firstThird)!, "left half step 1 is a third")

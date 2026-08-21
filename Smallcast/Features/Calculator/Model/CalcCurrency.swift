@@ -26,12 +26,6 @@ struct CurrencyRates: Codable, Equatable, Sendable {
     }
 }
 
-/// The consent gate as a type; `.off` ships by default. See docs/features/calculator.md#consent.
-enum CurrencySource: Equatable, Sendable {
-    case off
-    case on(CurrencyRates?)
-}
-
 enum CalcCurrency {
     enum ConversionParse: Equatable {
         case value(input: Double, from: CurrencyDef, to: CurrencyDef, output: Double)
@@ -47,9 +41,7 @@ enum CalcCurrency {
     static let categoryName = "Currency"
 
     /// `expr currency (to|in|->) currency`, shaped like `CalcUnits.parseConversion`, run after it.
-    static func parseConversion(_ tokens: [CalcToken], source: CurrencySource) -> ConversionParse? {
-        // The consent gate, before any parsing: without it the feature does not exist.
-        guard case .on(let rates) = source else { return nil }
+    static func parseConversion(_ tokens: [CalcToken], rates: CurrencyRates?) -> ConversionParse? {
         let tokens = amountFirst(tokens)
         guard tokens.count >= 3, CalcUnits.isConnector(tokens[tokens.count - 2]),
             case .ident(let toName) = tokens[tokens.count - 1],
@@ -106,7 +98,7 @@ enum CalcCurrency {
         }
     }
 
-    /// The only hand-written currency data: nouns CLDR won't assign. docs/features/calculator.md
+    /// Hand-written because CLDR won't assign a shared noun. docs/features/calculator.md
     private static let contested: [String: [String]] = [
         "USD": ["dollar", "dollars"],  // 22 claimants
         "CHF": ["franc", "francs"],  // 10
@@ -121,26 +113,65 @@ enum CalcCurrency {
         "SAR": ["riyal", "riyals"]  // 2
     ]
 
-    /// A currency as a unit on the money dimension, unpriced — `UnitDef.priced(at:)` stamps it with
-    /// today's rate. That is what lets money compose with everything else: `$/h`, `$/km`, `$/€`.
-    static func unit(named name: String) -> UnitDef? {
-        guard let definition = byName[name] else { return nil }
-        return UnitDef(definition.code, definition.name, .money, 1, currency: definition.code)
-    }
+    /// ISO 4217's own names where CLDR carries a different one; the standard is the source of truth.
+    private static let isoNames: [String: [String]] = [
+        "CNY": ["rmb", "renminbi"]  // ISO 4217 names CNY "Yuan Renminbi"; CLDR says "Chinese Yuan"
+    ]
 
-    /// Lookup by lowercased ident, generated data first so `contested` above is applied last.
+    /// Hand-written because no standards body names a coin. docs/features/calculator.md
+    static let crypto: [(code: String, name: String, aliases: [String])] = [
+        ("ADA", "Cardano", ["cardano"]),
+        ("AVAX", "Avalanche", ["avalanche"]),
+        ("BCH", "Bitcoin Cash", []),
+        ("BNB", "BNB", ["binance"]),
+        ("BSV", "Bitcoin SV", []),
+        ("BTC", "Bitcoin", ["bitcoin"]),
+        ("DASH", "Dash", []),
+        ("DOGE", "Dogecoin", ["dogecoin"]),
+        ("DOT", "Polkadot", ["polkadot"]),
+        ("EOS", "EOS", []),
+        ("ETC", "Ethereum Classic", []),
+        ("ETH", "Ethereum", ["ethereum", "ether"]),
+        ("LTC", "Litecoin", ["litecoin"]),
+        ("LUNA", "Terra", ["terra"]),
+        ("NEO", "Neo", []),
+        ("POL", "Polygon", ["polygon"]),
+        ("SHIB", "Shiba Inu", ["shiba"]),
+        ("SOL", "Solana", ["solana"]),
+        ("TRX", "TRON", ["tron"]),
+        ("USDT", "Tether", ["tether"]),
+        ("XLM", "Stellar", ["stellar"]),
+        ("XMR", "Monero", ["monero"]),
+        ("XRP", "XRP", ["ripple"])
+    ]
+
+    /// `CurrencyRateStore` builds its request from this, so the two lists cannot drift apart.
+    static let cryptoCodes: [String] = crypto.map(\.code)
+
+    /// Lookup by lowercased ident, generated data first so the hand-written tables above win.
     static let byName: [String: CurrencyDef] = {
         var defs: [String: CurrencyDef] = [:]
         var table: [String: CurrencyDef] = [:]
-        defs.reserveCapacity(CurrencyData.all.count)
-        table.reserveCapacity(CurrencyData.all.count + CurrencyData.aliases.count)
+        defs.reserveCapacity(CurrencyData.all.count + crypto.count)
+        table.reserveCapacity(CurrencyData.all.count + CurrencyData.aliases.count + crypto.count)
         for entry in CurrencyData.all {
             let def = CurrencyDef(code: entry.code, name: entry.name)
             defs[entry.code] = def
             table[entry.code.lowercased()] = def
         }
         for (word, code) in CurrencyData.aliases { table[word] = defs[code] }
+        // After the generated nouns, so a ticker beats one: `sol` is Solana, `soles` stays PEN.
+        for entry in crypto {
+            let def = CurrencyDef(code: entry.code, name: entry.name)
+            defs[entry.code] = def
+            table[entry.code.lowercased()] = def
+            for word in entry.aliases { table[word] = def }
+        }
         for (code, words) in contested {
+            guard let def = defs[code] else { continue }
+            for word in words { table[word] = def }
+        }
+        for (code, words) in isoNames {
             guard let def = defs[code] else { continue }
             for word in words { table[word] = def }
         }

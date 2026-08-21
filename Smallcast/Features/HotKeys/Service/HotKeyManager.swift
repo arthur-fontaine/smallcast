@@ -7,11 +7,15 @@ final class HotKeyManager {
     var onTogglePalette: (() -> Void)?
     var onToggleClipboard: (() -> Void)?
     var onToggleEmoji: (() -> Void)?
+    var onShowNotes: (() -> Void)?
+    var onCreateNote: (() -> Void)?
+    var onSearchNotes: (() -> Void)?
     var onSearchFiles: (() -> Void)?
     var onRunCustomCommand: ((UUID) -> Void)?
     var onRunSystemAction: ((SystemAction.ID) -> Void)?
     var onRunWindowCommand: ((WindowCommand.ID) -> Void)?
     var onOpenQuicklink: ((UUID) -> Void)?
+    var onRunExtensionCommand: ((String) -> Void)?
     /// Names what only the stores know; the fixed catalogs resolve here. Set in `AppCore.start()`.
     var displayName: ((HotKeyAction) -> String?)?
 
@@ -46,6 +50,7 @@ final class HotKeyManager {
     private let boundPaneKey = "boundPaneBundleIDs"
     private let boundCustomCommandKey = "boundCustomCommandIDs"
     private let boundQuicklinkKey = "boundQuicklinkIDs"
+    private let boundExtensionCommandKey = "boundExtensionCommandEntryIDs"
 
     func start(customCommandIDs: Set<UUID>, quicklinkIDs: Set<UUID>) {
         LegacyHotKeyRecords.adopt(candidateActions, decoder: decoder, encoder: encoder)
@@ -63,6 +68,13 @@ final class HotKeyManager {
         }
         doubleTapMonitor.start()
         syncDoubleTaps()
+    }
+
+    /// Entry ids holding an extension-command hotkey. Not pruned in `start()` like the UUID-keyed
+    /// indexes are: the installed set is scanned asynchronously and only when extensions are on, so
+    /// "not installed yet" is indistinguishable from "gone" at launch. Uninstalling clears its own.
+    var boundExtensionCommandEntryIDs: [String] {
+        UserDefaults.standard.stringArray(forKey: boundExtensionCommandKey) ?? []
     }
 
     /// Bundle IDs holding a per-app hotkey, so `start()` knows which records to load.
@@ -122,8 +134,12 @@ final class HotKeyManager {
             index(id, bound: binding != nil, key: boundCustomCommandKey)
         case .quicklink(let id):
             index(id, bound: binding != nil, key: boundQuicklinkKey)
-        case .togglePalette, .toggleClipboard, .toggleEmoji, .searchFiles, .systemAction,
-            .windowCommand:
+        case .extensionCommand(let entryID):
+            var set = Set(boundExtensionCommandEntryIDs)
+            if binding == nil { set.remove(entryID) } else { set.insert(entryID) }
+            UserDefaults.standard.set(Array(set), forKey: boundExtensionCommandKey)
+        case .togglePalette, .toggleClipboard, .toggleEmoji, .showNotes, .createNote, .searchNotes,
+            .searchFiles, .systemAction, .windowCommand:
             break
         }
         candidateActionsCache = nil
@@ -158,13 +174,12 @@ final class HotKeyManager {
     /// Every action that could hold a binding: the search space for conflicts and the map.
     private var candidateActions: [HotKeyAction] {
         if let candidateActionsCache { return candidateActionsCache }
-        var actions: [HotKeyAction] = [
-            .togglePalette, .toggleClipboard, .toggleEmoji, .searchFiles
-        ]
+        var actions = HotKeyAction.builtInActions
         actions += boundBundleIDs.map { .app(bundleID: $0) }
         actions += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
         actions += boundCustomCommandIDs.map { .customCommand(id: $0) }
         actions += boundQuicklinkIDs.map { .quicklink(id: $0) }
+        actions += boundExtensionCommandEntryIDs.map { .extensionCommand(entryID: $0) }
         actions += SystemAction.ID.allCases.map { .systemAction(id: $0) }
         actions += WindowCommand.ID.allCases.map { .windowCommand(id: $0) }
         candidateActionsCache = actions
@@ -176,9 +191,15 @@ final class HotKeyManager {
         case .togglePalette:
             return "App Launcher"
         case .toggleClipboard:
-            return "Clipboard History"
+            return CommandID.clipboardHistory.name
         case .toggleEmoji:
-            return "Emoji & Symbols"
+            return CommandID.searchEmoji.name
+        case .showNotes:
+            return CommandID.showNotes.name
+        case .createNote:
+            return CommandID.createNote.name
+        case .searchNotes:
+            return CommandID.searchNotes.name
         case .searchFiles:
             return CommandID.searchFiles.name
         case .app(let bundleID), .settingsPane(let bundleID):
@@ -191,6 +212,8 @@ final class HotKeyManager {
             return WindowCommandCatalog.command(id: id)?.name ?? "Window Command"
         case .quicklink:
             return displayName?(action) ?? "Quicklink"
+        case .extensionCommand:
+            return displayName?(action) ?? "Extension Command"
         }
     }
 
@@ -217,6 +240,9 @@ final class HotKeyManager {
         case .togglePalette: onTogglePalette?()
         case .toggleClipboard: onToggleClipboard?()
         case .toggleEmoji: onToggleEmoji?()
+        case .showNotes: onShowNotes?()
+        case .createNote: onCreateNote?()
+        case .searchNotes: onSearchNotes?()
         case .searchFiles: onSearchFiles?()
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
@@ -224,6 +250,7 @@ final class HotKeyManager {
         case .systemAction(let id): onRunSystemAction?(id)
         case .windowCommand(let id): onRunWindowCommand?(id)
         case .quicklink(let id): onOpenQuicklink?(id)
+        case .extensionCommand(let entryID): onRunExtensionCommand?(entryID)
         }
     }
 

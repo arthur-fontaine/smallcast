@@ -19,6 +19,11 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
   instead; resigning shifts the text a point or two.
 - **Focus restoration is load-bearing.** Paste targets the recorded `previousApp` and requires the
   Accessibility permission (`Permissions.ensureAccessibility()`).
+- **Input-source switching is a palette session.** The source active at summon time is captured before
+  the panel becomes key, the configured source is applied through `PalettePanel.fieldEditorContext`, and
+  the captured source is restored on hide and on termination — but only when the palette is still on the
+  source it applied, so a switch made since, by the user or another app, stands. Never applied globally:
+  the panel does not activate, so a global switch would land on whichever app is still frontmost.
 
 ## Summoning
 
@@ -31,9 +36,14 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
                                             · records previousApp (the paste / focus target)
                                             · resolves PasteTarget once per summon
                                             · resolves the screen anchor once per summon
+                                            · captures the input source to restore, once per summon
                                             · positions, lays out off-screen, orders front
                                                               ↓
                                                     RootPaletteView.body
+                                            · focuses the search field
+                                                              ↓
+                                            PalettePanel.makeFirstResponder
+                                            · applies the configured source to the field editor
 ```
 
 Everything resolved "once per summon" is resolved there deliberately, not per render. `AppCore` holds
@@ -60,24 +70,34 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 | `.quicklinks` | `QuicklinkListScreen` | `QuicklinkList` |
 | `.quicklinkArguments` | `QuicklinkArgumentsScreen` | `QuicklinkArgumentsView` (see [quicklinks.md](quicklinks.md#the-argument-prompt)) |
 | `.extensionCommand` | `ExtensionCommandScreen` | `ExtensionCommandView` (see [extensions.md](extensions.md)) |
-| `.recent` | `RecentScreen` | `RecentList` (see [launcher.md](launcher.md)) |
 
 Every mode but `.launcher` is a sub-screen that backs out to the launcher. **Tab cycles launcher ↔
-clipboard and nothing else**; the rest are reached by a command or a global hotkey, and Uninstall only
-from a launcher app's Actions menu, scoped to that app. `.recent` is the one exception to that too: ↑
-on an empty launcher search opens it, the way a shell prompt walks back through what you just did.
-
-**Escape empties the field before it dismisses.** With text typed, the first press clears it and the
-palette stays open; the second closes it. That first press is also where a calculation you only
-looked at is remembered — `CalculatorCoordinator.clearSearch`, which is the one discard that does not
-go through `prepare`. `prepare` itself fires `onWillReset` before it wipes the query, so a mode
-switch, a pop-to-root and a fresh summon all commit the same way.
+clipboard and nothing else** unless the selected row declares arguments, in which case it walks those
+fields first (see below); the rest are reached by a command or a global hotkey, and Uninstall only
+from a launcher app's Actions menu, scoped to that app.
 
 The argument screen is the one mode where the search field is not a search field: it _is_ the current
 argument's input, so its placeholder names that argument and ↵ submits rather than activating a row.
 Its own state lives on `AppCore.quicklinkArguments`, the way `.uninstall`'s target lives on
 `UninstallSession`, and leaving the mode cancels the pending open. A bare backspace steps back an
 argument before it falls through to the usual exit-to-launcher.
+
+### Inline command arguments
+
+An extension command can declare arguments, and they are typed **in the header, beside the search
+field** — not on a screen of their own. That costs the header its one simple rule, so it holds two
+invariants:
+
+- The search field sits at **one structural position, always**. It is never moved inside an `if`:
+  flipping the branch tears down its field editor, which drops first responder mid-navigation. Only
+  its *width* changes — it shrinks to the width of the typed text so the argument chips sit right
+  after it, as they do in Raycast.
+- Argument focus is its own `@FocusState`, `argumentFocused`, keyed by argument name. Moving the
+  selection hands focus back to the search field first, because the row that owned those fields is
+  about to stop being selected. ↵ on a blank required argument focuses it instead of launching.
+
+The typed values live on `PaletteState.commandArguments`, keyed by
+`PaletteState.argumentKey(entryID, name)`, and are cleared with the rest of the screen.
 
 The flat `selection` index is the single source of truth for highlight / activation and **must always
 match the visible row order**, including the inline calculator card at index 0 when present (see
@@ -142,18 +162,21 @@ reason the Settings window autosaves its frame instead ([backup.md](backup.md)).
 Which display an *unremembered* palette anchors to depends on the **Follow the cursor across displays**
 setting (`AppSettings.openOnCursorScreen`, on by default):
 
-- **On** — the screen holding `NSEvent.mouseLocation`, i.e. the display under the pointer.
-- **Off** — `NSScreen.main`.
+- **On** — `NSScreen.underCursor`: the screen holding `NSEvent.mouseLocation`, i.e. the display under
+  the pointer.
+- **Off** — `NSScreen.primary`: the screen at the global origin, i.e. the one with the menu bar.
 
-`NSScreen.main` alone can't implement the follow-the-cursor case: it is documented as the _key window's_
-screen, and an accessory app driving a non-activating panel has no key window on the display the user is
-looking at, so `main` resolves to the menu-bar display regardless of where the pointer is.
+**Neither case may use `NSScreen.main`**, which is documented as the screen of the window with keyboard
+focus — the frontmost app's, wherever the user last clicked. It therefore follows the user across
+displays, which is the wrong answer for both settings and made the off case do exactly what turning it
+off was meant to stop ([#270](https://github.com/arthur-fontaine/smallcast/issues/270)). The menu-bar display
+is the one whose `frame.origin` is `.zero`, which is what `primary` looks for.
 
-The hit test is `NSMouseInRect(mouse, screen.frame, false)`, **not** `CGRect.contains`. A mouse location
-is the CoreGraphics cursor position flipped about the primary display's height, so a screen's rows land
-in the half-open interval `(minY, maxY]`: the topmost row is exactly `maxY`, which `contains` excludes,
-while that same value is the `minY` of the display stacked above. `contains` would therefore hand a
-pointer parked at the top of one display to its neighbour. `NSMouseInRect` exists for precisely this.
+The cursor hit test is `NSMouseInRect(mouse, screen.frame, false)`, **not** `CGRect.contains`. A mouse
+location is the CoreGraphics cursor position flipped about the primary display's height, so a screen's
+rows land in the half-open interval `(minY, maxY]`: the topmost row is exactly `maxY`, which `contains`
+excludes, while that same value is the `minY` of the display stacked above. `contains` would therefore
+hand a pointer parked at the top of one display to its neighbour. `NSMouseInRect` exists for this.
 
 ## The placeholder is Smallcast's, not the field's
 
@@ -174,6 +197,23 @@ lands the caret. `PaletteMode.placeholder` is still the one source of the string
 explicit `accessibilityLabel` because the prompt used to supply it.
 
 This is the same class of bug as the freeze below — both come from the cell/field-editor swap.
+
+### IME composition
+
+A hand-drawn placeholder has one cost the real prompt does not. An IME composes into the field
+editor's own storage, so the bound `query` stays empty for the whole romanisation and the placeholder
+would sit under the in-flight pinyin. `PalettePanel` publishes the editor's `hasMarkedText()` as
+`PaletteState.isComposing`, and the placeholder is gated on `query.isEmpty && !isComposing`.
+
+The observation follows first responder, since SwiftUI hands the window's one field editor to
+whichever field holds focus, and it watches `NSTextView.didChangeSelectionNotification`. Measured,
+that is the **only** notification a marked-text change posts: `NSText.didChangeNotification` fires on
+the commit alone, which is the whole composition too late.
+
+`trackComposition()` re-reads the editor rather than assuming, and `windowDidBecomeKey` calls it as
+well as `makeFirstResponder`: a key transition can commit or drop marked text without posting
+anything, and a re-summon inside the Pop to Root window skips `prepare(mode:)` and never moves first
+responder, so neither of the other two paths would fire.
 
 ## The panel settles the pointer itself
 
@@ -204,9 +244,22 @@ The policy runs after `super.sendEvent`, so it has the last word, and it writes 
 actually differs. It must stay **symmetric**: an earlier version left the field alone and only forced
 the arrow outside it, and AppKit's own alternation over the field came straight back.
 
+## One menu at a time
+
+`RootPaletteView` holds a single `OpenMenu?` rather than a flag per menu, so "at most one is open" is
+structural instead of a pair of `onChange` handlers pushing each other closed. Three cases today —
+the ⌘K Actions menu (`.bottomTrailing`), the app menu (`.bottomLeading`) and the clipboard type
+filter (`.topTrailing`, hung under its header button). `menuContent` resolves the open case to one
+`PopoverMenuContent`, which is what lets ↑/↓, plain ↵, Esc and the click-away catcher serve every
+menu without knowing which is up. Every open path goes through `open(_:highlighting:)` and states
+where the highlight starts: the first row, except the type filter, which opens on the active filter.
+
+Every row closes the menu behind it — `activateMenuItem` is the one path, and a row that reorders the
+list under itself (Move Favorite Up/Down) is no exception, so no row ever runs against a rebuilt menu.
+
 ## Menu-open input freeze
 
-While a footer popover menu (⌘K Actions / app menu) is open the search field reads as inert but
+While a popover menu (⌘K Actions / app menu / clipboard type filter) is open the search field reads as inert but
 **never resigns first responder** — resigning makes the `NSTextField` swap between its field-editor
 and cell rendering, shifting the text / placeholder a point or two, so focus stays put. Input is
 frozen instead:
@@ -214,10 +267,26 @@ frozen instead:
 - `RootPaletteView` mirrors the open state into `PaletteState.menuOpen`, whose `didSet` fires
   `onMenuOpenChanged`.
 - `PalettePanel.sendEvent` then swallows text-editing keystrokes while `menuOpen` (letting ⌘/⌃ chords
-  and menu-nav keys through to SwiftUI `onKeyPress`), which is how ⌘P and ⌃X still reach their rows.
+  and menu-nav keys through to SwiftUI `onKeyPress`), which is how ⌘. and ⌃X still reach their rows.
 - The caret is hidden by clearing SwiftUI's **own** live field editor's `insertionPointColor`. SwiftUI
   force-casts its field editor to a private subclass, so vending a custom one crashes — only the
   existing one can be tuned.
+
+## Chords `onKeyPress` never sees
+
+Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Three kinds do not, and all of them are handled in
+`PalettePanel.sendEvent` before `super` hands the event to the responder chain:
+
+- **A bare backspace** — the field editor consumes it as an edit (`onBareBackspace`).
+- **Chords with no main menu item** — ⌘, and ⌘w, which an app with a menu bar would never see here.
+- **Chords AppKit has already bound to a selector.** `⌘.` is the one that bites: AppKit binds it to
+  `cancelOperation:` alongside Escape, so `interpretKeyEvents` hands it to the field editor and
+  `onKeyPress(keys: ["."])` never fires. Pin (⌘.) therefore arrives through `onCommandShortcut`,
+  which bumps `PaletteState.pinChordToken`; `RootPaletteView` observes that and resolves the row
+  through the current screen, so **which** row gets pinned still comes from `screen.rows` alone.
+
+Adding a chord that "does nothing" is almost always one of these three — check `sendEvent` before
+assuming the handler is wrong.
 
 ## Emacs navigation chords
 
