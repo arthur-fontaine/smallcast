@@ -97,11 +97,16 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 | `.quicklinks` | `QuicklinkListScreen` | `QuicklinkList` |
 | `.quicklinkArguments` | `QuicklinkArgumentsScreen` | `QuicklinkArgumentsView` (see [quicklinks.md](quicklinks.md#the-argument-prompt)) |
 | `.extensionCommand` | `ExtensionCommandScreen` | `ExtensionCommandView` (see [extensions.md](extensions.md)) |
+| `.aiChat` | `AIChatScreen` | `AIChatView` (see [ai.md](ai.md)) |
+| `.aiChats` | `AIChatListScreen` | `AIChatList` |
 
 Every mode but `.launcher` is a sub-screen that backs out to the launcher. **Tab cycles launcher ↔
 clipboard and nothing else** unless the selected row declares arguments, in which case it walks those
 fields first (see below); the rest are reached by a command or a global hotkey, and Uninstall only
 from a launcher app's Actions menu, scoped to that app.
+
+`.aiChat` is the second mode where the search field is a composer rather than a filter; the argument
+screen below is the first, and `showActionGroup` names both.
 
 The argument screen is the one mode where the search field is not a search field: it _is_ the current
 argument's input, so its placeholder names that argument and ↵ submits rather than activating a row.

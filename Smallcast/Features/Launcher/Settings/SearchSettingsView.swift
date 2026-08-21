@@ -96,6 +96,8 @@ struct SearchSettingsView: View {
             } header: {
                 Text(learned.isEmpty ? "What It Learned" : "What It Learned (\(learned.count))")
             }
+
+            FallbackCommandsSection()
         }
         .formStyle(.grouped)
         .confirmationDialog(

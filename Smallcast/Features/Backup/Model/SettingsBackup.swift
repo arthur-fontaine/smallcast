@@ -51,6 +51,15 @@ struct SettingsBackup: Codable {
         var quicklinkOpensNewWindow: Bool?
         var quicklinkSelectionFallback: String?
         var quicklinkConfirmsBeforeDelete: Bool?
+        // `aiEnabled` is absent: an import must not start sending typed text to an endpoint.
+        var aiProvider: String?
+        var aiBaseURL: String?
+        var aiModel: String?
+        var aiSystemPrompt: String?
+        var aiChord: String?
+        var fallbackCommandsEnabled: Bool?
+        var fallbackCommands: [String]?
+        var webSearchTemplate: String?
     }
 
     /// Combos keep the legacy shape, so older files import. docs/features/hotkeys.md#persistence
@@ -62,6 +71,8 @@ struct SettingsBackup: Codable {
         var createNote: HotKeyBinding?
         var searchNotes: HotKeyBinding?
         var searchFiles: HotKeyBinding?
+        var askAI: HotKeyBinding?
+        var searchAIChats: HotKeyBinding?
         var apps: [String: HotKeyBinding]?
         var panes: [String: HotKeyBinding]?
         var customCommands: [String: HotKeyBinding]?
@@ -122,7 +133,15 @@ extension SettingsBackup {
             extensionsShowInLauncher: s.extensionsShowInLauncher,
             quicklinkOpensNewWindow: s.quicklinkOpensNewWindow,
             quicklinkSelectionFallback: s.quicklinkSelectionFallback.rawValue,
-            quicklinkConfirmsBeforeDelete: s.quicklinkConfirmsBeforeDelete)
+            quicklinkConfirmsBeforeDelete: s.quicklinkConfirmsBeforeDelete,
+            aiProvider: s.aiProvider.rawValue,
+            aiBaseURL: s.aiBaseURL,
+            aiModel: s.aiModel,
+            aiSystemPrompt: s.aiSystemPrompt,
+            aiChord: s.aiChord.rawValue,
+            fallbackCommandsEnabled: s.fallbackCommandsEnabled,
+            fallbackCommands: s.fallbackCommands,
+            webSearchTemplate: s.webSearchTemplate)
 
         let hk = core.hotKeys
         var hotkeys = HotkeyBackup()
@@ -133,6 +152,8 @@ extension SettingsBackup {
         hotkeys.createNote = hk.binding(for: .createNote)
         hotkeys.searchNotes = hk.binding(for: .searchNotes)
         hotkeys.searchFiles = hk.binding(for: .searchFiles)
+        hotkeys.askAI = hk.binding(for: .askAI)
+        hotkeys.searchAIChats = hk.binding(for: .searchAIChats)
         hotkeys.apps = Dictionary(
             uniqueKeysWithValues: hk.boundBundleIDs.compactMap { id in
                 hk.binding(for: .app(bundleID: id)).map { (id, $0) }
@@ -333,6 +354,38 @@ extension SettingsBackup {
             settings.quicklinkConfirmsBeforeDelete = flag
             count += 1
         }
+        if let raw = s.aiProvider, let provider = AIProvider(rawValue: raw) {
+            settings.aiProvider = provider
+            count += 1
+        }
+        if let base = s.aiBaseURL {
+            settings.aiBaseURL = base
+            count += 1
+        }
+        if let model = s.aiModel {
+            settings.aiModel = model
+            count += 1
+        }
+        if let prompt = s.aiSystemPrompt {
+            settings.aiSystemPrompt = prompt
+            count += 1
+        }
+        if let raw = s.aiChord, let chord = PaletteAIChord(rawValue: raw) {
+            settings.aiChord = chord
+            count += 1
+        }
+        if let flag = s.fallbackCommandsEnabled {
+            settings.fallbackCommandsEnabled = flag
+            count += 1
+        }
+        if let commands = s.fallbackCommands {
+            settings.fallbackCommands = commands
+            count += 1
+        }
+        if let template = s.webSearchTemplate {
+            settings.webSearchTemplate = template
+            count += 1
+        }
         return count
     }
 
@@ -352,6 +405,8 @@ extension SettingsBackup {
         if let b = hotkeys.createNote { apply(b, .createNote) }
         if let b = hotkeys.searchNotes { apply(b, .searchNotes) }
         if let b = hotkeys.searchFiles { apply(b, .searchFiles) }
+        if let b = hotkeys.askAI { apply(b, .askAI) }
+        if let b = hotkeys.searchAIChats { apply(b, .searchAIChats) }
         for (id, b) in hotkeys.apps ?? [:] { apply(b, .app(bundleID: id)) }
         for (id, b) in hotkeys.panes ?? [:] { apply(b, .settingsPane(bundleID: id)) }
         for (rawID, b) in hotkeys.customCommands ?? [:] {

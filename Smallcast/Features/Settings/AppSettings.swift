@@ -231,6 +231,51 @@ final class AppSettings {
         didSet { defaults.set(windowCycleOnRepeat, forKey: Key.windowCycleOnRepeat.rawValue) }
     }
 
+    /// Also consent to send typed text to a third-party endpoint, so it defaults off and never
+    /// rides a backup. The credential itself lives in the Keychain, never here.
+    var aiEnabled: Bool {
+        didSet { defaults.set(aiEnabled, forKey: Key.aiEnabled.rawValue) }
+    }
+
+    var aiProvider: AIProvider {
+        didSet { defaults.set(aiProvider.rawValue, forKey: Key.aiProvider.rawValue) }
+    }
+
+    var aiBaseURL: String {
+        didSet { defaults.set(aiBaseURL, forKey: Key.aiBaseURL.rawValue) }
+    }
+
+    var aiModel: String {
+        didSet { defaults.set(aiModel, forKey: Key.aiModel.rawValue) }
+    }
+
+    /// Prepended to every conversation; empty means the provider's own default persona.
+    var aiSystemPrompt: String {
+        didSet { defaults.set(aiSystemPrompt, forKey: Key.aiSystemPrompt.rawValue) }
+    }
+
+    /// The in-palette chord that hands the typed text to the AI, from root search only.
+    var aiChord: PaletteAIChord {
+        didSet { defaults.set(aiChord.rawValue, forKey: Key.aiChord.rawValue) }
+    }
+
+    /// The rows a no-result search offers instead of "No apps found".
+    var fallbackCommandsEnabled: Bool {
+        didSet {
+            defaults.set(fallbackCommandsEnabled, forKey: Key.fallbackCommandsEnabled.rawValue)
+        }
+    }
+
+    /// Raw `FallbackCommandID` values; the array order *is* the order the rows appear in.
+    var fallbackCommands: [String] {
+        didSet { defaults.set(fallbackCommands, forKey: Key.fallbackCommands.rawValue) }
+    }
+
+    /// Search URL with a `{query}` placeholder, used by the Search the Web fallback.
+    var webSearchTemplate: String {
+        didSet { defaults.set(webSearchTemplate, forKey: Key.webSearchTemplate.rawValue) }
+    }
+
     /// Off means fully off, down to a still-registered shortcut opening nothing.
     var quicklinksEnabled: Bool {
         didSet { defaults.set(quicklinksEnabled, forKey: Key.quicklinksEnabled.rawValue) }
@@ -347,6 +392,30 @@ final class AppSettings {
         // Unset reads as 0, which is the intended default anyway — no gap.
         windowGap = defaults.integer(forKey: Key.windowGap.rawValue)
         windowCycleOnRepeat = defaults.bool(forKey: Key.windowCycleOnRepeat.rawValue)
+        // Opt-in like extensions: until it is asked for, nothing is ever sent anywhere.
+        aiEnabled = defaults.bool(forKey: Key.aiEnabled.rawValue)
+        let provider =
+            defaults.string(forKey: Key.aiProvider.rawValue).flatMap(AIProvider.init(rawValue:))
+            ?? .openAICompatible
+        aiProvider = provider
+        // Unset seeds the chosen provider's own address, so the pane opens on something valid.
+        aiBaseURL = defaults.string(forKey: Key.aiBaseURL.rawValue) ?? provider.defaultBaseURL
+        aiModel = defaults.string(forKey: Key.aiModel.rawValue) ?? provider.defaultModel
+        aiSystemPrompt = defaults.string(forKey: Key.aiSystemPrompt.rawValue) ?? ""
+        aiChord =
+            defaults.string(forKey: Key.aiChord.rawValue).flatMap(PaletteAIChord.init(rawValue:))
+            ?? .optionReturn
+        // Defaults on: a no-result search with nothing to offer is the state this replaces.
+        fallbackCommandsEnabled =
+            defaults.object(forKey: Key.fallbackCommandsEnabled.rawValue) == nil
+            || defaults.bool(forKey: Key.fallbackCommandsEnabled.rawValue)
+        // Unset seeds the defaults; a stored empty array is a deliberately emptied list.
+        fallbackCommands =
+            defaults.stringArray(forKey: Key.fallbackCommands.rawValue)
+            ?? FallbackCommands.encode(FallbackCommands.defaults)
+        webSearchTemplate =
+            defaults.string(forKey: Key.webSearchTemplate.rawValue)
+            ?? FallbackCommands.defaultWebTemplate
         quicklinksEnabled = defaults.bool(forKey: Key.quicklinksEnabled.rawValue)
         quicklinksShowInLauncher =
             defaults.object(forKey: Key.quicklinksShowInLauncher.rawValue) == nil

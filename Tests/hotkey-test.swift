@@ -92,6 +92,8 @@ struct DoubleTapDetectorTests {
             (.clipboardHistory, .toggleClipboard, "hotkey.toggleClipboard"),
             (.searchEmoji, .toggleEmoji, "hotkey.toggleEmoji"),
             (.searchFiles, .searchFiles, "hotkey.searchFiles"),
+            (.askAI, .askAI, "hotkey.askAI"),
+            (.searchAIChats, .searchAIChats, "hotkey.searchAIChats"),
             (.showNotes, .showNotes, "hotkey.showNotes"),
             (.createNote, .createNote, "hotkey.createNote"),
             (.searchNotes, .searchNotes, "hotkey.searchNotes")

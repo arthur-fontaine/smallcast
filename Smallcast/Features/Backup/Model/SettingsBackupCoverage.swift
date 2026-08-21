@@ -33,7 +33,15 @@ enum SettingsBackupCoverage {
         "quicklinkOpensNewWindow": .quicklinkOpensNewWindow,
         "quicklinkSelectionFallback": .quicklinkSelectionFallback,
         "quicklinkConfirmsBeforeDelete": .quicklinkConfirmsBeforeDelete,
-        "extensionsShowInLauncher": .extensionsShowInLauncher
+        "extensionsShowInLauncher": .extensionsShowInLauncher,
+        "aiProvider": .aiProvider,
+        "aiBaseURL": .aiBaseURL,
+        "aiModel": .aiModel,
+        "aiSystemPrompt": .aiSystemPrompt,
+        "aiChord": .aiChord,
+        "fallbackCommandsEnabled": .fallbackCommandsEnabled,
+        "fallbackCommands": .fallbackCommands,
+        "webSearchTemplate": .webSearchTemplate
     ]
 
     /// The `SettingsData` fields no `AppSettings` key stands behind, and what they read instead.
@@ -58,6 +66,9 @@ enum SettingsBackupCoverage {
         AppSettingsKey.palettePosition.rawValue:
             "Machine-local geometry: a point restored onto another display layout lands nowhere.",
         AppSettingsKey.autoSwitchInputSource.rawValue:
-            "Names a keyboard input source installed on this Mac; another Mac may not have it."
+            "Names a keyboard input source installed on this Mac; another Mac may not have it.",
+        AppSettingsKey.aiEnabled.rawValue:
+            "Doubles as consent to send typed text to a third-party endpoint; an import must not "
+            + "switch it on."
     ]
 }

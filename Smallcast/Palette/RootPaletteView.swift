@@ -17,6 +17,8 @@ struct RootPaletteView: View {
     @Environment(QuicklinkStore.self) private var quicklinks
     @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments
     @Environment(ExtensionManager.self) private var extensions
+    @Environment(AIChatSession.self) private var aiSession
+    @Environment(AIConversationStore.self) private var aiConversations
     @Environment(AppSettings.self) private var settings
     @Environment(LaunchHistoryStore.self) private var launchHistory
     @Environment(RunningAppsMonitor.self) private var runningApps
@@ -78,6 +80,13 @@ struct RootPaletteView: View {
             return ExtensionCommandScreen(
                 screen: extensionScreen, extensions: extensions, core: core, vm: vm,
                 openActions: openActions)
+        case .aiChat:
+            return AIChatScreen(
+                session: aiSession, conversations: aiConversations, core: core, vm: vm,
+                openActions: openActions)
+        case .aiChats:
+            return AIChatListScreen(
+                conversations: aiConversations, core: core, vm: vm, openActions: openActions)
         }
     }
 
@@ -227,9 +236,9 @@ struct RootPaletteView: View {
         let screen = screen
         let count = screen.rows.count
         let sel = selection(count: count)
-        // The argument form has no rows to count, but ↵ still does something.
-        let showActionGroup =
-            (count > 0 || vm.mode == .quicklinkArguments) && screen.hasPrimaryAction(at: sel)
+        // The argument form and the chat composer have no rows to count, but ↵ still does something.
+        let alwaysActs = vm.mode == .quicklinkArguments || vm.mode == .aiChat
+        let showActionGroup = (count > 0 || alwaysActs) && screen.hasPrimaryAction(at: sel)
 
         // One header position, so focus survives the swap. See docs/features/palette.md.
         return withMenus(screenBody(screen, selection: sel, showActionGroup: showActionGroup))
@@ -270,6 +279,8 @@ struct RootPaletteView: View {
             }
             // Same for a half-filled argument form: leaving the screen abandons the pending open.
             if vm.mode != .quicklinkArguments { core.quicklinkCoordinator.cancelQuicklinkArguments() }
+            // A reply nobody is watching any more is not worth finishing.
+            if vm.mode != .aiChat { core.aiCoordinator.stop() }
         }
         // `prepare` may change nothing, so this intent still snaps the scroll to the origin.
         .onChange(of: vm.resetToken) {
@@ -336,6 +347,8 @@ struct RootPaletteView: View {
         .onKeyPress(keys: [.return], phases: .down) { press in
             let command = press.modifiers.contains(.command)
             let option = press.modifiers.contains(.option)
+            // Ahead of the rest: which modified ↵ this is, is the AI chord setting's to say.
+            if askAI(key: .returnKey, modifiers: press.modifiers) { return .handled }
             if menuOpen, !command, !option {
                 activateMenuItem(menuSelection)
                 return .handled
@@ -365,6 +378,7 @@ struct RootPaletteView: View {
             return .handled
         }
         .onKeyPress(.tab) {
+            if askAI(key: .tab, modifiers: []) { return .handled }
             if !menuOpen { advanceTabFocus() }
             return .handled
         }
@@ -401,6 +415,10 @@ struct RootPaletteView: View {
                 history.delete(at: selection)
                 return .handled
             }
+            if let chats = screen as? AIChatListScreen {
+                chats.delete(at: selection)
+                return .handled
+            }
             return .ignored
         }
         // ⌃X / ⌃⇧X mirror the delete rows — both cases, Shift uppercasing — and close an open menu.
@@ -414,6 +432,8 @@ struct RootPaletteView: View {
                 if all { clipboard.deleteAll() } else { clipboard.delete(at: selection) }
             case let history as CalculatorHistoryScreen:
                 if all { history.deleteAll() } else { history.delete(at: selection) }
+            case let chats as AIChatListScreen:
+                if all { chats.deleteAll() } else { chats.delete(at: selection) }
             default:
                 return .ignored
             }
@@ -436,12 +456,41 @@ struct RootPaletteView: View {
             if menuOpen { closeMenus() }
             return .handled
         }
+        .modifier(
+            AIChatShortcutKeys(
+                isChat: vm.mode == .aiChat,
+                onRegenerate: { core.aiCoordinator.regenerate() },
+                onNewChat: { core.aiCoordinator.newChat() },
+                onHandled: { if menuOpen { closeMenus() } })
+        )
         // Both cases, Shift uppercasing the key; the compact bar shows no target.
         .onKeyPress(keys: ["q", "Q"], phases: .down) { press in
             guard press.modifiers.contains(.control), press.modifiers.contains(.shift),
                 !isCollapsed, let launcher = screen as? LauncherScreen
             else { return .ignored }
             return launcher.quit(at: selection(in: launcher)) ? .handled : .ignored
+        }
+    }
+
+    /// The configurable chord that hands the typed text to the AI. Root search only, and never
+    /// gated on the rows: a query that matched nothing is exactly when it is most wanted.
+    private func askAI(key: PaletteAIChord.Key, modifiers: EventModifiers) -> Bool {
+        let chord = settings.aiChord
+        guard chord.key == key, settings.aiEnabled, vm.mode == .launcher, !menuOpen,
+            holds(chord.modifier, in: modifiers),
+            !vm.query.trimmingCharacters(in: .whitespaces).isEmpty
+        else { return false }
+        core.aiCoordinator.askAI(prompt: vm.query)
+        return true
+    }
+
+    /// `PaletteAIChord` names its modifier in its own terms so it stays Foundation-only; this is
+    /// the one place that mapping lives.
+    private func holds(_ modifier: PaletteAIChord.Modifier?, in modifiers: EventModifiers) -> Bool {
+        switch modifier {
+        case .option: return modifiers.contains(.option)
+        case .control: return modifiers.contains(.control)
+        case nil: return true
         }
     }
 
