@@ -294,9 +294,6 @@ struct FallbackRowView: View {
                 .font(Theme.Typography.rowTitle)
                 .lineLimit(1)
             Spacer()
-            Text("Fallback")
-                .font(Theme.Typography.rowTrailing)
-                .foregroundStyle(.secondary)
         }
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, Theme.Spacing.sm)
