@@ -315,6 +315,9 @@ calculator card is the precedent. `LauncherScreen.Row` gains a `.fallback` case,
 when the ranked results are empty and the trimmed query is not, and `LauncherList` draws its section
 last so the flat selection still maps 1:1 onto the visible rows.
 
+The row's trailing slot is left empty on purpose. Every other row names its kind there, but the section
+header already says `Use “…” with…` — repeating "Fallback" on each row said nothing the header had not.
+
 `Model/FallbackCommand.swift` is pure and covered by `fallback-test`: the stored spelling, the order,
 the availability filter and the web-URL templating. `FallbackCoordinator` is the one funnel that runs
 one, so the row, its ⌘K entry and its Settings row cannot disagree.
