@@ -106,6 +106,7 @@
 		41B6F507244AA96C36685E55 /* ExtensionFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AB7443241D950BB0290CFA6 /* ExtensionFormView.swift */; };
 		41C23BD9DEB0B00026F50D8D /* HTTPAIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 048382EEED4DACDC06E9D654 /* HTTPAIProvider.swift */; };
 		4246F2FDBA1B733BA2632906 /* UninstallCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 021CE7DAD8F6BCA363C66A74 /* UninstallCoordinator.swift */; };
+		427CB9CAE9E9E7CDE953BCD1 /* PaletteAIChord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 121ABE1053C16E65B1C2794C /* PaletteAIChord.swift */; };
 		4457EC4722EE26BFADDAC510 /* UpdateCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58486FB34B589C5AECD8A11F /* UpdateCoordinator.swift */; };
 		457CC3574BAC79D770024C80 /* HyperKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31C9110470A26567C7EAD75A /* HyperKey.swift */; };
 		4610FB68352FAA9773ABDCC2 /* QuicklinkArgumentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 697D4A8616816187B35D34CB /* QuicklinkArgumentsView.swift */; };
@@ -434,6 +435,7 @@
 		0F9A3317A562598864AE9AE1 /* ChatGPTSubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatGPTSubscriptionManager.swift; sourceTree = "<group>"; };
 		11ACBBC0D09B460EABAAD23A /* AIBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIBrand.swift; sourceTree = "<group>"; };
 		11B632CF45C34C26E532262F /* ExtensionCleanup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionCleanup.swift; sourceTree = "<group>"; };
+		121ABE1053C16E65B1C2794C /* PaletteAIChord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteAIChord.swift; sourceTree = "<group>"; };
 		13D6E412B42F895458675193 /* UninstallRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallRunner.swift; sourceTree = "<group>"; };
 		1418EFC5E9C99E9E2CFC5ECD /* SystemPromptEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPromptEditor.swift; sourceTree = "<group>"; };
 		15856DB223D67EEF6041782C /* Zlib.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Zlib.swift; sourceTree = "<group>"; };
@@ -1311,6 +1313,7 @@
 				B2433FDA2AD7D36113B35073 /* LMStudioServerStatus.swift */,
 				EA3DDC76A5672129268439FB /* MarkdownBlock.swift */,
 				671DA7B8FBA3CD19D5EDF16F /* OllamaHost.swift */,
+				121ABE1053C16E65B1C2794C /* PaletteAIChord.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -2316,6 +2319,7 @@
 				E9014C2A9924C9E5295F9B45 /* OnboardingState.swift in Sources */,
 				CE25ECC6E0FA5ED16D32431D /* OnboardingView.swift in Sources */,
 				C8BE888997C965FABBB8F55E /* OverflowFade.swift in Sources */,
+				427CB9CAE9E9E7CDE953BCD1 /* PaletteAIChord.swift in Sources */,
 				558463A8B100A959C2F53415 /* PaletteCoordinator.swift in Sources */,
 				FCAC6059E1DC892A1F0F03AD /* PaletteDropGuideController.swift in Sources */,
 				E7D1D855E7767763FFC331AC /* PaletteDropGuideView.swift in Sources */,

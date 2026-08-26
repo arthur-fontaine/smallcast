@@ -110,7 +110,16 @@ struct AISettingsView: View {
 
     private var chatSection: some View {
         @Bindable var settings = settings
+        @Bindable var appSettings = appSettings
         return Section {
+            Picker(selection: $appSettings.aiChord) {
+                ForEach(PaletteAIChord.allCases) { chord in
+                    Text(chord.title).tag(chord)
+                }
+            } label: {
+                Text("Ask from the launcher")
+                Text("Sends what you typed in root search, whether or not anything matched it.")
+            }
             Toggle(isOn: $settings.webSearchEnabled) {
                 Text("Web search")
                 Text(
@@ -119,9 +128,13 @@ struct AISettingsView: View {
         } header: {
             Text("Chat")
         } footer: {
-            Text("Images pasted into the chat go to any model that accepts them; others never see one.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text(
+                "On ⇥, a typed query goes to the AI and an empty Tab still opens the clipboard. "
+                    + "Images pasted into the chat go to any model that accepts them; others never "
+                    + "see one."
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 

@@ -323,6 +323,16 @@ final class AppSettings {
         didSet { defaults.set(windowCycleOnRepeat, forKey: Key.windowCycleOnRepeat.rawValue) }
     }
 
+    /// The in-palette chord that hands the typed text to the AI, from root search only.
+    var aiChord: PaletteAIChord {
+        didSet { defaults.set(aiChord.rawValue, forKey: Key.aiChord.rawValue) }
+    }
+
+    /// Whether Tab on the launcher toggles the clipboard. Off leaves Tab to the argument fields.
+    var tabOpensClipboard: Bool {
+        didSet { defaults.set(tabOpensClipboard, forKey: Key.tabOpensClipboard.rawValue) }
+    }
+
     /// The rows a no-result search offers instead of "No apps found".
     var fallbackCommandsEnabled: Bool {
         didSet {
@@ -478,6 +488,13 @@ final class AppSettings {
         // Unset reads as 0, which is the intended default anyway — no gap.
         windowGap = defaults.integer(forKey: Key.windowGap.rawValue)
         windowCycleOnRepeat = defaults.bool(forKey: Key.windowCycleOnRepeat.rawValue)
+        aiChord =
+            defaults.string(forKey: Key.aiChord.rawValue).flatMap(PaletteAIChord.init(rawValue:))
+            ?? .optionReturn
+        // Defaults on: this is what Tab already did before it could be turned off.
+        tabOpensClipboard =
+            defaults.object(forKey: Key.tabOpensClipboard.rawValue) == nil
+            || defaults.bool(forKey: Key.tabOpensClipboard.rawValue)
         // Defaults on: a no-result search with nothing to offer is the state this replaces.
         fallbackCommandsEnabled =
             defaults.object(forKey: Key.fallbackCommandsEnabled.rawValue) == nil

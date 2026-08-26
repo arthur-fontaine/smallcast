@@ -371,6 +371,8 @@ struct RootPaletteView: View {
         .onKeyPress(keys: [.return], phases: .down) { press in
             let command = press.modifiers.contains(.command)
             let option = press.modifiers.contains(.option)
+            // Ahead of the rest: which modified ↵ this is, is the AI chord setting's to say.
+            if askAI(key: .returnKey, modifiers: press.modifiers) { return .handled }
             if menuOpen, !command, !option {
                 activateMenuItem(menuSelection)
                 return .handled
@@ -397,6 +399,7 @@ struct RootPaletteView: View {
             return .handled
         }
         .onKeyPress(.tab) {
+            if askAI(key: .tab, modifiers: []) { return .handled }
             if !menuOpen { advanceTabFocus() }
             return .handled
         }
@@ -848,8 +851,30 @@ struct RootPaletteView: View {
 
     /// Tab flips launcher↔clipboard; Calculator History exits rather than joining. Chat stays put:
     /// its field is a draft, and a bare mode swap would carry the draft into the launcher.
+    /// The configurable chord that hands the typed text to the AI. Root search only, and never
+    /// gated on the rows: a query that matched nothing is exactly when it is most wanted.
+    private func askAI(key: PaletteAIChord.Key, modifiers: EventModifiers) -> Bool {
+        let chord = settings.aiChord
+        guard chord.key == key, settings.aiEnabled, vm.mode == .launcher, !menuOpen,
+            holds(chord.modifier, in: modifiers),
+            !vm.query.trimmingCharacters(in: .whitespaces).isEmpty
+        else { return false }
+        core.fallbackCoordinator.run(.askAI, query: vm.query)
+        return true
+    }
+
+    /// `PaletteAIChord` names its modifier in its own terms so it stays Foundation-only; this is
+    /// the one place that mapping lives.
+    private func holds(_ modifier: PaletteAIChord.Modifier?, in modifiers: EventModifiers) -> Bool {
+        switch modifier {
+        case .option: return modifiers.contains(.option)
+        case .control: return modifiers.contains(.control)
+        case nil: return true
+        }
+    }
+
     private func toggleMode() {
-        guard vm.mode != .ai, vm.mode != .aiHistory else { return }
+        guard settings.tabOpensClipboard, vm.mode != .ai, vm.mode != .aiHistory else { return }
         vm.mode = vm.mode == .launcher ? .clipboard : .launcher
     }
 

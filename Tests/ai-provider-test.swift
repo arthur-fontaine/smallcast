@@ -20,6 +20,7 @@ struct AIProviderTests {
         modelCatalogBuildsProviderRequests()
         modelCatalogDecodesProviderResponses()
         localPresetsNameTheirOwnEndpoints()
+        askChordNamesOneKeyAndModifier()
         lmStudioReportsItsConfiguredPort()
         ollamaHostResolvesToAClientAddress()
         modelCatalogSearchesWithoutRenderingEverything()
@@ -251,6 +252,29 @@ struct AIProviderTests {
         expect(
             OllamaHost.defaultPort == 11434,
             "Ollama's own default port is what a host with no port means")
+    }
+
+    static func askChordNamesOneKeyAndModifier() {
+        let expected: [(PaletteAIChord, PaletteAIChord.Key, [String])] = [
+            (.optionReturn, .returnKey, ["⌥", "↵"]),
+            (.controlReturn, .returnKey, ["⌃", "↵"]),
+            (.tab, .tab, ["⇥"])
+        ]
+        for (chord, key, caps) in expected {
+            expect(chord.key == key, "\(chord.rawValue) ends on the key the palette handles")
+            expect(chord.keycaps == caps, "\(chord.rawValue) draws its own keycaps")
+        }
+        expect(
+            PaletteAIChord.optionReturn.modifier == .option
+                && PaletteAIChord.controlReturn.modifier == .control,
+            "a modified return names which modifier it wants")
+        expect(
+            PaletteAIChord.tab.modifier == nil,
+            "a bare Tab asks for no modifier, so a modified Tab is not the chord")
+        // Stored raw, and carried in settings backups: renaming one silently resets the setting.
+        expect(
+            PaletteAIChord.allCases.map(\.rawValue) == ["option-return", "control-return", "tab"],
+            "the stored spellings are stable")
     }
 
     static func modelCatalogSearchesWithoutRenderingEverything() {

@@ -59,6 +59,8 @@ struct SettingsBackup: Codable {
         var menuBarEvents: Int?
         var menuBarLinkedEventsOnly: Bool?
         var hideCurrentEvent: Int?
+        var aiChord: String?
+        var tabOpensClipboard: Bool?
         var fallbackCommandsEnabled: Bool?
         var fallbackCommands: [String]?
         var webSearchTemplate: String?
@@ -143,6 +145,8 @@ extension SettingsBackup {
             menuBarEvents: s.menuBarEvents.rawValue,
             menuBarLinkedEventsOnly: s.menuBarLinkedEventsOnly,
             hideCurrentEvent: s.hideCurrentEvent.rawValue,
+            aiChord: s.aiChord.rawValue,
+            tabOpensClipboard: s.tabOpensClipboard,
             fallbackCommandsEnabled: s.fallbackCommandsEnabled,
             fallbackCommands: s.fallbackCommands,
             webSearchTemplate: s.webSearchTemplate)
@@ -377,6 +381,14 @@ extension SettingsBackup {
         }
         if let flag = s.menuBarLinkedEventsOnly {
             settings.menuBarLinkedEventsOnly = flag
+            count += 1
+        }
+        if let raw = s.aiChord, let chord = PaletteAIChord(rawValue: raw) {
+            settings.aiChord = chord
+            count += 1
+        }
+        if let flag = s.tabOpensClipboard {
+            settings.tabOpensClipboard = flag
             count += 1
         }
         if let flag = s.fallbackCommandsEnabled {
