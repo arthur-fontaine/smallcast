@@ -75,6 +75,18 @@ differs. Both ports are the installer defaults and are configurable in those app
 editable like any other. A loopback address needs no API key, and `AIEndpointPolicy` already permits
 `http` only there.
 
+**LM Studio's port is asked for, not assumed.** It is configurable there and frequently is not 1234, so
+choosing the preset runs `lms server status --json` through `LMStudioServerLocator` and seeds the
+reported port. The CLI answers with the *configured* port whether or not the server is up, which is what
+makes it worth asking. The static `1234` stays the fallback for a machine with no `lms`, an `lms` too old
+for `--json`, or an answer that is not a usable port — a seeded broken address would be worse than a
+wrong-but-obvious one. The seed replaces only an address still equal to that default, so it can never
+overwrite what the user typed or a URL they saved deliberately. Ollama is left at 11434: `OLLAMA_HOST` is
+a shell variable the app does not inherit from Finder, and that port is near-universal.
+
+`LMStudioServerStatus` holds the decode so `ai-provider-test` can cover it; the process spawn lives in
+`Service/` with a two-second watchdog, so a wedged binary cannot hang the pane.
+
 `acceptsUnlistedModels` is what the two presets share with the custom route: a local server serves
 whatever was pulled, and lists nothing at all until a model is loaded, so a model discovery never
 reported still has to be nameable by hand. A vendor API has a real catalog and refuses names outside it.

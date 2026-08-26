@@ -618,6 +618,7 @@ private struct AIConnectionEditorSheet: View {
                 connection.baseURL = newProvider.defaultBaseURL
             }
             discoveryRevision += 1
+            if newProvider == .lmStudio { adoptLMStudioPort() }
         }
     }
 
@@ -745,6 +746,19 @@ private struct AIConnectionEditorSheet: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Remove \(model)")
+        }
+    }
+
+    /// LM Studio's port is configurable and often not 1234, so its own CLI is asked once the preset
+    /// is chosen. Only an address still equal to the static default is replaced: anything else is
+    /// either the user's own typing or a URL they saved deliberately.
+    private func adoptLMStudioPort() {
+        Task {
+            guard let status = await LMStudioServerLocator.status(),
+                connection.provider == .lmStudio,
+                connection.baseURL == AIProviderKind.lmStudio.defaultBaseURL
+            else { return }
+            connection.baseURL = status.baseURL
         }
     }
 

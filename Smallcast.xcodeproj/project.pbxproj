@@ -64,6 +64,7 @@
 		28C2E8D8AB28086A8B914D2E /* ExtensionNodeShims.swift in Sources */ = {isa = PBXBuildFile; fileRef = 903A065956D6DB3A9EC2D53D /* ExtensionNodeShims.swift */; };
 		29856638DC78C18A3A03E90C /* SpotlightNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D36370BAD7951122AAF0668 /* SpotlightNames.swift */; };
 		29B5637BBF30714AAA2942C0 /* SettingsBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B8A1A3552623E66663D1D4 /* SettingsBackup.swift */; };
+		2A3D031EBE61F598B4E5758D /* LMStudioServerStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2433FDA2AD7D36113B35073 /* LMStudioServerStatus.swift */; };
 		2B2EDCCEEEA19A9B4261B659 /* SettingsHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35A79A97EA4B014D35FD74ED /* SettingsHistory.swift */; };
 		2B509A84D8EAB8BBF6225778 /* NotesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BA85A24D29DBC3B4705F2DB /* NotesRepository.swift */; };
 		2BB55C07F6C9F50796919350 /* EmojiGridGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3DEDBFB16749DDCDF82E59A /* EmojiGridGeometry.swift */; };
@@ -88,6 +89,7 @@
 		3912B4DAB1FAEBC3713EFF53 /* MessageHUDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFD67A9EC71D09E0A7DCF7CB /* MessageHUDView.swift */; };
 		3A370C2555AA47AFA3C96F9F /* PaletteWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 801213455F72B5CFB3CFB780 /* PaletteWindowController.swift */; };
 		3AC13EF4239B162111DEA386 /* AppCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E333B1E358FA39BC89E158 /* AppCore.swift */; };
+		3B0E4D56D21867E70575596F /* LMStudioServerLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD15441ECBA2FD80C975C51B /* LMStudioServerLocator.swift */; };
 		3B5C0D34013CD424A226EB29 /* AliasStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B424E0E7E7A52D7BEE9FAF0 /* AliasStore.swift */; };
 		3B6F38C27F7DF8A422509B67 /* ClipboardCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F4F851A5DA03B991F2FD518 /* ClipboardCoordinator.swift */; };
 		3B8FA87A0CAC26CD42EC6E39 /* SnippetsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5504CC19DC849F762116F8C4 /* SnippetsSettingsView.swift */; };
@@ -665,6 +667,7 @@
 		B1255D5326F121AA6E1C02B4 /* AppIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconView.swift; sourceTree = "<group>"; };
 		B13F189C82BCDCD7D4776101 /* VolumeHUDController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeHUDController.swift; sourceTree = "<group>"; };
 		B1AABE1E1175138C90AABB50 /* SnippetMarkdownSerializer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetMarkdownSerializer.swift; sourceTree = "<group>"; };
+		B2433FDA2AD7D36113B35073 /* LMStudioServerStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LMStudioServerStatus.swift; sourceTree = "<group>"; };
 		B2CA5382FAD53A7689A364AF /* UpdateInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateInstaller.swift; sourceTree = "<group>"; };
 		B64C76634B4B067540978793 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 		B65D4385052E445AFF267712 /* ShortcutCaptureSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutCaptureSession.swift; sourceTree = "<group>"; };
@@ -678,6 +681,7 @@
 		BC3FC19876EE24A886E2B06F /* BundleSignature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleSignature.swift; sourceTree = "<group>"; };
 		BC4229744A9F38A8AB2B0C43 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		BC952AD260C41DF93BAAECBD /* HistoryFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryFeed.swift; sourceTree = "<group>"; };
+		BD15441ECBA2FD80C975C51B /* LMStudioServerLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LMStudioServerLocator.swift; sourceTree = "<group>"; };
 		BEC689E90E1BD2199FFEFDA4 /* ExtensionPaletteModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionPaletteModifiers.swift; sourceTree = "<group>"; };
 		BF54A772B5DD515E429F3B4F /* SnippetKeywordListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetKeywordListener.swift; sourceTree = "<group>"; };
 		BFB387DC2752970A6683583B /* ReleaseChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseChannel.swift; sourceTree = "<group>"; };
@@ -1078,6 +1082,7 @@
 				F3F46D4849BA1E23AB0FDDBA /* CodexExecutableLocator.swift */,
 				F5D750896E0A9F0F8FCFB479 /* CodexTurnRunner.swift */,
 				048382EEED4DACDC06E9D654 /* HTTPAIProvider.swift */,
+				BD15441ECBA2FD80C975C51B /* LMStudioServerLocator.swift */,
 			);
 			path = Service;
 			sourceTree = "<group>";
@@ -1298,6 +1303,7 @@
 				6381EA08884D04327712B0B4 /* ChatMessage.swift */,
 				182B41863A87E90364777648 /* ChatSession.swift */,
 				4C54B92B4D1EA27B2429A618 /* CodexAppServerProtocol.swift */,
+				B2433FDA2AD7D36113B35073 /* LMStudioServerStatus.swift */,
 				EA3DDC76A5672129268439FB /* MarkdownBlock.swift */,
 			);
 			path = Model;
@@ -2255,6 +2261,8 @@
 				7AD8C846B7D8DBA14E850522 /* InputSourceSwitcher.swift in Sources */,
 				5E4AB6E6F15D31B19BC03DC8 /* KeyCapChip.swift in Sources */,
 				58E45693174EDC410B95EF09 /* KeyShortcut.swift in Sources */,
+				3B0E4D56D21867E70575596F /* LMStudioServerLocator.swift in Sources */,
+				2A3D031EBE61F598B4E5758D /* LMStudioServerStatus.swift in Sources */,
 				EE3C6B432445262C0254385E /* LaunchAtLogin.swift in Sources */,
 				34E3691C0AC51FAD377201E7 /* LaunchHistoryStore.swift in Sources */,
 				32DF60166F2EC6CF0BCB12FA /* LauncherCoordinator.swift in Sources */,

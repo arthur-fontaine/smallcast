@@ -20,6 +20,7 @@ struct AIProviderTests {
         modelCatalogBuildsProviderRequests()
         modelCatalogDecodesProviderResponses()
         localPresetsNameTheirOwnEndpoints()
+        lmStudioReportsItsConfiguredPort()
         modelCatalogSearchesWithoutRenderingEverything()
         endpointPolicyRejectsUnsafeRemoteURLs()
         storedKeysDoNotFollowARetargetedConnection()
@@ -193,6 +194,27 @@ struct AIProviderTests {
         expect(
             AIProviderKind.allCases.filter(\.acceptsUnlistedModels) == listed,
             "only an endpoint that serves whatever was pulled accepts a model typed by hand")
+    }
+
+    static func lmStudioReportsItsConfiguredPort() {
+        let stopped = Data(#"{"running":false,"port":49281}"#.utf8)
+        expect(
+            LMStudioServerStatus.decode(stopped)
+                == LMStudioServerStatus(running: false, port: 49281),
+            "a stopped server still names the port it is configured on")
+        expect(
+            LMStudioServerStatus.decode(stopped)?.baseURL == "http://localhost:49281/v1",
+            "the reported port becomes a loopback base URL on /v1")
+        expect(
+            LMStudioServerStatus.decode(Data(#"{"running":true,"port":1234}"#.utf8))?.running == true,
+            "a running server is reported as running")
+        // An `lms` too old for `--json` prints prose, and a seeded broken address is worse than 1234.
+        for bad in ["The server is not running.", #"{"running":false}"#, #"{"port":0}"#,
+                    #"{"port":70000}"#, ""] {
+            expect(
+                LMStudioServerStatus.decode(Data(bad.utf8)) == nil,
+                "an answer that is not a usable port falls through to the static default")
+        }
     }
 
     static func modelCatalogSearchesWithoutRenderingEverything() {
