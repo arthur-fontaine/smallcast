@@ -52,10 +52,18 @@ only the closure wiring; the behaviour is `PaletteCoordinator`'s.
 ## Dismissal and the typed query
 
 `PaletteEscapeAction.resolve` orders one Escape press: an open menu closes, then a non-empty query
-clears, then an extension command's own stack pops, and only an empty field on the launcher closes the
-palette. Clearing routes through `CalculatorCoordinator.clearSearch`, because emptying the field is also
-the moment a calculation stops being edited and can still be remembered. See
-[calculator.md](calculator.md).
+clears, then an extension command's own stack pops, then any other sub-screen steps back to the launcher,
+and only an empty field on the launcher closes the palette. Clearing routes through
+`CalculatorCoordinator.clearSearch`, because emptying the field is also the moment a calculation stops
+being edited and can still be remembered. See [calculator.md](calculator.md).
+
+**The launcher is the only screen Escape closes from.** Everywhere else it means back, so one press can
+never throw away a screen still being worked in — a file search, a clipboard filter, a half-answered
+quicklink. `PaletteWindowController.exitScreen` is that one step, and a bare backspace in an empty field
+takes the same one: the argument form retreats through its answers, chat history returns to the chat, a
+chat drops its last attachment, and anything else returns to a fresh launcher. Escape used to diverge
+from backspace at exactly this step, which is what made the file's own "ordered like a bare backspace"
+only nearly true.
 
 Dismissing with text — the toggle hotkeys, Escape, or clicking away — keeps the query for
 `PaletteWindowController.typedQueryGrace` (30 s), whatever Pop to Root Search is set to, so glancing at

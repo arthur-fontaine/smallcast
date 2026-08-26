@@ -77,6 +77,29 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
+    /// One step back out of a sub-screen. Escape and a bare backspace both land here, so the two
+    /// can never disagree about what "back" means.
+    func exitScreen() -> Bool {
+        guard core.palette.mode != .launcher, core.palette.query.isEmpty else { return false }
+        // The argument form steps back through the answers first, one key per field.
+        if core.palette.mode == .quicklinkArguments,
+            let previous = core.quicklinkArguments.retreat()
+        {
+            core.palette.query = previous
+            core.palette.selection = 0
+            return true
+        }
+        if core.palette.mode == .aiHistory {
+            core.palette.prepare(mode: .ai)
+            return true
+        }
+        if core.palette.mode == .ai, core.aiChatCoordinator.removeLastAttachment() {
+            return true
+        }
+        core.palette.prepare(mode: .launcher)
+        return true
+    }
+
     func hide(restoreFocus: Bool, reason: PaletteHideReason) {
         panel?.orderOut(nil)
         core.inputSourceSwitcher.endSession()
@@ -264,27 +287,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             self?.core.palette.focusToken = UUID()
         }
         // Backspace in an empty search backs out of a sub-screen to a fresh root.
-        panel.onBareBackspace = { [weak self] in
-            guard let core = self?.core, core.palette.mode != .launcher, core.palette.query.isEmpty
-            else { return false }
-            // The argument form steps back through the answers first, one key per field.
-            if core.palette.mode == .quicklinkArguments,
-                let previous = core.quicklinkArguments.retreat()
-            {
-                core.palette.query = previous
-                core.palette.selection = 0
-                return true
-            }
-            if core.palette.mode == .aiHistory {
-                core.palette.prepare(mode: .ai)
-                return true
-            }
-            if core.palette.mode == .ai, core.aiChatCoordinator.removeLastAttachment() {
-                return true
-            }
-            core.palette.prepare(mode: .launcher)
-            return true
-        }
+        panel.onBareBackspace = { [weak self] in self?.exitScreen() ?? false }
         // Handled at the panel: the field editor or a missing main menu eats these first.
         panel.onCommandShortcut = { [weak self] event in
             guard let self, !event.isARepeat,

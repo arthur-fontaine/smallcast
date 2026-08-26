@@ -38,15 +38,19 @@ struct PaletteEscapeTests {
             PaletteEscapeAction.resolve(menuOpen: false, query: "", mode: .launcher),
             .hidePalette,
             "an empty launcher query hides the palette")
+        // The launcher is the only screen Escape closes from. Everything else steps back to it, so
+        // one press can never throw away a screen the user is still working in.
+        for mode in PaletteMode.allCases where mode != .launcher && mode != .extensionCommand {
+            expect(
+                PaletteEscapeAction.resolve(menuOpen: false, query: "", mode: mode),
+                .exitScreen,
+                "an empty \(mode.rawValue) query steps back to the launcher")
+        }
         // The two modes where the field is not a search field: an argument answer and a chat draft.
         expect(
             PaletteEscapeAction.resolve(menuOpen: false, query: "blue", mode: .quicklinkArguments),
             .clearQuery,
             "a half-typed argument clears before the pending quicklink is abandoned")
-        expect(
-            PaletteEscapeAction.resolve(menuOpen: false, query: "", mode: .quicklinkArguments),
-            .hidePalette,
-            "an empty argument field hides the palette, which cancels the pending quicklink")
         expect(
             PaletteEscapeAction.resolve(menuOpen: false, query: "why is the sky", mode: .ai),
             .clearQuery,

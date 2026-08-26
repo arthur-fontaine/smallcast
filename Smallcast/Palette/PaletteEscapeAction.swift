@@ -5,6 +5,7 @@ enum PaletteEscapeAction: Equatable {
     case closeMenu
     case clearQuery
     case exitExtensionScreen
+    case exitScreen
     case hidePalette
 
     static func resolve(menuOpen: Bool, query: String, mode: PaletteMode) -> Self {
@@ -12,6 +13,8 @@ enum PaletteEscapeAction: Equatable {
         if !query.isEmpty { return .clearQuery }
         // An extension pops its own navigation stack before the command is left.
         if mode == .extensionCommand { return .exitExtensionScreen }
+        // Every other sub-screen backs out to the launcher; only the launcher itself closes.
+        if mode != .launcher { return .exitScreen }
         return .hidePalette
     }
 }

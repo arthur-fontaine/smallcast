@@ -389,6 +389,8 @@ struct RootPaletteView: View {
                 core.calculatorCoordinator.clearSearch()
             case .exitExtensionScreen:
                 core.extensionCoordinator.exitExtensionScreen()
+            case .exitScreen:
+                core.paletteCoordinator.exitScreen()
             case .hidePalette:
                 core.paletteCoordinator.hidePalette(reason: .dismissed)
             }
