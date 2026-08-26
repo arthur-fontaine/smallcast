@@ -98,8 +98,20 @@ wrong-but-obvious one. A seed replaces only an address still equal to the preset
 one guard for two cases: the user typing while the lookup runs, and a saved connection whose URL they
 chose deliberately. A remote address still faces the HTTPS rule above, unchanged.
 
+**The LM Studio row says whether the server is up, and starts it if not.** The connection editor is where
+someone finds out the endpoint is dead, so it reports running / stopped with the port `lms` named, rather
+than leaving discovery's "checking this local endpoint" label sitting there against nothing. A start that
+worked re-fires discovery, which is the point: the model list was empty only because nothing was
+listening.
+
+**There is no Stop button, deliberately.** The server may be answering something other than Smallcast, so
+stopping it is LM Studio's own call to offer. Ollama has no equivalent row at all: it publishes no status
+command, so there is nothing to report and nothing to act on.
+
 `LMStudioServerStatus` and `OllamaHost` hold the parsing so `ai-provider-test` covers every accepted and
-rejected form; both spawns live in `Service/` behind a two-second watchdog, so nothing can hang the pane.
+rejected form; the spawns live in `Service/` behind a watchdog, so nothing can hang the pane. Status and
+`launchctl` get two seconds; `lms server start` gets ten, because a warm start is instant but
+bootstrapping the background service the first time is not.
 
 `acceptsUnlistedModels` is what the two presets share with the custom route: a local server serves
 whatever was pulled, and lists nothing at all until a model is loaded, so a model discovery never
