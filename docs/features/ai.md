@@ -54,7 +54,7 @@ AI Chat is the first consumer, but the provider layer does not depend on it.
 
 ## Connections and routing
 
-`AIProviderKind` exposes four named presets plus a custom OpenAI-compatible route:
+`AIProviderKind` exposes six named presets plus a custom OpenAI-compatible route:
 
 | Setting | Transport | Default base URL |
 | --- | --- | --- |
@@ -62,12 +62,55 @@ AI Chat is the first consumer, but the provider layer does not depend on it.
 | Anthropic Claude | Anthropic Messages | `https://api.anthropic.com` |
 | Google Gemini | Gemini's OpenAI-compatible API | `https://generativelanguage.googleapis.com/v1beta/openai` |
 | OpenRouter | OpenAI-compatible | `https://openrouter.ai/api/v1` |
+| Ollama | OpenAI-compatible | `http://localhost:11434/v1` |
+| LM Studio | OpenAI-compatible | `http://localhost:1234/v1` |
 | OpenAI Compatible | OpenAI-compatible | user-editable |
 
 The base URL stays editable for every preset because gateways and organization proxies are legitimate
-destinations. `AIHTTPConfiguration.endpointURL` accepts a complete endpoint or appends the transport's
-completion path. Gemini requests identify Smallcast through `x-goog-api-client`; OpenRouter requests
-carry the app title.
+destinations.
+
+The two local presets are the same transport pointed at a loopback port, not a second one: Ollama and
+LM Studio both serve OpenAI Chat Completions under `/v1`, so nothing about the request or the stream
+differs. Both ports are the installer defaults and are configurable in those apps, so the field is
+editable like any other. A loopback address needs no API key, and `AIEndpointPolicy` already permits
+`http` only there.
+
+**Neither local port is assumed.** Both are configurable and both are routinely something else, so
+choosing either preset asks that server where it actually is, through `adoptLocalAddress(for:)`. The two
+answers come from different places because the two apps expose different things:
+
+| | Asked | Why that source |
+| --- | --- | --- |
+| LM Studio | `lms server status --json` | Its CLI reports the *configured* port whether or not the server is up, in about 0.12 s |
+| Ollama | `OLLAMA_HOST`, then `launchctl getenv OLLAMA_HOST` | It publishes no status command; that variable is what [its own FAQ](https://docs.ollama.com/faq#how-can-i-expose-ollama-on-my-network) tells macOS users to set |
+
+`launchctl setenv` only reaches processes started after it, so the app's inherited copy of `OLLAMA_HOST`
+can be stale or absent — hence reading the session domain live as the fallback. `getenv` exits 0 with no
+output for an unset name, so the output is the only signal.
+
+`OLLAMA_HOST` is a *bind* address, and the FAQ's own example is `0.0.0.0`. Every wildcard resolves to
+`localhost`, because no request can be sent to one. A bare number is a port, a host with no port keeps
+11434, an IPv6 literal is bracketed for the URL, and a value carrying `https://` keeps it.
+
+The static defaults stay the fallback for a machine with no `lms`, an `lms` too old for `--json`, an
+unset `OLLAMA_HOST`, or an answer that is not a usable port — a seeded broken address is worse than a
+wrong-but-obvious one. A seed replaces only an address still equal to the preset's own default, which is
+one guard for two cases: the user typing while the lookup runs, and a saved connection whose URL they
+chose deliberately. A remote address still faces the HTTPS rule above, unchanged.
+
+`LMStudioServerStatus` and `OllamaHost` hold the parsing so `ai-provider-test` covers every accepted and
+rejected form; both spawns live in `Service/` behind a two-second watchdog, so nothing can hang the pane.
+
+`acceptsUnlistedModels` is what the two presets share with the custom route: a local server serves
+whatever was pulled, and lists nothing at all until a model is loaded, so a model discovery never
+reported still has to be nameable by hand. A vendor API has a real catalog and refuses names outside it.
+
+Discovery drops any model whose id reads as an embedding one. No catalog reports what a model is for,
+and a local server lists its embedding models beside the ones that can hold a conversation.
+
+`AIHTTPConfiguration.endpointURL` accepts a complete endpoint or appends the transport's completion
+path. Gemini requests identify Smallcast through `x-goog-api-client`; OpenRouter requests carry the
+app title.
 
 Each connection has an ordered, deduplicated list of exact model identifiers. While its editor is open,
 Smallcast asks the configured provider for the models available to the entered key and uses the result

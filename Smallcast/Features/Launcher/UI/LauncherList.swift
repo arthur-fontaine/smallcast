@@ -288,7 +288,7 @@ struct FallbackRowView: View {
     var body: some View {
         HStack(spacing: Theme.Spacing.lg) {
             Image(systemName: row.sfSymbol)
-                .frame(width: Theme.Size.rowIcon)
+                .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
                 .foregroundStyle(.secondary)
             Text(row.name)
                 .font(Theme.Typography.rowTitle)

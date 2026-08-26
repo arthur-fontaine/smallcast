@@ -6,6 +6,8 @@ enum AIProviderKind: String, CaseIterable, Codable, Identifiable, Sendable {
     case gemini
     case openRouter
     case openAICompatible
+    case ollama
+    case lmStudio
 
     var id: String { rawValue }
 
@@ -16,6 +18,8 @@ enum AIProviderKind: String, CaseIterable, Codable, Identifiable, Sendable {
         case .gemini: return "Google Gemini"
         case .openRouter: return "OpenRouter"
         case .openAICompatible: return "OpenAI Compatible"
+        case .ollama: return "Ollama"
+        case .lmStudio: return "LM Studio"
         }
     }
 
@@ -26,6 +30,19 @@ enum AIProviderKind: String, CaseIterable, Codable, Identifiable, Sendable {
         case .gemini: return "https://generativelanguage.googleapis.com/v1beta/openai"
         case .openRouter: return "https://openrouter.ai/api/v1"
         case .openAICompatible: return "https://api.openai.com/v1"
+        // Both local servers speak OpenAI over /v1; their ports are the installer defaults and are
+        // configurable, so the field stays editable.
+        case .ollama: return "http://localhost:11434/v1"
+        case .lmStudio: return "http://localhost:1234/v1"
+        }
+    }
+
+    /// A local server serves whatever was pulled, and lists nothing until something is loaded, so a
+    /// model that discovery never reported still has to be nameable by hand.
+    var acceptsUnlistedModels: Bool {
+        switch self {
+        case .openAICompatible, .ollama, .lmStudio: return true
+        case .openAI, .anthropic, .gemini, .openRouter: return false
         }
     }
 

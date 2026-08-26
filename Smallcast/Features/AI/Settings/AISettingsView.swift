@@ -618,6 +618,7 @@ private struct AIConnectionEditorSheet: View {
                 connection.baseURL = newProvider.defaultBaseURL
             }
             discoveryRevision += 1
+            adoptLocalAddress(for: newProvider)
         }
     }
 
@@ -684,7 +685,7 @@ private struct AIConnectionEditorSheet: View {
             } else {
                 Label("No available model matches this key.", systemImage: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                if connection.provider == .openAICompatible {
+                if connection.provider.acceptsUnlistedModels {
                     Button("Use “\(query)” anyway") { addModel(query, acceptsImages: nil) }
                 }
             }
@@ -748,9 +749,30 @@ private struct AIConnectionEditorSheet: View {
         }
     }
 
+    /// Neither local server is reliably on its documented port, so each is asked once its preset is
+    /// chosen — LM Studio through its own CLI, Ollama through the `OLLAMA_HOST` its FAQ sets. Only an
+    /// address still equal to the static default is replaced: anything else is either the user's own
+    /// typing or a URL they saved deliberately.
+    private func adoptLocalAddress(for provider: AIProviderKind) {
+        guard provider == .lmStudio || provider == .ollama else { return }
+        Task {
+            let detected: String? =
+                provider == .lmStudio
+                ? await LMStudioServerLocator.status()?.baseURL
+                : await OllamaServerLocator.host()?.baseURL
+            guard let detected, connection.provider == provider,
+                connection.baseURL == provider.defaultBaseURL
+            else { return }
+            connection.baseURL = detected
+        }
+    }
+
     private var modelPlaceholder: String {
         switch connection.provider {
         case .openAI, .openAICompatible: return "Model ID (e.g. gpt-5.4-mini)"
+        case .ollama: return "Model ID (e.g. llama3.2)"
+        // LM Studio names a model by whatever was downloaded, so there is nothing to suggest.
+        case .lmStudio: return "Model ID"
         case .anthropic: return "Model ID (e.g. claude-sonnet-4-6)"
         case .gemini: return "Model ID (e.g. gemini-3.7-flash)"
         case .openRouter: return "Model ID (e.g. openai/gpt-5.4-mini)"

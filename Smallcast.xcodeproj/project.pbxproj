@@ -41,6 +41,7 @@
 		189CAC1AFFDB8A2E0D71656D /* RootPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE879165C9F37272CBE9421 /* RootPaletteView.swift */; };
 		1908B1638F51D51B59761E91 /* AIConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84F7DCAF2FF8EA0DB5027CB /* AIConnection.swift */; };
 		1AB52F101A3EE27B0409AFE1 /* ChatTranscriptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A308E5F2A3CEA17A54F83AF5 /* ChatTranscriptView.swift */; };
+		1C206C3A413852BC7DC40758 /* OllamaHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 671DA7B8FBA3CD19D5EDF16F /* OllamaHost.swift */; };
 		1D1084F01117E06C46802C1A /* MarkdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0898C530C1E69F251CB83B1 /* MarkdownView.swift */; };
 		1D40E999DBE120757C07B1B0 /* NoteEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7EB4704E9101AE5C798940 /* NoteEditorView.swift */; };
 		1D85FE60823093855CD8A2BA /* NotesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5364ADA36AECE317D668059 /* NotesPanel.swift */; };
@@ -64,6 +65,7 @@
 		28C2E8D8AB28086A8B914D2E /* ExtensionNodeShims.swift in Sources */ = {isa = PBXBuildFile; fileRef = 903A065956D6DB3A9EC2D53D /* ExtensionNodeShims.swift */; };
 		29856638DC78C18A3A03E90C /* SpotlightNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D36370BAD7951122AAF0668 /* SpotlightNames.swift */; };
 		29B5637BBF30714AAA2942C0 /* SettingsBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B8A1A3552623E66663D1D4 /* SettingsBackup.swift */; };
+		2A3D031EBE61F598B4E5758D /* LMStudioServerStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2433FDA2AD7D36113B35073 /* LMStudioServerStatus.swift */; };
 		2B2EDCCEEEA19A9B4261B659 /* SettingsHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35A79A97EA4B014D35FD74ED /* SettingsHistory.swift */; };
 		2B509A84D8EAB8BBF6225778 /* NotesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BA85A24D29DBC3B4705F2DB /* NotesRepository.swift */; };
 		2BB55C07F6C9F50796919350 /* EmojiGridGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3DEDBFB16749DDCDF82E59A /* EmojiGridGeometry.swift */; };
@@ -88,6 +90,7 @@
 		3912B4DAB1FAEBC3713EFF53 /* MessageHUDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFD67A9EC71D09E0A7DCF7CB /* MessageHUDView.swift */; };
 		3A370C2555AA47AFA3C96F9F /* PaletteWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 801213455F72B5CFB3CFB780 /* PaletteWindowController.swift */; };
 		3AC13EF4239B162111DEA386 /* AppCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E333B1E358FA39BC89E158 /* AppCore.swift */; };
+		3B0E4D56D21867E70575596F /* LMStudioServerLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD15441ECBA2FD80C975C51B /* LMStudioServerLocator.swift */; };
 		3B5C0D34013CD424A226EB29 /* AliasStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B424E0E7E7A52D7BEE9FAF0 /* AliasStore.swift */; };
 		3B6F38C27F7DF8A422509B67 /* ClipboardCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F4F851A5DA03B991F2FD518 /* ClipboardCoordinator.swift */; };
 		3B8FA87A0CAC26CD42EC6E39 /* SnippetsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5504CC19DC849F762116F8C4 /* SnippetsSettingsView.swift */; };
@@ -135,6 +138,7 @@
 		52FC22566583E26A19F6AD9A /* AIBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11ACBBC0D09B460EABAAD23A /* AIBrand.swift */; };
 		53E4B95AFF0F18D35F1CEA82 /* SelectionReveal.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BD845AFBD4DB9562F0CE0E /* SelectionReveal.swift */; };
 		5452F8C95BF8C86655499FDE /* MeetingCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB87881DEDDA65E70FD00F2C /* MeetingCardView.swift */; };
+		547E268B6666A60C9ABECA29 /* OllamaServerLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 436441320EA252D6FB7275EB /* OllamaServerLocator.swift */; };
 		55267AE443546489EA3754EC /* RecentScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 985C24FCBBC8CBB3A7BAF508 /* RecentScreen.swift */; };
 		554FF81931197C136AF8B33F /* CalcPercent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A2E435CC80A8909FC2DF8EA /* CalcPercent.swift */; };
 		558463A8B100A959C2F53415 /* PaletteCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B757388824DA8D824A939D05 /* PaletteCoordinator.swift */; };
@@ -511,6 +515,7 @@
 		41B8A1A3552623E66663D1D4 /* SettingsBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsBackup.swift; sourceTree = "<group>"; };
 		428310A97041FC201FC259EF /* OverflowFade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverflowFade.swift; sourceTree = "<group>"; };
 		42E7DB9D73425DF29BEC3FF2 /* ReleaseNotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotesView.swift; sourceTree = "<group>"; };
+		436441320EA252D6FB7275EB /* OllamaServerLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaServerLocator.swift; sourceTree = "<group>"; };
 		4365E59C580003627981545D /* AIStreamDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIStreamDecoder.swift; sourceTree = "<group>"; };
 		4727FC1D2F60E72DE7D03759 /* PopoverMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverMenu.swift; sourceTree = "<group>"; };
 		49975F62D60ED9322B6F05D7 /* SnippetKeywordPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetKeywordPolicy.swift; sourceTree = "<group>"; };
@@ -558,6 +563,7 @@
 		639BC4C12AE65E5CACFCC50A /* AppLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncher.swift; sourceTree = "<group>"; };
 		63B9DCCAAB8541E31C605FE0 /* AppPickerPopover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPickerPopover.swift; sourceTree = "<group>"; };
 		65D6DAF91B6C66B27BF4EFD8 /* RenderNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderNode.swift; sourceTree = "<group>"; };
+		671DA7B8FBA3CD19D5EDF16F /* OllamaHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaHost.swift; sourceTree = "<group>"; };
 		6775C750626CE21C1D338D42 /* ExtensionManifest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionManifest.swift; sourceTree = "<group>"; };
 		687D35D3942E6D6FD740DCC6 /* RaycastImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastImport.swift; sourceTree = "<group>"; };
 		69738EC635A1208DB3EE6229 /* CalcDateTime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcDateTime.swift; sourceTree = "<group>"; };
@@ -665,6 +671,7 @@
 		B1255D5326F121AA6E1C02B4 /* AppIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconView.swift; sourceTree = "<group>"; };
 		B13F189C82BCDCD7D4776101 /* VolumeHUDController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeHUDController.swift; sourceTree = "<group>"; };
 		B1AABE1E1175138C90AABB50 /* SnippetMarkdownSerializer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetMarkdownSerializer.swift; sourceTree = "<group>"; };
+		B2433FDA2AD7D36113B35073 /* LMStudioServerStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LMStudioServerStatus.swift; sourceTree = "<group>"; };
 		B2CA5382FAD53A7689A364AF /* UpdateInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateInstaller.swift; sourceTree = "<group>"; };
 		B64C76634B4B067540978793 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 		B65D4385052E445AFF267712 /* ShortcutCaptureSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutCaptureSession.swift; sourceTree = "<group>"; };
@@ -678,6 +685,7 @@
 		BC3FC19876EE24A886E2B06F /* BundleSignature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleSignature.swift; sourceTree = "<group>"; };
 		BC4229744A9F38A8AB2B0C43 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		BC952AD260C41DF93BAAECBD /* HistoryFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryFeed.swift; sourceTree = "<group>"; };
+		BD15441ECBA2FD80C975C51B /* LMStudioServerLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LMStudioServerLocator.swift; sourceTree = "<group>"; };
 		BEC689E90E1BD2199FFEFDA4 /* ExtensionPaletteModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionPaletteModifiers.swift; sourceTree = "<group>"; };
 		BF54A772B5DD515E429F3B4F /* SnippetKeywordListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetKeywordListener.swift; sourceTree = "<group>"; };
 		BFB387DC2752970A6683583B /* ReleaseChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseChannel.swift; sourceTree = "<group>"; };
@@ -1078,6 +1086,8 @@
 				F3F46D4849BA1E23AB0FDDBA /* CodexExecutableLocator.swift */,
 				F5D750896E0A9F0F8FCFB479 /* CodexTurnRunner.swift */,
 				048382EEED4DACDC06E9D654 /* HTTPAIProvider.swift */,
+				BD15441ECBA2FD80C975C51B /* LMStudioServerLocator.swift */,
+				436441320EA252D6FB7275EB /* OllamaServerLocator.swift */,
 			);
 			path = Service;
 			sourceTree = "<group>";
@@ -1298,7 +1308,9 @@
 				6381EA08884D04327712B0B4 /* ChatMessage.swift */,
 				182B41863A87E90364777648 /* ChatSession.swift */,
 				4C54B92B4D1EA27B2429A618 /* CodexAppServerProtocol.swift */,
+				B2433FDA2AD7D36113B35073 /* LMStudioServerStatus.swift */,
 				EA3DDC76A5672129268439FB /* MarkdownBlock.swift */,
+				671DA7B8FBA3CD19D5EDF16F /* OllamaHost.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -2255,6 +2267,8 @@
 				7AD8C846B7D8DBA14E850522 /* InputSourceSwitcher.swift in Sources */,
 				5E4AB6E6F15D31B19BC03DC8 /* KeyCapChip.swift in Sources */,
 				58E45693174EDC410B95EF09 /* KeyShortcut.swift in Sources */,
+				3B0E4D56D21867E70575596F /* LMStudioServerLocator.swift in Sources */,
+				2A3D031EBE61F598B4E5758D /* LMStudioServerStatus.swift in Sources */,
 				EE3C6B432445262C0254385E /* LaunchAtLogin.swift in Sources */,
 				34E3691C0AC51FAD377201E7 /* LaunchHistoryStore.swift in Sources */,
 				32DF60166F2EC6CF0BCB12FA /* LauncherCoordinator.swift in Sources */,
@@ -2295,6 +2309,8 @@
 				B6E97175C7959EECFE3B02DD /* NotesView.swift in Sources */,
 				DE32837E72AB4170E4EFD787 /* NotesWindowController.swift in Sources */,
 				D0C1E971DC73CA50E3AAD2D5 /* NotificationToken.swift in Sources */,
+				1C206C3A413852BC7DC40758 /* OllamaHost.swift in Sources */,
+				547E268B6666A60C9ABECA29 /* OllamaServerLocator.swift in Sources */,
 				A54CCCC0700D6841E55E4277 /* OnboardingCard.swift in Sources */,
 				CD9650C3CB12B16CB60AA809 /* OnboardingCoordinator.swift in Sources */,
 				E9014C2A9924C9E5295F9B45 /* OnboardingState.swift in Sources */,
