@@ -52,6 +52,25 @@ AI Chat is the first consumer, but the provider layer does not depend on it.
   image each turn or let history grow the payload as a chat goes on. The composer refuses a picture
   past the budget and says so, rather than letting send time drop it silently.
 
+## Asking from the launcher
+
+`AppSettings.aiChord` is a `PaletteAIChord` — ⌥↵ (default), ⌃↵ or ⇥ — and hands what is typed in root
+search straight to a fresh chat. Deliberately a fixed set rather than a `ShortcutRecorder`: that records
+a *global* Carbon chord registered with `HotKeyCenter`, which this is not.
+
+It fires from root search only, with something typed, no menu open, and AI on. It is never gated on the
+rows — a query that matched nothing is exactly when it is most wanted, which is also why the same action
+is offered as a [fallback row](launcher.md). Both go through
+`FallbackCoordinator.run(.askAI, query:)`, so the chord and the row cannot answer differently.
+
+⌥↵ is free on the launcher: `pasteKeepingWindowOpen` is the protocol's own `false` there, and only the
+clipboard and emoji screens implement it. On ⇥ the chord's non-empty-query guard keeps it clear of
+Settings › Clipboard's Tab toggle: a typed query goes to the AI, an empty Tab still opens the clipboard.
+
+`PaletteAIChord` names its own key and modifier rather than SwiftUI's `EventModifiers`, so the file stays
+Foundation-only and `ai-provider-test` can pin the stored spellings — they ride settings backups, so
+renaming one would silently reset the setting.
+
 ## Connections and routing
 
 `AIProviderKind` exposes six named presets plus a custom OpenAI-compatible route:

@@ -40,6 +40,8 @@ enum SettingsBackupCoverage {
         "menuBarEvents": .menuBarEvents,
         "menuBarLinkedEventsOnly": .menuBarLinkedEventsOnly,
         "hideCurrentEvent": .hideCurrentEvent,
+        "aiChord": .aiChord,
+        "tabOpensClipboard": .tabOpensClipboard,
         "fallbackCommandsEnabled": .fallbackCommandsEnabled,
         "fallbackCommands": .fallbackCommands,
         "webSearchTemplate": .webSearchTemplate

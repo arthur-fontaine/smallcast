@@ -19,7 +19,7 @@ fork's file.
   main base/main`, and only when it walks back past a sync go looking for the anchor by tree. See
   [Why the merge base lies](#why-the-merge-base-lies).
 - **Every merge must re-check the [Smallcast-only table](#smallcast-only-features).** Every one of those
-  seventeen entries reaches into a file upstream also owns, so "take upstream's file" deletes part of it
+  nineteen entries reaches into a file upstream also owns, so "take upstream's file" deletes part of it
   with no conflict to warn you. Four have been lost that way, one of them twice.
 - **A dropped feature is a merge conflict that resolved wrong**, not a follow-up task. The harnesses
   catch some of it; the rest is only caught by walking the table.
@@ -117,6 +117,8 @@ version" deletes without a conflict to warn you.
 | **`CalcUnits.ordered`** | — | `CalcUnits` — declaration order, which is what `CompoundUnit.namedEquivalent` searches |
 | **Typo tolerance** | — | `SearchRelevance`: the `typo` tier, `isLiteral` excluding it, `Band.nameTypo` at 0, `bandCount` derived from the top band, `typoScore`, `FuzzyMatch.allowedDistance(forQueryLength:)`, and the `typo:` argument to `consider`. `Tests/fuzz-test.swift`'s typo block and its two hardcoded band indices |
 | **Sixths, and four fourths** — 44 window commands, not upstream's 34 | — | `WindowManagement/WindowCommand.swift` (the six `Sixth` cases, the four single-fourth cases and the `sixths` group) and `WindowManagement/WindowLayout.swift` (their geometry). `Tests/window-command-test.swift` asserts the catalog count and each group's, so a stale number is the tell |
+| **Ask the AI from root search** — ⌥↵ by default, configurable | `Features/AI/Model/PaletteAIChord.swift` | `RootPaletteView`'s `askAI(key:modifiers:)` / `holds(_:in:)` pair, called **first** in both the ↵ and Tab handlers; the picker in `AISettingsView`'s chat section; `AppSettings.aiChord` and its `AppSettingsKey`, its `SettingsBackup` field and `SettingsBackupCoverage` entry. `ai-provider-test` pins the stored spellings |
+| **Tab opens the clipboard, or does not** | — | `AppSettings.tabOpensClipboard` and its `AppSettingsKey`, the guard in `RootPaletteView.toggleMode`, the toggle in `ClipboardSettingsView`, and its `SettingsBackup` field and coverage entry. Upstream's Tab is unconditional |
 | **Fallback commands** — a no-result search offers what accepts any text | `Launcher/Model/FallbackCommand.swift`, `Launcher/UI/FallbackCoordinator.swift`, `Launcher/Settings/FallbackCommandsSection.swift`, `Tests/fallback-test.swift` | `LauncherScreen`'s `Row.fallback` case, its `fallbacks` build in `init` and its `activate` / `actions` / `primaryActionTitle` arms; `LauncherList`'s `fallbacks` / `selectedFallbackID` / `query` / `onFallback` parameters, its `Row.fallback` case and `fallbackRows`; `FallbackCommandsSection()` in `SearchSettingsView`; `FileSearchCoordinator.show(query:)`; `QuicklinkCoordinator.openQuicklink`'s `prefilledArgument:`; `SnippetTemplateEngine.usesArguments`; the three `AppSettingsKey` values and their `SettingsBackupCoverage` entries. `FallbackCommandID.askAI` runs through upstream's `aiChatCoordinator` — see the AI chat row below |
 | **Branding and the dev channel** | `Smallcast.entitlements`, `smallcast.icon/`, `project.yml` | `About` links, the release tap owner and the updater feed in `Updates/Service/UpdateCheckStore.swift` — both must point at this fork, or the app updates itself into Tinycast |
 
@@ -170,6 +172,7 @@ no test covered the hook. Check these by hand, every time:
 - **The first Escape clears the query**, the second dismisses — and clearing still commits the
   calculation that was on screen.
 - **Escape on a sub-screen goes back, it does not close.** Only the launcher's own Escape dismisses.
+- **⌥↵ with text asks the AI**, and **Tab walks a row's argument fields** before it toggles anything.
 - **Escape inside an extension's form field** clears the field and leaves the palette closeable.
 - **Reopening within 30 s of dismissing keeps what was typed.** Lost once.
 - **A typo still finds the app** (`chorme` → Google Chrome), and `finder` still does *not* find Find My. Lost once.
