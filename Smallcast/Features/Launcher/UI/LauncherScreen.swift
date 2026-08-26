@@ -25,6 +25,8 @@ struct LauncherScreen: PaletteScreen {
     private let pinsFavorites: Bool
     /// How many of `results` are the pinned favorites; zero unless the Favorites section is showing.
     private let favoriteCount: Int
+    /// What a query with no matches offers instead of "No apps found"; empty otherwise.
+    private let fallbacks: [FallbackRow]
     /// Resolved in `init`: the palette indexes this several times per event, so it can't recompute.
     let rows: [Row]
 
@@ -58,26 +60,34 @@ struct LauncherScreen: PaletteScreen {
         self.showSections = pinsFavorites || AppEntry.Kind.named(by: vm.query) != nil
         self.pinsFavorites = pinsFavorites
         self.favoriteCount = pinsFavorites ? results.prefix(while: favorites.isFavorite).count : 0
+        // Only a typed query that matched nothing: there is no text to hand a fallback otherwise.
+        let fallbacks = results.isEmpty && !pinsFavorites ? core.fallbackCoordinator.rows : []
+        self.fallbacks = fallbacks
+        let lead: [Row]
         if let calc {
-            self.rows = [.calc(calc)] + entries
+            lead = [.calc(calc)]
         } else if let meeting {
-            self.rows = [.meeting(meeting)] + entries
+            lead = [.meeting(meeting)]
         } else {
-            self.rows = entries
+            lead = []
         }
+        self.rows = lead + entries + fallbacks.map(Row.fallback)
     }
 
-    /// The card is a row like any other, so the flat selection indexes `rows` with no offset.
+    /// The card and the fallbacks are rows like any other, so the flat selection indexes `rows`
+    /// with no offset. Their order here is the order `LauncherList` draws them in.
     enum Row: Equatable, Identifiable {
         case calc(CalcResult)
         case meeting(MeetingEvent)
         case entry(AppEntry)
+        case fallback(FallbackRow)
 
         var id: String {
             switch self {
             case .calc: return "calc-card"
             case .meeting: return "meeting-card"
             case .entry(let app): return app.id
+            case .fallback(let row): return "fallback-" + row.id
             }
         }
     }
@@ -94,6 +104,7 @@ struct LauncherScreen: PaletteScreen {
         case .meeting(let meeting):
             return meeting.link == nil ? "Open in Calendar" : "Join Meeting"
         case .entry(let app): return app.kind.descriptor.openVerb
+        case .fallback(let row): return row.name
         case nil: return "Open Application"
         }
     }
@@ -139,7 +150,7 @@ struct LauncherScreen: PaletteScreen {
     private func isCardSelected(_ selection: Int) -> Bool {
         switch row(at: selection) {
         case .calc, .meeting: return true
-        case .entry, nil: return false
+        case .entry, .fallback, nil: return false
         }
     }
 
@@ -153,6 +164,11 @@ struct LauncherScreen: PaletteScreen {
     func hasPrimaryAction(at selection: Int) -> Bool {
         guard case .calc(let result) = row(at: selection) else { return true }
         return result.isActionable
+    }
+
+    private func fallback(at selection: Int) -> FallbackRow? {
+        guard case .fallback(let row) = row(at: selection) else { return nil }
+        return row
     }
 
     func actions(at selection: Int) -> PopoverMenuContent? {
@@ -170,6 +186,16 @@ struct LauncherScreen: PaletteScreen {
                     // Reset can move the item; keep the highlight on the item whose action ran.
                     if let index = rows.firstIndex(of: .entry(app)) { vm.selection = index }
                 })
+        case .fallback(let row):
+            return PopoverMenuContent(
+                header: vm.query,
+                items: [
+                    PopoverMenuItem(
+                        title: row.name, systemImage: row.sfSymbol, shortcut: "↵"
+                    ) {
+                        core.fallbackCoordinator.run(row.command, query: vm.query)
+                    }
+                ])
         case nil:
             return nil
         }
@@ -183,6 +209,7 @@ struct LauncherScreen: PaletteScreen {
         case .entry(let app):
             core.launcherCoordinator.launch(
                 app, searchQuery: vm.query, arguments: argumentValues(for: app))
+        case .fallback(let row): core.fallbackCoordinator.run(row.command, query: vm.query)
         case nil: break
         }
     }
@@ -300,6 +327,10 @@ struct LauncherScreen: PaletteScreen {
     private func content(selection: Int, scroll: ScrollIntent) -> some View {
         LauncherList(
             results: results,
+            fallbacks: fallbacks,
+            selectedFallbackID: fallback(at: selection)?.id,
+            query: vm.query,
+            onFallback: { core.fallbackCoordinator.run($0.command, query: vm.query) },
             selectedID: entry(at: selection)?.id,
             favoriteCount: favoriteCount,
             showSections: showSections,

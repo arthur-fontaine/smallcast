@@ -19,7 +19,7 @@ fork's file.
   main base/main`, and only when it walks back past a sync go looking for the anchor by tree. See
   [Why the merge base lies](#why-the-merge-base-lies).
 - **Every merge must re-check the [Smallcast-only table](#smallcast-only-features).** Every one of those
-  sixteen entries reaches into a file upstream also owns, so "take upstream's file" deletes part of it
+  seventeen entries reaches into a file upstream also owns, so "take upstream's file" deletes part of it
   with no conflict to warn you. Four have been lost that way, one of them twice.
 - **A dropped feature is a merge conflict that resolved wrong**, not a follow-up task. The harnesses
   catch some of it; the rest is only caught by walking the table.
@@ -89,9 +89,10 @@ Both cases matter and they mean different things:
 | `abue-ammar` | `arthur-fontaine` | the Homebrew tap, the release feed, the website URL |
 
 Never rename inside `website/` (upstream's own site, left as Tinycast's), `pnpm-lock.yaml` (integrity
-hashes) or this file, which names Tinycast on purpose. Afterwards,
-`grep -rniI 'tinycast\|abue-ammar' --exclude-dir=.git --exclude-dir=website --exclude-dir=node_modules
---exclude=pnpm-lock.yaml --exclude=upstream.md .` must return nothing.
+hashes), or the two places that name Tinycast on purpose: this file, and `AGENTS.md`'s pointer to it.
+Afterwards, `grep -rniI 'tinycast\|abue-ammar' --exclude-dir=.git --exclude-dir=website
+--exclude-dir=node_modules --exclude=pnpm-lock.yaml --exclude=upstream.md --exclude=AGENTS.md .` must
+return nothing.
 
 ## Smallcast-only features
 
@@ -116,6 +117,7 @@ version" deletes without a conflict to warn you.
 | **`CalcUnits.ordered`** | — | `CalcUnits` — declaration order, which is what `CompoundUnit.namedEquivalent` searches |
 | **Typo tolerance** | — | `SearchRelevance`: the `typo` tier, `isLiteral` excluding it, `Band.nameTypo` at 0, `bandCount` derived from the top band, `typoScore`, `FuzzyMatch.allowedDistance(forQueryLength:)`, and the `typo:` argument to `consider`. `Tests/fuzz-test.swift`'s typo block and its two hardcoded band indices |
 | **Sixths, and four fourths** — 44 window commands, not upstream's 34 | — | `WindowManagement/WindowCommand.swift` (the six `Sixth` cases, the four single-fourth cases and the `sixths` group) and `WindowManagement/WindowLayout.swift` (their geometry). `Tests/window-command-test.swift` asserts the catalog count and each group's, so a stale number is the tell |
+| **Fallback commands** — a no-result search offers what accepts any text | `Launcher/Model/FallbackCommand.swift`, `Launcher/UI/FallbackCoordinator.swift`, `Launcher/Settings/FallbackCommandsSection.swift`, `Tests/fallback-test.swift` | `LauncherScreen`'s `Row.fallback` case, its `fallbacks` build in `init` and its `activate` / `actions` / `primaryActionTitle` arms; `LauncherList`'s `fallbacks` / `selectedFallbackID` / `query` / `onFallback` parameters, its `Row.fallback` case and `fallbackRows`; `FallbackCommandsSection()` in `SearchSettingsView`; `FileSearchCoordinator.show(query:)`; `QuicklinkCoordinator.openQuicklink`'s `prefilledArgument:`; `SnippetTemplateEngine.usesArguments`; the three `AppSettingsKey` values and their `SettingsBackupCoverage` entries. `FallbackCommandID.askAI` runs through upstream's `aiChatCoordinator` — see the AI chat row below |
 | **Branding and the dev channel** | `Smallcast.entitlements`, `smallcast.icon/`, `project.yml` | `About` links, the release tap owner and the updater feed in `Updates/Service/UpdateCheckStore.swift` — both must point at this fork, or the app updates itself into Tinycast |
 
 ## Comparable features
@@ -135,10 +137,11 @@ so this is not a downgrade — but each row has a way of going wrong.
 | Region auto-conversion, crypto | Upstream | — |
 | Window management | Upstream, **plus** this fork's sixths and single fourths | Upstream's catalog is 34 commands and this one is 44. Upstream's own `fourths` group holds only First / Last Three Fourths, so the two sets union rather than collide — reconcile case by case, then fix the count and the group counts in `window-command-test` |
 | Escape clears before it dismisses | Upstream's `PaletteEscapeAction.resolve` | Contributed upstream from here and restructured there. Keep two things on top of it: `.clearQuery` routes through `CalculatorCoordinator.clearSearch` so a looked-at calculation is still remembered, and `.hidePalette` passes `reason: .dismissed` so the 30 s typed-query grace still applies |
+| AI chat | Upstream's, entirely — five providers, an optional ChatGPT subscription through Codex, model discovery, system prompts, chat history and markdown tables | This fork shipped its own AI chat in PR #18 the day before this sync, so both existed at once. Upstream's `openAICompatible` provider plus its loopback handling covers LM Studio and Ollama, so nothing was lost but the named presets. Two things ride on top: `FallbackCoordinator`'s `.askAI` arm calls `startNewChat()` / `showChat()` / `send(_:)`, and `aiEnabled` stays out of settings backups because it doubles as consent to send typed text off the Mac |
 | Parenthesised conversions | Upstream — `QuantityParser.converted` returns a `QuantityValue` now, not a `CalcResult` | This fork's compound-unit conversion moved with it: the `.compound` arm belongs in `converted` and reports through `fail(_:)`, while `convertedResult` only formats |
 | Palette search field position | Upstream — one structural position, conditional *width* | Putting it inside a branch tears down its field editor and drops first responder mid-navigation |
 | Notes, in-app updater, launcher aliases, ⌘-digit favorites, clipboard type filter, input-source switcher, Space switching | Upstream only — new features arriving with the sync | — |
-| AI chat, the Calendar and meeting screens, extension OAuth, Raycast v2 encrypted import, release notes in the update window | Upstream only — new features arriving with the sync | Each brings its own `SettingsTab` case, `AppCore` store and harness. `Info.plist` gains camera and calendar usage strings, and `project.yml` ships `NOTICE.md` as a resource for the brand marks |
+| The Calendar and meeting screens, extension OAuth, Raycast v2 encrypted import, release notes in the update window | Upstream only — new features arriving with the sync | Each brings its own `SettingsTab` case, `AppCore` store and harness. `Info.plist` gains camera and calendar usage strings, and `project.yml` ships `NOTICE.md` as a resource for the brand marks |
 | Light appearance | Upstream. The `.darkAqua` lock is gone, and `AGENTS.md` is upstream's | — |
 | `AGENTS.md` and `docs/` | Upstream's, renamed — the whole directory comes from there | Re-add the sections describing the Smallcast-only features above, including this file's link |
 

@@ -73,7 +73,11 @@ final class QuicklinkCoordinator {
     // MARK: - Opening
 
     /// The one funnel for every open, so neither the switch nor the prompt can be bypassed.
-    func openQuicklink(id: UUID, forcingDefaultApp: Bool = false) {
+    /// `prefilledArgument` is the fallback row's path: the typed search text answers the first
+    /// argument outright, and the form only appears if more remain.
+    func openQuicklink(
+        id: UUID, forcingDefaultApp: Bool = false, prefilledArgument: String? = nil
+    ) {
         guard settings.quicklinksEnabled, let quicklink = store.quicklink(id: id) else {
             return
         }
@@ -106,6 +110,8 @@ final class QuicklinkCoordinator {
             pendingQuicklinkForcesDefaultApp = forcingDefaultApp
             // Never `restoreAnyMode`: this screen is always a fresh prompt, never a restored one.
             paletteCoordinator.showPalette(mode: .quicklinkArguments)
+            // Submitted after the screen is up, so a remaining argument lands on a live form.
+            if let prefilledArgument { submitQuicklinkArgument(prefilledArgument) }
             return
         }
         performQuicklinkOpen(

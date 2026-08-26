@@ -59,6 +59,9 @@ struct SettingsBackup: Codable {
         var menuBarEvents: Int?
         var menuBarLinkedEventsOnly: Bool?
         var hideCurrentEvent: Int?
+        var fallbackCommandsEnabled: Bool?
+        var fallbackCommands: [String]?
+        var webSearchTemplate: String?
     }
 
     /// Combos keep the legacy shape, so older files import. docs/features/hotkeys.md#persistence
@@ -139,7 +142,10 @@ extension SettingsBackup {
             autoJoinConfirms: s.autoJoinConfirms,
             menuBarEvents: s.menuBarEvents.rawValue,
             menuBarLinkedEventsOnly: s.menuBarLinkedEventsOnly,
-            hideCurrentEvent: s.hideCurrentEvent.rawValue)
+            hideCurrentEvent: s.hideCurrentEvent.rawValue,
+            fallbackCommandsEnabled: s.fallbackCommandsEnabled,
+            fallbackCommands: s.fallbackCommands,
+            webSearchTemplate: s.webSearchTemplate)
 
         let hk = core.hotKeys
         var hotkeys = HotkeyBackup()
@@ -371,6 +377,18 @@ extension SettingsBackup {
         }
         if let flag = s.menuBarLinkedEventsOnly {
             settings.menuBarLinkedEventsOnly = flag
+            count += 1
+        }
+        if let flag = s.fallbackCommandsEnabled {
+            settings.fallbackCommandsEnabled = flag
+            count += 1
+        }
+        if let commands = s.fallbackCommands {
+            settings.fallbackCommands = commands
+            count += 1
+        }
+        if let template = s.webSearchTemplate {
+            settings.webSearchTemplate = template
             count += 1
         }
         if let raw = s.hideCurrentEvent, let hide = HideCurrentEvent(rawValue: raw) {

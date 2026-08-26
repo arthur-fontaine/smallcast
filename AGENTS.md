@@ -2,7 +2,8 @@
 
 A native macOS menu-bar launcher — a minimal Raycast: fuzzy app launcher, global and per-app hotkeys, a
 text/image clipboard history, an inline calculator, a floating note, snippets, quicklinks, window
-management and an emoji picker. It also **runs Raycast extensions** natively, in JavaScriptCore.
+management, an emoji picker and a streamed AI chat against your own provider. It also **runs Raycast
+extensions** natively, in JavaScriptCore.
 SwiftUI + AppKit, running as an accessory with no Dock icon (`LSUIElement`). Zero third-party
 dependencies.
 
@@ -89,6 +90,11 @@ feature's doc, under its own `## Invariants`.
   colour), `PopoverMenuItem` as a data shape, and `Platform/`. What is never shared: anything with
   "how an extension looks or moves" in it. `ExtensionActionsPanel` and `ExtensionGridGeometry` exist
   precisely because the palette's own menu and the emoji grid must stay free to change without them.
+- **A secret goes in the Keychain, never in `AppSettings`.** `Features/AI/Service/APIKeyStore.swift`
+  and `Features/Extensions/Service/ExtensionOAuthKeychain.swift` are the two accessors, each scoped to
+  the running bundle. A settings backup enumerates `AppSettingsKey`, so a credential kept there would
+  travel to another Mac. A flag that doubles as consent — `snippetsEnabled`, `extensionsEnabled`,
+  `aiEnabled`, `calendarEnabled` — is excluded from a backup for the same reason.
 - **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section, per
   `VisibilityStore` category and per Settings pane — never re-derive a category by sniffing an entry ID.
 - **Generated files are never hand-edited.** `EmojiData.generated.swift` comes from
@@ -96,7 +102,7 @@ feature's doc, under its own `## Invariants`.
   `Resources/RaycastRuntime.generated.js` from `Scripts/raycast-runtime/build.mjs` — the runtime is
   committed so building the app never needs Node.
 - **Smallcast is a fork, and upstream's version wins where the two converged.** Syncing `base/main`
-  is a feature-by-feature decision, not a merge: upstream rewrites its history, and sixteen Smallcast-only
+  is a feature-by-feature decision, not a merge: upstream rewrites its history, and seventeen Smallcast-only
   features hook into files upstream also owns, so taking its file silently deletes them. Never sync
   without walking the tables in [upstream.md](docs/upstream.md).
 - **`DesignSystem/Scrolling/EdgeDissolve.swift` and `ThinScrollbar.swift` are off-limits.** Both are

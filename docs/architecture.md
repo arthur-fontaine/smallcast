@@ -23,7 +23,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ ShellCommandRunner · DoubleTap{Modifier,Detector} · ClipboardStore ·       │
 │ RaycastFormat · RaycastV1Decoder · AppSettingsKey · SettingsBackupCoverage │
 │ MeetingLink · MeetingEvent · UpcomingWindow · MeetingDay · MenuBarSummary  │
-│ AutoJoinPolicy · EventDraft                                                │
+│ AutoJoinPolicy · EventDraft · AI/Model/* · FallbackCommand                 │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ consumed by
 ┌─ EFFECT ─────────────────────────▼─────────────────────────────────────────┐
@@ -37,7 +37,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ published through
 ┌─ OBSERVABLE STATE ───────────────▼─────────────────────────────────────────┐
-│ 38 @MainActor @Observable stores, sessions, indices and State types        │
+│ 46 @MainActor @Observable stores, sessions, indices and State types        │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ rendered by
 ┌─ VIEW ───────────────────────────▼─────────────────────────────────────────┐
@@ -80,7 +80,7 @@ app: the stores (`AppIndex`, `ClipboardStore`, `SnippetsStore`, `QuicklinkStore`
 (`ClipboardManager`,
 `HotKeyManager`, `HyperKeyTap`, `RunningAppsMonitor`, `SnippetKeywordListener`), the shared state
 (`AppSettings`, `PaletteState`, `FileSearchSession`, `UninstallSession`,
-`QuicklinkArgumentSession`, `MeetingClock`), `NotesStore`, the eighteen feature coordinators, and the
+`QuicklinkArgumentSession`, `MeetingClock`), `NotesStore`, the nineteen feature coordinators, and the
 window controllers.
 
 `AppDelegate.applicationDidFinishLaunching` calls `AppCore.shared.start()` and nothing else. That is the
@@ -139,7 +139,7 @@ macOS by itself. Nothing else in the app sets an appearance.
 
 ## Observation
 
-38 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
+46 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
 state through `@Environment` rather than `@EnvironmentObject`.
 
 Three things about this model are easy to get wrong:
@@ -186,7 +186,7 @@ Smallcast/
   DesignSystem/     Theme (the token source), KeyCapChip, Tooltip, SymbolImage,
                     VisualEffectView, PopoverMenu, SettingsComponents, Scrolling/, Interaction/
   Platform/         system shims: Permissions, LaunchAtLogin, InputSourceSwitcher, ScreenTarget,
-                    AppDisplayName,
+                    AppDisplayName, Keychain,
                     NotificationToken, AppPaths, Signposts, HealthTicker, Memo, ActivationPolicy,
                     Images/, Compression/
   Resources/        RaycastRuntime.generated.js, the embedded extension runtime
@@ -198,7 +198,7 @@ Smallcast/
     PaletteRowIndex.swift   the flat selection index — palette-owned, so it sits at the top
     Launcher/ Clipboard/ Calculator/ Calendar/ Emoji/ FileSearch/ Notes/ Quicklinks/ Snippets/
     Uninstall/ SystemActions/ CustomCommands/ HotKeys/ Backup/ WindowManagement/ Onboarding/
-    Extensions/
+    Extensions/ AI/
         Model/      pure — the harness inputs
         Service/    effects — stores, monitors, runners, AppKit glue
         UI/         screens, views, and the feature's coordinator

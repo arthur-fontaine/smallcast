@@ -128,6 +128,15 @@ enum SnippetTemplateEngine {
         }
     }
 
+    /// Whether the template asks for a value the user has to type — what makes a quicklink usable
+    /// as a fallback command, since the typed search text is what fills the first one.
+    static func usesArguments(_ text: String) -> Bool {
+        parseSegments(text).contains { segment in
+            if case .argument = segment { return true }
+            return false
+        }
+    }
+
     private static func result(of expansion: Expansion) -> ExpansionResult {
         ExpansionResult(
             text: expansion.text,

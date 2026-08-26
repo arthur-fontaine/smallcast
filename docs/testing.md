@@ -87,6 +87,8 @@ If a change touches anything in the right column, the harness on the left is man
 | `callout-test` | `DesignSystem/Theme.swift`, `HotKeys/UI/CalloutPlacement.swift` |
 | `system-action-test` | `SystemActions/Model/SystemAction.swift` |
 | `volume-test` | `SystemActions/Model/VolumeLevel.swift` |
+| `ai-test` | all of `AI/Model/` — the stream decoder, request builder, archive and chord table |
+| `fallback-test` | `Launcher/Model/FallbackCommand.swift` |
 | `window-command-test` | `WindowManagement/WindowCommand.swift`, `WindowLayout.swift`, `WindowActionMemory.swift` |
 | `custom-command-test` | `CustomCommands/Model/CustomCommand.swift`, `Service/ShellCommandRunner.swift` |
 | `uninstall-test` | all five pure files in `Uninstall/Model/` |

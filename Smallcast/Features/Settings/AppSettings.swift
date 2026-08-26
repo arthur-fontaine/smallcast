@@ -323,6 +323,23 @@ final class AppSettings {
         didSet { defaults.set(windowCycleOnRepeat, forKey: Key.windowCycleOnRepeat.rawValue) }
     }
 
+    /// The rows a no-result search offers instead of "No apps found".
+    var fallbackCommandsEnabled: Bool {
+        didSet {
+            defaults.set(fallbackCommandsEnabled, forKey: Key.fallbackCommandsEnabled.rawValue)
+        }
+    }
+
+    /// Raw `FallbackCommandID` values; the array order *is* the order the rows appear in.
+    var fallbackCommands: [String] {
+        didSet { defaults.set(fallbackCommands, forKey: Key.fallbackCommands.rawValue) }
+    }
+
+    /// Search URL with a `{query}` placeholder, used by the Search the Web fallback.
+    var webSearchTemplate: String {
+        didSet { defaults.set(webSearchTemplate, forKey: Key.webSearchTemplate.rawValue) }
+    }
+
     /// Off means fully off, down to a still-registered shortcut opening nothing.
     var quicklinksEnabled: Bool {
         didSet { defaults.set(quicklinksEnabled, forKey: Key.quicklinksEnabled.rawValue) }
@@ -461,6 +478,17 @@ final class AppSettings {
         // Unset reads as 0, which is the intended default anyway — no gap.
         windowGap = defaults.integer(forKey: Key.windowGap.rawValue)
         windowCycleOnRepeat = defaults.bool(forKey: Key.windowCycleOnRepeat.rawValue)
+        // Defaults on: a no-result search with nothing to offer is the state this replaces.
+        fallbackCommandsEnabled =
+            defaults.object(forKey: Key.fallbackCommandsEnabled.rawValue) == nil
+            || defaults.bool(forKey: Key.fallbackCommandsEnabled.rawValue)
+        // Unset seeds the defaults; a stored empty array is a deliberately emptied list.
+        fallbackCommands =
+            defaults.stringArray(forKey: Key.fallbackCommands.rawValue)
+            ?? FallbackCommands.encode(FallbackCommands.defaults)
+        webSearchTemplate =
+            defaults.string(forKey: Key.webSearchTemplate.rawValue)
+            ?? FallbackCommands.defaultWebTemplate
         quicklinksEnabled = defaults.bool(forKey: Key.quicklinksEnabled.rawValue)
         quicklinksShowInLauncher =
             defaults.object(forKey: Key.quicklinksShowInLauncher.rawValue) == nil

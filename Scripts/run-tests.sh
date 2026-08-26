@@ -212,6 +212,8 @@ run slow ext-test          -parse-as-library \
                            Smallcast/Platform/Compression/Zlib.swift
 run settings-history-test  Smallcast/Features/Settings/SettingsTab.swift \
                            Smallcast/Features/Settings/SettingsHistory.swift
+run fallback-test          $L/FallbackCommand.swift \
+                           Smallcast/Features/Quicklinks/Model/Quicklink.swift
 run updates-test           Smallcast/Features/Updates/Model/*.swift
 run ai-provider-test       Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/AI/Model/*.swift \

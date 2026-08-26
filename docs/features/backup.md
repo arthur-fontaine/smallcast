@@ -14,8 +14,9 @@ feature lives in `Features/Backup/`.
   listening, so an imported file must not be able to grant it. A `Mirror` or a macro is the wrong
   answer: neither can be read to check what is covered.
 - **A flag that grants a capability is never carried by a backup**, whether it is excluded from
-  `SettingsBackupCoverage` like `snippetsEnabled` or kept out of `AppSettings` entirely. Importing a
-  config must not be able to grant something the user never granted.
+  `SettingsBackupCoverage` like `snippetsEnabled`, `extensionsEnabled` and `aiEnabled`, or kept out of
+  `AppSettings` entirely — the AI API key lives in the Keychain for exactly that reason, so no key here
+  can carry it. Importing a config must not be able to grant something the user never granted.
 - The format is internal and may change freely. The only requirement is that **export → import
   round-trips within one build** — there is no version field and no migration.
 

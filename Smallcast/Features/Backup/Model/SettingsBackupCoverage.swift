@@ -39,7 +39,10 @@ enum SettingsBackupCoverage {
         "autoJoinConfirms": .autoJoinConfirms,
         "menuBarEvents": .menuBarEvents,
         "menuBarLinkedEventsOnly": .menuBarLinkedEventsOnly,
-        "hideCurrentEvent": .hideCurrentEvent
+        "hideCurrentEvent": .hideCurrentEvent,
+        "fallbackCommandsEnabled": .fallbackCommandsEnabled,
+        "fallbackCommands": .fallbackCommands,
+        "webSearchTemplate": .webSearchTemplate
     ]
 
     /// The `SettingsData` fields no `AppSettings` key stands behind, and what they read instead.
@@ -72,8 +75,8 @@ enum SettingsBackupCoverage {
         AppSettingsKey.cameraPreview.rawValue:
             "Turns the camera on before a meeting; an import must not grant that.",
         AppSettingsKey.aiEnabled.rawValue:
-            "No other AI setting travels in a backup, so an import would arm a feature it cannot "
-            + "configure.",
+            "Doubles as consent to send typed text to a third-party endpoint; an import must not "
+            + "switch it on.",
         AppSettingsKey.aiConnections.rawValue:
             "AI connection metadata stays on the Mac with the Keychain credentials it describes.",
         AppSettingsKey.aiDefaultModel.rawValue:
