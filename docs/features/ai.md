@@ -75,17 +75,31 @@ differs. Both ports are the installer defaults and are configurable in those app
 editable like any other. A loopback address needs no API key, and `AIEndpointPolicy` already permits
 `http` only there.
 
-**LM Studio's port is asked for, not assumed.** It is configurable there and frequently is not 1234, so
-choosing the preset runs `lms server status --json` through `LMStudioServerLocator` and seeds the
-reported port. The CLI answers with the *configured* port whether or not the server is up, which is what
-makes it worth asking. The static `1234` stays the fallback for a machine with no `lms`, an `lms` too old
-for `--json`, or an answer that is not a usable port — a seeded broken address would be worse than a
-wrong-but-obvious one. The seed replaces only an address still equal to that default, so it can never
-overwrite what the user typed or a URL they saved deliberately. Ollama is left at 11434: `OLLAMA_HOST` is
-a shell variable the app does not inherit from Finder, and that port is near-universal.
+**Neither local port is assumed.** Both are configurable and both are routinely something else, so
+choosing either preset asks that server where it actually is, through `adoptLocalAddress(for:)`. The two
+answers come from different places because the two apps expose different things:
 
-`LMStudioServerStatus` holds the decode so `ai-provider-test` can cover it; the process spawn lives in
-`Service/` with a two-second watchdog, so a wedged binary cannot hang the pane.
+| | Asked | Why that source |
+| --- | --- | --- |
+| LM Studio | `lms server status --json` | Its CLI reports the *configured* port whether or not the server is up, in about 0.12 s |
+| Ollama | `OLLAMA_HOST`, then `launchctl getenv OLLAMA_HOST` | It publishes no status command; that variable is what [its own FAQ](https://docs.ollama.com/faq#how-can-i-expose-ollama-on-my-network) tells macOS users to set |
+
+`launchctl setenv` only reaches processes started after it, so the app's inherited copy of `OLLAMA_HOST`
+can be stale or absent — hence reading the session domain live as the fallback. `getenv` exits 0 with no
+output for an unset name, so the output is the only signal.
+
+`OLLAMA_HOST` is a *bind* address, and the FAQ's own example is `0.0.0.0`. Every wildcard resolves to
+`localhost`, because no request can be sent to one. A bare number is a port, a host with no port keeps
+11434, an IPv6 literal is bracketed for the URL, and a value carrying `https://` keeps it.
+
+The static defaults stay the fallback for a machine with no `lms`, an `lms` too old for `--json`, an
+unset `OLLAMA_HOST`, or an answer that is not a usable port — a seeded broken address is worse than a
+wrong-but-obvious one. A seed replaces only an address still equal to the preset's own default, which is
+one guard for two cases: the user typing while the lookup runs, and a saved connection whose URL they
+chose deliberately. A remote address still faces the HTTPS rule above, unchanged.
+
+`LMStudioServerStatus` and `OllamaHost` hold the parsing so `ai-provider-test` covers every accepted and
+rejected form; both spawns live in `Service/` behind a two-second watchdog, so nothing can hang the pane.
 
 `acceptsUnlistedModels` is what the two presets share with the custom route: a local server serves
 whatever was pulled, and lists nothing at all until a model is loaded, so a model discovery never

@@ -618,7 +618,7 @@ private struct AIConnectionEditorSheet: View {
                 connection.baseURL = newProvider.defaultBaseURL
             }
             discoveryRevision += 1
-            if newProvider == .lmStudio { adoptLMStudioPort() }
+            adoptLocalAddress(for: newProvider)
         }
     }
 
@@ -749,16 +749,21 @@ private struct AIConnectionEditorSheet: View {
         }
     }
 
-    /// LM Studio's port is configurable and often not 1234, so its own CLI is asked once the preset
-    /// is chosen. Only an address still equal to the static default is replaced: anything else is
-    /// either the user's own typing or a URL they saved deliberately.
-    private func adoptLMStudioPort() {
+    /// Neither local server is reliably on its documented port, so each is asked once its preset is
+    /// chosen — LM Studio through its own CLI, Ollama through the `OLLAMA_HOST` its FAQ sets. Only an
+    /// address still equal to the static default is replaced: anything else is either the user's own
+    /// typing or a URL they saved deliberately.
+    private func adoptLocalAddress(for provider: AIProviderKind) {
+        guard provider == .lmStudio || provider == .ollama else { return }
         Task {
-            guard let status = await LMStudioServerLocator.status(),
-                connection.provider == .lmStudio,
-                connection.baseURL == AIProviderKind.lmStudio.defaultBaseURL
+            let detected: String? =
+                provider == .lmStudio
+                ? await LMStudioServerLocator.status()?.baseURL
+                : await OllamaServerLocator.host()?.baseURL
+            guard let detected, connection.provider == provider,
+                connection.baseURL == provider.defaultBaseURL
             else { return }
-            connection.baseURL = status.baseURL
+            connection.baseURL = detected
         }
     }
 

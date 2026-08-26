@@ -21,6 +21,7 @@ struct AIProviderTests {
         modelCatalogDecodesProviderResponses()
         localPresetsNameTheirOwnEndpoints()
         lmStudioReportsItsConfiguredPort()
+        ollamaHostResolvesToAClientAddress()
         modelCatalogSearchesWithoutRenderingEverything()
         endpointPolicyRejectsUnsafeRemoteURLs()
         storedKeysDoNotFollowARetargetedConnection()
@@ -215,6 +216,41 @@ struct AIProviderTests {
                 LMStudioServerStatus.decode(Data(bad.utf8)) == nil,
                 "an answer that is not a usable port falls through to the static default")
         }
+    }
+
+    static func ollamaHostResolvesToAClientAddress() {
+        let cases: [(String, String?)] = [
+            // The docs' own example: a wildcard is a bind address, never somewhere to send a request.
+            ("0.0.0.0:11434", "http://localhost:11434/v1"),
+            ("0.0.0.0:49152", "http://localhost:49152/v1"),
+            ("127.0.0.1:9999", "http://127.0.0.1:9999/v1"),
+            // Only the port changed, which is the shorthand for exactly that.
+            ("11434", "http://localhost:11434/v1"),
+            ("8080", "http://localhost:8080/v1"),
+            // A host with no port keeps Ollama's own default.
+            ("192.168.1.5", "http://192.168.1.5:11434/v1"),
+            ("192.168.1.5:11434", "http://192.168.1.5:11434/v1"),
+            ("http://0.0.0.0:11434", "http://localhost:11434/v1"),
+            ("https://ollama.example.com:443", "https://ollama.example.com:443/v1"),
+            ("[::]:11434", "http://localhost:11434/v1"),
+            ("[::1]:11434", "http://[::1]:11434/v1"),
+            ("0.0.0.0:11434/", "http://localhost:11434/v1"),
+            ("  0.0.0.0:11434  ", "http://localhost:11434/v1"),
+            // Nothing usable: the static default has to stand instead.
+            ("", nil),
+            ("0.0.0.0:0", nil),
+            ("0.0.0.0:70000", nil),
+            ("0.0.0.0:port", nil),
+            ("ftp://0.0.0.0:11434", nil)
+        ]
+        for (value, expected) in cases {
+            expect(
+                OllamaHost.parse(value)?.baseURL == expected,
+                "OLLAMA_HOST \"\(value)\" resolves to \(expected ?? "the static default")")
+        }
+        expect(
+            OllamaHost.defaultPort == 11434,
+            "Ollama's own default port is what a host with no port means")
     }
 
     static func modelCatalogSearchesWithoutRenderingEverything() {

@@ -41,6 +41,7 @@
 		189CAC1AFFDB8A2E0D71656D /* RootPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE879165C9F37272CBE9421 /* RootPaletteView.swift */; };
 		1908B1638F51D51B59761E91 /* AIConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84F7DCAF2FF8EA0DB5027CB /* AIConnection.swift */; };
 		1AB52F101A3EE27B0409AFE1 /* ChatTranscriptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A308E5F2A3CEA17A54F83AF5 /* ChatTranscriptView.swift */; };
+		1C206C3A413852BC7DC40758 /* OllamaHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 671DA7B8FBA3CD19D5EDF16F /* OllamaHost.swift */; };
 		1D1084F01117E06C46802C1A /* MarkdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0898C530C1E69F251CB83B1 /* MarkdownView.swift */; };
 		1D40E999DBE120757C07B1B0 /* NoteEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7EB4704E9101AE5C798940 /* NoteEditorView.swift */; };
 		1D85FE60823093855CD8A2BA /* NotesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5364ADA36AECE317D668059 /* NotesPanel.swift */; };
@@ -137,6 +138,7 @@
 		52FC22566583E26A19F6AD9A /* AIBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11ACBBC0D09B460EABAAD23A /* AIBrand.swift */; };
 		53E4B95AFF0F18D35F1CEA82 /* SelectionReveal.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BD845AFBD4DB9562F0CE0E /* SelectionReveal.swift */; };
 		5452F8C95BF8C86655499FDE /* MeetingCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB87881DEDDA65E70FD00F2C /* MeetingCardView.swift */; };
+		547E268B6666A60C9ABECA29 /* OllamaServerLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 436441320EA252D6FB7275EB /* OllamaServerLocator.swift */; };
 		55267AE443546489EA3754EC /* RecentScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 985C24FCBBC8CBB3A7BAF508 /* RecentScreen.swift */; };
 		554FF81931197C136AF8B33F /* CalcPercent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A2E435CC80A8909FC2DF8EA /* CalcPercent.swift */; };
 		558463A8B100A959C2F53415 /* PaletteCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B757388824DA8D824A939D05 /* PaletteCoordinator.swift */; };
@@ -513,6 +515,7 @@
 		41B8A1A3552623E66663D1D4 /* SettingsBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsBackup.swift; sourceTree = "<group>"; };
 		428310A97041FC201FC259EF /* OverflowFade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverflowFade.swift; sourceTree = "<group>"; };
 		42E7DB9D73425DF29BEC3FF2 /* ReleaseNotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotesView.swift; sourceTree = "<group>"; };
+		436441320EA252D6FB7275EB /* OllamaServerLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaServerLocator.swift; sourceTree = "<group>"; };
 		4365E59C580003627981545D /* AIStreamDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIStreamDecoder.swift; sourceTree = "<group>"; };
 		4727FC1D2F60E72DE7D03759 /* PopoverMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverMenu.swift; sourceTree = "<group>"; };
 		49975F62D60ED9322B6F05D7 /* SnippetKeywordPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetKeywordPolicy.swift; sourceTree = "<group>"; };
@@ -560,6 +563,7 @@
 		639BC4C12AE65E5CACFCC50A /* AppLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncher.swift; sourceTree = "<group>"; };
 		63B9DCCAAB8541E31C605FE0 /* AppPickerPopover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPickerPopover.swift; sourceTree = "<group>"; };
 		65D6DAF91B6C66B27BF4EFD8 /* RenderNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderNode.swift; sourceTree = "<group>"; };
+		671DA7B8FBA3CD19D5EDF16F /* OllamaHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaHost.swift; sourceTree = "<group>"; };
 		6775C750626CE21C1D338D42 /* ExtensionManifest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionManifest.swift; sourceTree = "<group>"; };
 		687D35D3942E6D6FD740DCC6 /* RaycastImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastImport.swift; sourceTree = "<group>"; };
 		69738EC635A1208DB3EE6229 /* CalcDateTime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcDateTime.swift; sourceTree = "<group>"; };
@@ -1083,6 +1087,7 @@
 				F5D750896E0A9F0F8FCFB479 /* CodexTurnRunner.swift */,
 				048382EEED4DACDC06E9D654 /* HTTPAIProvider.swift */,
 				BD15441ECBA2FD80C975C51B /* LMStudioServerLocator.swift */,
+				436441320EA252D6FB7275EB /* OllamaServerLocator.swift */,
 			);
 			path = Service;
 			sourceTree = "<group>";
@@ -1305,6 +1310,7 @@
 				4C54B92B4D1EA27B2429A618 /* CodexAppServerProtocol.swift */,
 				B2433FDA2AD7D36113B35073 /* LMStudioServerStatus.swift */,
 				EA3DDC76A5672129268439FB /* MarkdownBlock.swift */,
+				671DA7B8FBA3CD19D5EDF16F /* OllamaHost.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -2303,6 +2309,8 @@
 				B6E97175C7959EECFE3B02DD /* NotesView.swift in Sources */,
 				DE32837E72AB4170E4EFD787 /* NotesWindowController.swift in Sources */,
 				D0C1E971DC73CA50E3AAD2D5 /* NotificationToken.swift in Sources */,
+				1C206C3A413852BC7DC40758 /* OllamaHost.swift in Sources */,
+				547E268B6666A60C9ABECA29 /* OllamaServerLocator.swift in Sources */,
 				A54CCCC0700D6841E55E4277 /* OnboardingCard.swift in Sources */,
 				CD9650C3CB12B16CB60AA809 /* OnboardingCoordinator.swift in Sources */,
 				E9014C2A9924C9E5295F9B45 /* OnboardingState.swift in Sources */,
