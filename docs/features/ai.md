@@ -54,7 +54,7 @@ AI Chat is the first consumer, but the provider layer does not depend on it.
 
 ## Connections and routing
 
-`AIProviderKind` exposes four named presets plus a custom OpenAI-compatible route:
+`AIProviderKind` exposes six named presets plus a custom OpenAI-compatible route:
 
 | Setting | Transport | Default base URL |
 | --- | --- | --- |
@@ -62,12 +62,29 @@ AI Chat is the first consumer, but the provider layer does not depend on it.
 | Anthropic Claude | Anthropic Messages | `https://api.anthropic.com` |
 | Google Gemini | Gemini's OpenAI-compatible API | `https://generativelanguage.googleapis.com/v1beta/openai` |
 | OpenRouter | OpenAI-compatible | `https://openrouter.ai/api/v1` |
+| Ollama | OpenAI-compatible | `http://localhost:11434/v1` |
+| LM Studio | OpenAI-compatible | `http://localhost:1234/v1` |
 | OpenAI Compatible | OpenAI-compatible | user-editable |
 
 The base URL stays editable for every preset because gateways and organization proxies are legitimate
-destinations. `AIHTTPConfiguration.endpointURL` accepts a complete endpoint or appends the transport's
-completion path. Gemini requests identify Smallcast through `x-goog-api-client`; OpenRouter requests
-carry the app title.
+destinations.
+
+The two local presets are the same transport pointed at a loopback port, not a second one: Ollama and
+LM Studio both serve OpenAI Chat Completions under `/v1`, so nothing about the request or the stream
+differs. Both ports are the installer defaults and are configurable in those apps, so the field is
+editable like any other. A loopback address needs no API key, and `AIEndpointPolicy` already permits
+`http` only there.
+
+`acceptsUnlistedModels` is what the two presets share with the custom route: a local server serves
+whatever was pulled, and lists nothing at all until a model is loaded, so a model discovery never
+reported still has to be nameable by hand. A vendor API has a real catalog and refuses names outside it.
+
+Discovery drops any model whose id reads as an embedding one. No catalog reports what a model is for,
+and a local server lists its embedding models beside the ones that can hold a conversation.
+
+`AIHTTPConfiguration.endpointURL` accepts a complete endpoint or appends the transport's completion
+path. Gemini requests identify Smallcast through `x-goog-api-client`; OpenRouter requests carry the
+app title.
 
 Each connection has an ordered, deduplicated list of exact model identifiers. While its editor is open,
 Smallcast asks the configured provider for the models available to the entered key and uses the result

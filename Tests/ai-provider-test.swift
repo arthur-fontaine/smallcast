@@ -19,6 +19,7 @@ struct AIProviderTests {
         providerPresetsResolveEndpoints()
         modelCatalogBuildsProviderRequests()
         modelCatalogDecodesProviderResponses()
+        localPresetsNameTheirOwnEndpoints()
         modelCatalogSearchesWithoutRenderingEverything()
         endpointPolicyRejectsUnsafeRemoteURLs()
         storedKeysDoNotFollowARetargetedConnection()
@@ -41,7 +42,9 @@ struct AIProviderTests {
             (.anthropic, "https://api.anthropic.com/v1/messages"),
             (.gemini, "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"),
             (.openRouter, "https://openrouter.ai/api/v1/chat/completions"),
-            (.openAICompatible, "https://api.openai.com/v1/chat/completions")
+            (.openAICompatible, "https://api.openai.com/v1/chat/completions"),
+            (.ollama, "http://localhost:11434/v1/chat/completions"),
+            (.lmStudio, "http://localhost:1234/v1/chat/completions")
         ]
         for (provider, endpoint) in expected {
             let configuration = AIHTTPConfiguration(
@@ -67,7 +70,9 @@ struct AIProviderTests {
             (.anthropic, "https://api.anthropic.com/v1/models?limit=1000"),
             (.gemini, "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000"),
             (.openRouter, "https://openrouter.ai/api/v1/models/user"),
-            (.openAICompatible, "https://api.openai.com/v1/models")
+            (.openAICompatible, "https://api.openai.com/v1/models"),
+            (.ollama, "http://localhost:11434/v1/models"),
+            (.lmStudio, "http://localhost:1234/v1/models")
         ]
         for (provider, endpoint) in expected {
             let query = try? AIModelDiscovery.query(
@@ -155,6 +160,39 @@ struct AIProviderTests {
         expect(
             geminiModels == [.init(id: "gemini-chat", name: "Gemini Chat")],
             "Gemini discovery keeps generation models and strips the resource prefix")
+
+        let local = Data(
+            """
+            {"data":[
+                {"id":"llama3.2"},
+                {"id":"text-embedding-nomic-v1.5"},
+                {"id":"embed-english-v3"}
+            ]}
+            """.utf8)
+        expect(
+            (try? AIModelDiscovery.decode(local, shape: .openAI)) == [
+                .init(id: "llama3.2", name: "llama3.2")
+            ],
+            "a model that can only embed is not offered as one that can answer")
+    }
+
+    static func localPresetsNameTheirOwnEndpoints() {
+        expect(
+            AIProviderKind.ollama.title == "Ollama" && AIProviderKind.lmStudio.title == "LM Studio",
+            "both local servers are named as their own preset")
+        for provider in [AIProviderKind.ollama, .lmStudio] {
+            let url = try? AIEndpointPolicy.validate(provider.defaultBaseURL)
+            expect(
+                url != nil && AIEndpointPolicy.isLoopback(provider.defaultBaseURL),
+                "\(provider.title) defaults to a loopback address, so http needs no key")
+            expect(
+                provider.apiShape == .openAICompatible,
+                "\(provider.title) is reached over the OpenAI shape, not a second transport")
+        }
+        let listed: [AIProviderKind] = [.openAICompatible, .ollama, .lmStudio]
+        expect(
+            AIProviderKind.allCases.filter(\.acceptsUnlistedModels) == listed,
+            "only an endpoint that serves whatever was pulled accepts a model typed by hand")
     }
 
     static func modelCatalogSearchesWithoutRenderingEverything() {

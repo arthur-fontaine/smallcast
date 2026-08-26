@@ -155,11 +155,18 @@ enum AIModelDiscovery {
         var seen = Set<String>()
         return models.compactMap { model in
             let id = model.id.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !id.isEmpty, seen.insert(id).inserted else { return nil }
+            guard !id.isEmpty, seen.insert(id).inserted, !isEmbedding(id) else { return nil }
             let name = model.name.trimmingCharacters(in: .whitespacesAndNewlines)
             return Model(
                 id: id, name: name.isEmpty ? id : name, inputModalities: model.inputModalities)
         }
+    }
+
+    /// By name, because no catalog reports what a model is for. An embedding model cannot answer a
+    /// chat, and a local server lists it beside the ones that can.
+    private static func isEmbedding(_ id: String) -> Bool {
+        id.localizedCaseInsensitiveContains("embedding")
+            || id.localizedCaseInsensitiveContains("embed-")
     }
 
     private static func searchRank(_ model: Model, query: String) -> Int {

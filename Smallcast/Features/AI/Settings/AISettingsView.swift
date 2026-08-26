@@ -684,7 +684,7 @@ private struct AIConnectionEditorSheet: View {
             } else {
                 Label("No available model matches this key.", systemImage: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                if connection.provider == .openAICompatible {
+                if connection.provider.acceptsUnlistedModels {
                     Button("Use “\(query)” anyway") { addModel(query, acceptsImages: nil) }
                 }
             }
@@ -751,6 +751,9 @@ private struct AIConnectionEditorSheet: View {
     private var modelPlaceholder: String {
         switch connection.provider {
         case .openAI, .openAICompatible: return "Model ID (e.g. gpt-5.4-mini)"
+        case .ollama: return "Model ID (e.g. llama3.2)"
+        // LM Studio names a model by whatever was downloaded, so there is nothing to suggest.
+        case .lmStudio: return "Model ID"
         case .anthropic: return "Model ID (e.g. claude-sonnet-4-6)"
         case .gemini: return "Model ID (e.g. gemini-3.7-flash)"
         case .openRouter: return "Model ID (e.g. openai/gpt-5.4-mini)"

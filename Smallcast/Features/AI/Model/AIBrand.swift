@@ -46,7 +46,7 @@ enum AIBrand: String, CaseIterable, Sendable {
         case .openAI: return .openAI
         case .anthropic: return .claude
         case .gemini: return .gemini
-        case .openRouter, .openAICompatible: return resolve(model: model)
+        case .openRouter, .openAICompatible, .ollama, .lmStudio: return resolve(model: model)
         }
     }
 
