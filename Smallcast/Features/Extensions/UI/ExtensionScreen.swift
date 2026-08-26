@@ -114,7 +114,8 @@ struct ExtensionScreen: Equatable {
             let sectionType = root.type == "Grid" ? "Grid.Section" : "List.Section"
             let emptyType = root.type == "Grid" ? "Grid.EmptyView" : "List.EmptyView"
             emptyView = root.children.first { $0.type == emptyType }
-            let needle = filtersLocally ? query.trimmingCharacters(in: .whitespaces) : ""
+            let needle = FuzzyMatch.Query(
+                filtersLocally ? query.trimmingCharacters(in: .whitespaces) : "")
             var rows: [Row] = []
             var items: [Item] = []
             // Numbering as the rows are built is what keeps `selection` and the drawn order in step;
@@ -182,12 +183,12 @@ struct ExtensionScreen: Equatable {
 
     /// Local filtering mirrors Raycast: title, subtitle and keywords, ranked by the launcher's matcher
     /// so an extension list feels like the rest of the palette.
-    static func matches(_ item: RenderNode, _ needle: String) -> Bool {
+    static func matches(_ item: RenderNode, _ needle: FuzzyMatch.Query) -> Bool {
         guard !needle.isEmpty else { return true }
         var haystack = [item.string("title") ?? ""]
         if let subtitle = item.string("subtitle") { haystack.append(subtitle) }
         haystack.append(contentsOf: item.array("keywords").compactMap(\.stringValue))
-        return haystack.contains { FuzzyMatch.score(query: needle, candidate: $0) != nil }
+        return haystack.contains { FuzzyMatch.score(needle, candidate: $0) != nil }
     }
 
     private static func gridColumns(_ root: RenderNode) -> Int {

@@ -33,7 +33,13 @@ enum SettingsBackupCoverage {
         "quicklinkOpensNewWindow": .quicklinkOpensNewWindow,
         "quicklinkSelectionFallback": .quicklinkSelectionFallback,
         "quicklinkConfirmsBeforeDelete": .quicklinkConfirmsBeforeDelete,
-        "extensionsShowInLauncher": .extensionsShowInLauncher
+        "extensionsShowInLauncher": .extensionsShowInLauncher,
+        "calendarShowInLauncher": .calendarShowInLauncher,
+        "joinWindowMinutes": .joinWindowMinutes,
+        "autoJoinConfirms": .autoJoinConfirms,
+        "menuBarEvents": .menuBarEvents,
+        "menuBarLinkedEventsOnly": .menuBarLinkedEventsOnly,
+        "hideCurrentEvent": .hideCurrentEvent
     ]
 
     /// The `SettingsData` fields no `AppSettings` key stands behind, and what they read instead.
@@ -58,6 +64,27 @@ enum SettingsBackupCoverage {
         AppSettingsKey.palettePosition.rawValue:
             "Machine-local geometry: a point restored onto another display layout lands nowhere.",
         AppSettingsKey.autoSwitchInputSource.rawValue:
-            "Names a keyboard input source installed on this Mac; another Mac may not have it."
+            "Names a keyboard input source installed on this Mac; another Mac may not have it.",
+        AppSettingsKey.calendarEnabled.rawValue:
+            "Doubles as consent to read your calendar; an import must not grant calendar access.",
+        AppSettingsKey.autoJoinMeetings.rawValue:
+            "Arms the app to open meeting links unattended; an import must not switch that on.",
+        AppSettingsKey.cameraPreview.rawValue:
+            "Turns the camera on before a meeting; an import must not grant that.",
+        AppSettingsKey.aiEnabled.rawValue:
+            "No other AI setting travels in a backup, so an import would arm a feature it cannot "
+            + "configure.",
+        AppSettingsKey.aiConnections.rawValue:
+            "AI connection metadata stays on the Mac with the Keychain credentials it describes.",
+        AppSettingsKey.aiDefaultModel.rawValue:
+            "The default model names an external AI destination; importing must not choose one.",
+        AppSettingsKey.aiWebSearch.rawValue:
+            "Whether prompts may reach a search engine is a choice each Mac makes for itself.",
+        AppSettingsKey.aiSystemPrompt.rawValue:
+            "Standing instructions to a model are the one AI setting that changes every answer; an "
+            + "import must not carry them onto another Mac unseen.",
+        AppSettingsKey.aiSystemPromptEnabled.rawValue:
+            "Governs whether a turn carries standing instructions at all, so it changes every answer "
+            + "the same way the prompt it gates does."
     ]
 }

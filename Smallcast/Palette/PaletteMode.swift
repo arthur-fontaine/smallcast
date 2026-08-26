@@ -3,9 +3,12 @@ import AppKit
 enum PaletteMode: String, CaseIterable, Identifiable {
     case launcher
     case clipboard
+    case ai
+    case aiHistory
     case calculatorHistory
     case emoji
     case fileSearch
+    case schedule
     case uninstall
     case quicklinks
     /// Collects a quicklink's `{argument}` values; the request lives on the session.
@@ -16,27 +19,16 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case extensionCommand
 
     var id: String { rawValue }
-    var title: String {
-        switch self {
-        case .launcher: return "Apps"
-        case .clipboard: return "Clipboard"
-        case .calculatorHistory: return "Calculator History"
-        case .emoji: return "Emoji & Symbols"
-        case .fileSearch: return "Search Files"
-        case .uninstall: return "Uninstall Application"
-        case .quicklinks: return "Quicklinks"
-        case .quicklinkArguments: return "Open Quicklink"
-        case .recent: return "Recent"
-        case .extensionCommand: return "Extension"
-        }
-    }
     var systemImage: String {
         switch self {
         case .launcher: return "magnifyingglass"
         case .clipboard: return "doc.on.doc"
+        case .ai: return "sparkles"
+        case .aiHistory: return "clock.arrow.circlepath"
         case .calculatorHistory: return "plus.forwardslash.minus"
         case .emoji: return "face.smiling"
         case .fileSearch: return "doc.text.magnifyingglass"
+        case .schedule: return "calendar"
         case .uninstall: return "trash"
         case .quicklinks, .quicklinkArguments: return Quicklink.sfSymbol
         case .recent: return "clock.arrow.circlepath"
@@ -47,9 +39,12 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         switch self {
         case .launcher: return "Search for apps and commands…"
         case .clipboard: return "Type to filter entries…"
+        case .ai: return "Ask anything…"
+        case .aiHistory: return "Search chats…"
         case .calculatorHistory: return "Do math, convert units, or search your past calculations…"
         case .emoji: return "Search emoji and symbols…"
         case .fileSearch: return "Search files and folders…"
+        case .schedule: return "Search today and tomorrow…"
         case .uninstall: return "Filter files and folders by name…"
         case .quicklinks: return "Search quicklinks…"
         // Replaced by the pending argument's name; only reached if the session vanished mid-render.

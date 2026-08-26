@@ -15,7 +15,7 @@ contradicts the code is a defect, so fix it in the commit that made it wrong.
 | [release.md](release.md) | How a build reaches a user: packaging, CI, releases, the Homebrew tap, the website | the pipeline changes |
 | [signing.md](signing.md) | The self-signed identity and the two CI secrets | the signing setup changes |
 | [ui.md](ui.md) | The design system: tokens, panel chrome, row grammar, glass, dialogs and HUDs | a token or a presentation rule changes |
-| [upstream.md](upstream.md) | Merging Tinycast (`base/main`): the anchor-by-tree procedure, and an exhaustive table of what is Smallcast-only versus comparable | a feature is added on either side, or a sync finds something the table missed |
+| [upstream.md](upstream.md) | Merging Smallcast (`base/main`): the anchor-by-tree procedure, and an exhaustive table of what is Smallcast-only versus comparable | a feature is added on either side, or a sync finds something the table missed |
 
 ## Features
 
@@ -27,6 +27,7 @@ open with an `## Invariants` section; read it before changing anything in that a
 [launcher](features/launcher.md) ·
 [clipboard](features/clipboard.md) ·
 [calculator](features/calculator.md) ·
+[calendar](features/calendar.md) ·
 [emoji](features/emoji.md) ·
 [file search](features/file-search.md) ·
 [notes](features/notes.md) ·

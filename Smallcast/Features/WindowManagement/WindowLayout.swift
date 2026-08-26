@@ -347,6 +347,11 @@ enum WindowLayout {
             return Fractions(
                 x0: 0.75, x1: 1, y0: 0, y1: 1,
                 anchor: Anchor(horizontal: .max, vertical: .min))
+        case .firstThreeFourths:
+            return Fractions(x0: 0, x1: 0.75, y0: 0, y1: 1, anchor: .topLeading)
+        case .lastThreeFourths:
+            return Fractions(
+                x0: 0.25, x1: 1, y0: 0, y1: 1, anchor: Anchor(horizontal: .max, vertical: .min))
 
         case .firstThird:
             return Fractions(x0: 0, x1: oneThird, y0: 0, y1: 1, anchor: .topLeading)

@@ -11,6 +11,10 @@ final class HotKeyManager {
     var onCreateNote: (() -> Void)?
     var onSearchNotes: (() -> Void)?
     var onSearchFiles: (() -> Void)?
+    var onJoinNextMeeting: (() -> Void)?
+    var onShowSchedule: (() -> Void)?
+    var onCreateEvent: (() -> Void)?
+    var onShowAIChat: (() -> Void)?
     var onRunCustomCommand: ((UUID) -> Void)?
     var onRunSystemAction: ((SystemAction.ID) -> Void)?
     var onRunWindowCommand: ((WindowCommand.ID) -> Void)?
@@ -53,7 +57,6 @@ final class HotKeyManager {
     private let boundExtensionCommandKey = "boundExtensionCommandEntryIDs"
 
     func start(customCommandIDs: Set<UUID>, quicklinkIDs: Set<UUID>) {
-        LegacyHotKeyRecords.adopt(candidateActions, decoder: decoder, encoder: encoder)
         prune(key: boundCustomCommandKey, live: customCommandIDs) { .customCommand(id: $0) }
         prune(key: boundQuicklinkKey, live: quicklinkIDs) { .quicklink(id: $0) }
         // After the prunes, so a dropped record can't survive in memory this session.
@@ -139,7 +142,8 @@ final class HotKeyManager {
             if binding == nil { set.remove(entryID) } else { set.insert(entryID) }
             UserDefaults.standard.set(Array(set), forKey: boundExtensionCommandKey)
         case .togglePalette, .toggleClipboard, .toggleEmoji, .showNotes, .createNote, .searchNotes,
-            .searchFiles, .systemAction, .windowCommand:
+            .searchFiles, .joinNextMeeting, .mySchedule, .createEvent, .aiChat, .systemAction,
+            .windowCommand:
             break
         }
         candidateActionsCache = nil
@@ -202,6 +206,14 @@ final class HotKeyManager {
             return CommandID.searchNotes.name
         case .searchFiles:
             return CommandID.searchFiles.name
+        case .joinNextMeeting:
+            return CommandID.joinNextMeeting.name
+        case .mySchedule:
+            return CommandID.mySchedule.name
+        case .createEvent:
+            return CommandID.createEvent.name
+        case .aiChat:
+            return CommandID.aiChat.name
         case .app(let bundleID), .settingsPane(let bundleID):
             return displayName?(action) ?? bundleID
         case .customCommand:
@@ -244,6 +256,10 @@ final class HotKeyManager {
         case .createNote: onCreateNote?()
         case .searchNotes: onSearchNotes?()
         case .searchFiles: onSearchFiles?()
+        case .joinNextMeeting: onJoinNextMeeting?()
+        case .mySchedule: onShowSchedule?()
+        case .createEvent: onCreateEvent?()
+        case .aiChat: onShowAIChat?()
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
         case .customCommand(let id): onRunCustomCommand?(id)

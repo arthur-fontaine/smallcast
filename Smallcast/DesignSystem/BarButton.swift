@@ -38,3 +38,59 @@ struct BarButton<Label: View>: View {
         .onHover { hovered = $0 }
     }
 }
+
+/// A header control that states the active choice and opens an in-window menu.
+struct HeaderMenuButton: View {
+    let title: String
+    let icon: PopoverMenuIcon
+    let isOpen: Bool
+    let help: String
+    let action: () -> Void
+
+    init(
+        title: String, icon: PopoverMenuIcon, isOpen: Bool, help: String,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.icon = icon
+        self.isOpen = isOpen
+        self.help = help
+        self.action = action
+    }
+
+    init(
+        title: String, systemImage: String, isOpen: Bool, help: String,
+        action: @escaping () -> Void
+    ) {
+        self.init(title: title, icon: .symbol(systemImage), isOpen: isOpen, help: help, action: action)
+    }
+
+    var body: some View {
+        BarButton(chrome: .menu, action: action) {
+            HStack(spacing: Theme.Spacing.sm) {
+                switch icon {
+                case .symbol(let name):
+                    Image(systemName: name)
+                        .font(Theme.Typography.bar)
+                        .symbolRenderingMode(.hierarchical)
+                case .asset(let name):
+                    Image(name)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: Theme.Size.barBrandIcon, height: Theme.Size.barBrandIcon)
+                case .file(let path):
+                    MenuFileIcon(path: path)
+                }
+                Text(title)
+                    .font(Theme.Typography.bar)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                // Points at the menu it opens, the way a native pop-up's chevron does.
+                Image(systemName: isOpen ? "chevron.up" : "chevron.down")
+                    .font(Theme.Typography.disclosure)
+            }
+            .foregroundStyle(Theme.Colors.textSecondary)
+        }
+        .help(help)
+    }
+}

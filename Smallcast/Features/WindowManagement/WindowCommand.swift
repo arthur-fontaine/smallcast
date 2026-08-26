@@ -25,6 +25,8 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
         case secondFourth = "second-fourth"
         case thirdFourth = "third-fourth"
         case lastFourth = "last-fourth"
+        case firstThreeFourths = "first-three-fourths"
+        case lastThreeFourths = "last-three-fourths"
         case maximize
         case almostMaximize = "almost-maximize"
         case reasonableSize = "reasonable-size"
@@ -153,6 +155,8 @@ enum WindowCommandCatalog {
         case .secondFourth: return "Second Fourth"
         case .thirdFourth: return "Third Fourth"
         case .lastFourth: return "Last Fourth"
+        case .firstThreeFourths: return "First Three Fourths"
+        case .lastThreeFourths: return "Last Three Fourths"
         case .maximize: return "Maximize"
         case .almostMaximize: return "Almost Maximize"
         case .reasonableSize: return "Reasonable Size"
@@ -190,6 +194,8 @@ enum WindowCommandCatalog {
         case .topRightSixth, .bottomRightSixth: return "rectangle.trailingthird.inset.filled"
         case .firstFourth, .secondFourth, .thirdFourth, .lastFourth:
             return "rectangle.split.3x1"
+        case .firstThreeFourths: return "rectangle.lefthalf.inset.filled"
+        case .lastThreeFourths: return "rectangle.righthalf.inset.filled"
         case .firstThird, .firstTwoThirds: return "rectangle.leadingthird.inset.filled"
         case .centerThird: return "rectangle.center.inset.filled"
         case .lastThird, .lastTwoThirds: return "rectangle.trailingthird.inset.filled"
@@ -233,7 +239,8 @@ enum WindowCommandCatalog {
         case .topLeftSixth, .topCenterSixth, .topRightSixth, .bottomLeftSixth, .bottomCenterSixth,
             .bottomRightSixth:
             return .sixths
-        case .firstFourth, .secondFourth, .thirdFourth, .lastFourth:
+        case .firstFourth, .secondFourth, .thirdFourth, .lastFourth, .firstThreeFourths,
+            .lastThreeFourths:
             return .fourths
         case .firstThird, .centerThird, .lastThird, .firstTwoThirds, .lastTwoThirds:
             return .thirds

@@ -6,10 +6,36 @@
 # member, which is how CI reported success over a harness that had not compiled since phase 10.
 
 set -uo pipefail
+
+# Absolute: the workers re-enter this script after the cd, where a relative $0 would not resolve.
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 cd "$(dirname "$0")/.." || exit 1
 
 BIN="${TMPDIR:-/tmp}/smallcast-harness"
 mkdir -p "$BIN"
+
+# `--exec` is the worker half: xargs re-enters here once per queued harness.
+if [ "${1:-}" = "--exec" ]; then
+    shift
+    name=$1 opt=$2
+    shift 2
+    if ! swiftc -swift-version 6 "$opt" "$@" "Tests/$name.swift" -o "$BIN/$name" > "$BIN/$name.log" 2>&1; then
+        printf '\033[31mFAIL\033[0m  %-22s did not compile\n' "$name"
+        : > "$BIN/$name.failed"
+        exit 0
+    fi
+    if ! "$BIN/$name" > "$BIN/$name.log" 2>&1; then
+        printf '\033[31mFAIL\033[0m  %-22s assertion failed\n' "$name"
+        : > "$BIN/$name.failed"
+        exit 0
+    fi
+    printf '\033[32mok\033[0m    %-22s\n' "$name"
+    exit 0
+fi
+
+QUEUE="$BIN/queue"
+: > "$QUEUE"
+rm -f "$BIN"/*.failed
 
 failed=()
 ran=0
@@ -26,8 +52,16 @@ if [ "$only" = "--index" ]; then
     printf '[' > "$DB"
 fi
 
-# run <name> <source...> — compile the harness and run it, recording either kind of failure.
+# run [slow] [-O] <name> <source...> — queue the harness. `slow` dispatches it in the first wave.
 run() {
+    local opt=-Onone pri=1
+    while :; do
+        case "$1" in
+            slow) pri=0; shift;;
+            -O)   opt=-O; shift;;
+            *)    break;;
+        esac
+    done
     local name=$1
     shift
     if [ -n "$only" ] && [ "$name" != "$only" ]; then return 0; fi
@@ -49,21 +83,12 @@ run() {
         return 0
     fi
 
-    if ! swiftc -swift-version 6 "$@" "Tests/$name.swift" -o "$BIN/$name" 2>&1; then
-        printf '\033[31mFAIL\033[0m  %-22s did not compile\n' "$name"
-        failed+=("$name")
-        return 0
-    fi
-    if ! "$BIN/$name"; then
-        printf '\033[31mFAIL\033[0m  %-22s assertion failed\n' "$name"
-        failed+=("$name")
-        return 0
-    fi
-    printf '\033[32mok\033[0m    %-22s\n' "$name"
+    # xargs splits the queue on whitespace, so no harness source path may contain a space.
+    printf '%s %s %s %s\n' "$pri" "$name" "$opt" "$*" >> "$QUEUE"
 }
 
 L=Smallcast/Features/Launcher/Model
-run fuzz-test              $L/SearchRelevance.swift
+run slow -O fuzz-test      $L/SearchRelevance.swift
 run file-search-test       $L/SearchRelevance.swift \
                            Smallcast/Features/FileSearch/Model/*.swift
 run file-search-session-test Smallcast/Platform/Signposts.swift \
@@ -71,10 +96,12 @@ run file-search-session-test Smallcast/Platform/Signposts.swift \
                              Smallcast/Features/FileSearch/Model/*.swift \
                              Smallcast/Features/FileSearch/Service/*.swift
 run ranking-test           $L/SearchRelevance.swift $L/LauncherRankingStore.swift
-run scopes-test            $L/SearchScopes.swift
 run launch-history-test    $L/LaunchHistoryStore.swift
+run scopes-test            $L/SearchScopes.swift
+run app-name-test          Smallcast/Platform/AppDisplayName.swift
 run favorites-test         $L/FavoriteSlots.swift
 run calc-test              Smallcast/Features/Calculator/Model/*.swift
+run calendar-test          Smallcast/Features/Calendar/Model/*.swift
 run clipboard-test         Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFilter.swift
 run emoji-test             Smallcast/Features/Emoji/Model/EmojiCatalog.swift \
@@ -89,11 +116,17 @@ run palette-placement-test Smallcast/Platform/Appearance.swift \
                            Smallcast/DesignSystem/Theme.swift \
                            Smallcast/Palette/PalettePlacement.swift
 run scroll-reveal-test     Smallcast/DesignSystem/Scrolling/SelectionReveal.swift
+run redaction-test         Smallcast/DesignSystem/RedactedPlaceholder.swift
+run ai-instructions-test   Smallcast/Features/AI/Model/AIInstructions.swift \
+                           Smallcast/Features/AI/Model/AIPreamble.swift
 run hover-arming-test      Smallcast/Palette/HoverArming.swift \
                            Smallcast/Palette/PaletteState.swift \
                            Smallcast/Palette/PaletteMode.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
+                           Smallcast/Features/Quicklinks/Model/Quicklink.swift
+run palette-escape-test    Smallcast/Palette/PaletteMode.swift \
+                           Smallcast/Palette/PaletteEscapeAction.swift \
                            Smallcast/Features/Quicklinks/Model/Quicklink.swift
 run hotkey-test            Smallcast/Features/HotKeys/Model/DoubleTapModifier.swift \
                            Smallcast/Features/HotKeys/Model/DoubleTapDetector.swift \
@@ -132,7 +165,7 @@ run quicklink-test         Smallcast/Features/Quicklinks/Model/Quicklink.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkStore.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkArchive.swift
-run snippets-test          Smallcast/Platform/NotificationToken.swift \
+run slow snippets-test     Smallcast/Platform/NotificationToken.swift \
                            Smallcast/Platform/HealthTicker.swift \
                            Smallcast/Platform/AccessibilityText.swift \
                            Smallcast/Features/Snippets/Model/*.swift \
@@ -147,8 +180,10 @@ run notes-editor-test      Smallcast/Platform/Signposts.swift \
                            Smallcast/Features/Notes/Model/NoteDocument.swift \
                            Smallcast/Features/Notes/UI/NoteTextView.swift \
                            Smallcast/Features/Notes/UI/NoteEditorView.swift
-run raycast-test           Smallcast/Features/Backup/Model/RaycastFormat.swift \
+run slow -O raycast-test   Smallcast/Features/Backup/Model/RaycastFormat.swift \
                            Smallcast/Features/Backup/Model/RaycastV1Decoder.swift \
+                           Smallcast/Features/Backup/Service/RaycastV2Decoder.swift \
+                           Smallcast/Features/Backup/Service/Scrypt.swift \
                            Smallcast/Platform/Compression/Zlib.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFilter.swift
@@ -162,13 +197,15 @@ run ext-cleanup-test       $E/Service/ExtensionCleanup.swift \
 run ext-store-test         $E/Model/ExtensionRegistry.swift \
                            $E/Model/ExtensionPackageManager.swift \
                            $E/Model/ExtensionStoreResponse.swift
-run ext-test               -parse-as-library \
+run slow ext-test          -parse-as-library \
                            $E/Model/ExtensionBootConfig.swift \
                            $E/Model/ExtensionManifest.swift \
                            $E/Model/RenderNode.swift \
                            $E/Service/ExtensionCatalog.swift \
                            $E/Service/ExtensionFetcher.swift \
                            $E/Service/ExtensionNodeShims.swift \
+                           $E/Service/ExtensionOAuthKeychain.swift \
+                           $E/Service/ExtensionOAuthSession.swift \
                            $E/Service/ExtensionRuntime.swift \
                            $E/UI/ExtensionScreen.swift \
                            $L/SearchRelevance.swift \
@@ -176,6 +213,23 @@ run ext-test               -parse-as-library \
 run settings-history-test  Smallcast/Features/Settings/SettingsTab.swift \
                            Smallcast/Features/Settings/SettingsHistory.swift
 run updates-test           Smallcast/Features/Updates/Model/*.swift
+run ai-provider-test       Smallcast/Features/Settings/AppSettingsKey.swift \
+                           Smallcast/Features/AI/Model/*.swift \
+                           Smallcast/Features/AI/Settings/AISettingsStore.swift
+run ai-chat-test           Smallcast/Features/AI/Model/AIRequest.swift \
+                           Smallcast/Features/AI/Model/ChatMessage.swift \
+                           Smallcast/Features/AI/Model/ChatSession.swift \
+                           Smallcast/Features/AI/Model/MarkdownBlock.swift \
+                           Smallcast/Features/AI/Service/AIProvider.swift \
+                           Smallcast/Features/AI/Service/ChatHistoryStore.swift \
+                           Smallcast/Features/AI/UI/AIChatState.swift
+run slow codex-turn-test   Smallcast/Platform/AppPaths.swift \
+                           Smallcast/Features/AI/Model/*.swift \
+                           Smallcast/Features/AI/Service/AIProvider.swift \
+                           Smallcast/Features/AI/Service/ChatGPTSubscriptionManager.swift \
+                           Smallcast/Features/AI/Service/CodexAppServerClient.swift \
+                           Smallcast/Features/AI/Service/CodexExecutableLocator.swift \
+                           Smallcast/Features/AI/Service/CodexTurnRunner.swift
 
 if [ "$emit_db" -eq 1 ]; then
     printf ']\n' >> "$DB"
@@ -198,7 +252,20 @@ if [ "$ran" -eq 0 ]; then
     exit 2
 fi
 
+# `sort -s` is stable, so the slow harnesses lead and everything else keeps its declaration order.
+JOBS="${SMALLCAST_TEST_JOBS:-$(sysctl -n hw.ncpu)}"
+sort -s -k1,1n "$QUEUE" | cut -d' ' -f2- | xargs -P "$JOBS" -L1 "$SELF" --exec
+
+# A compiler diagnostic is far longer than PIPE_BUF, so the workers log it and it is replayed here.
+while read -r _ name _; do
+    if [ -f "$BIN/$name.failed" ]; then failed+=("$name"); fi
+done < "$QUEUE"
+
 if [ ${#failed[@]} -gt 0 ]; then
+    for name in "${failed[@]}"; do
+        printf '\n\033[31m--- %s ---\033[0m\n' "$name"
+        cat "$BIN/$name.log"
+    done
     printf '\n%d harness(es) failed: %s\n' "${#failed[@]}" "${failed[*]}" >&2
     exit 1
 fi

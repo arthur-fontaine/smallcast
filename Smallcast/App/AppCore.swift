@@ -30,6 +30,8 @@ final class AppCore {
     let calcHistory = CalculatorHistoryStore()
     let currencyRates = CurrencyRateStore()
     let launchHistory = LaunchHistoryStore()
+    let calendarStore = CalendarStore()
+    let meetingClock = MeetingClock()
     let updateChecker = UpdateCheckStore()
     let emojiIndex = EmojiIndex()
     let frequentEmoji = FrequentEmojiStore()
@@ -41,6 +43,10 @@ final class AppCore {
     let quicklinkArguments = QuicklinkArgumentSession()
     let notesStore: NotesStore
     let extensions: ExtensionManager
+    let chatHistory: ChatHistoryStore
+    let aiChat: AIChatState
+    let aiSettings = AISettingsStore()
+    let chatGPTSubscription = ChatGPTSubscriptionManager()
 
     /// Set when a quicklink editor should open with Settings; the pane consumes it.
     var pendingQuicklinkEdit: QuicklinkEditRequest?
@@ -100,6 +106,7 @@ final class AppCore {
         windowCommandCoordinator: windowCommandCoordinator,
         snippetExpansion: snippetExpansion, fileSearchCoordinator: fileSearchCoordinator,
         notesCoordinator: notesCoordinator, extensionCoordinator: extensionCoordinator,
+        calendarCoordinator: calendarCoordinator,
         core: self)
     @ObservationIgnored private(set) lazy var clipboardCoordinator = ClipboardCoordinator(
         clipboardStore: clipboardStore, palette: palette, windowController: windowController,
@@ -110,11 +117,18 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var calculatorCoordinator = CalculatorCoordinator(
         calcHistory: calcHistory, palette: palette, currencyRates: currencyRates,
         paletteCoordinator: paletteCoordinator, core: self)
+    @ObservationIgnored private(set) lazy var calendarCoordinator = CalendarCoordinator(
+        store: calendarStore, clock: meetingClock, appIndex: appIndex, settings: settings,
+        paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var fileSearchCoordinator = FileSearchCoordinator(
         settings: settings, appIndex: appIndex, session: fileSearch, palette: palette,
         paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var updateCoordinator = UpdateCoordinator(
         store: updateChecker, core: self)
+    @ObservationIgnored private(set) lazy var aiChatCoordinator = AIChatCoordinator(
+        chat: aiChat, settings: settings, appIndex: appIndex, palette: palette,
+        paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
+        core: self)
 
     @ObservationIgnored private lazy var windowController = PaletteWindowController(core: self)
     @ObservationIgnored private lazy var messageHUD = MessageHUDController(settings: settings)
@@ -125,8 +139,11 @@ final class AppCore {
     private init() {
         let launcherRanking = LauncherRankingStore()
         let settings = AppSettings()
+        let chatHistory = ChatHistoryStore(directory: AppPaths.applicationSupport())
         self.launcherRanking = launcherRanking
         self.settings = settings
+        self.chatHistory = chatHistory
+        aiChat = AIChatState(history: chatHistory)
         appIndex = AppIndex(ranking: launcherRanking, aliases: aliases)
         let clipboardManager = ClipboardManager(store: clipboardStore, settings: settings)
         self.clipboardManager = clipboardManager
@@ -164,6 +181,7 @@ final class AppCore {
             fileSearchCoordinator.applyEnabled()
             fileSearchCoordinator.applyPolicy()
             notesCoordinator.applyEnabled()
+            aiChatCoordinator.applyEnabled()
             customCommands.onChange = { [weak self] _ in
                 self?.customCommandCoordinator.applyCustomCommandsPresence()
             }
@@ -176,11 +194,12 @@ final class AppCore {
             quicklinks.load()
             quicklinkCoordinator.applyQuicklinksPresence()
             updateCoordinator.applyEnabled()
+            calendarCoordinator.applyEnabled()
             Task { await appIndex.refresh() }
             Task { await emojiIndex.load() }
             currencyRates.start()
             updateChecker.onUpdateAvailable = { [weak self] release in
-                self?.updateCoordinator.presentIfAvailable(release)
+                self?.updateCoordinator.presentIfAvailable(release) ?? true
             }
             updateChecker.start()
 
@@ -197,6 +216,12 @@ final class AppCore {
             hotKeys.onCreateNote = { [weak self] in self?.notesCoordinator.createNote() }
             hotKeys.onSearchNotes = { [weak self] in self?.notesCoordinator.searchNotes() }
             hotKeys.onSearchFiles = { [weak self] in self?.fileSearchCoordinator.show() }
+            hotKeys.onShowAIChat = { [weak self] in self?.aiChatCoordinator.showChat() }
+            hotKeys.onJoinNextMeeting = { [weak self] in
+                self?.calendarCoordinator.joinNextMeeting()
+            }
+            hotKeys.onShowSchedule = { [weak self] in self?.calendarCoordinator.showSchedule() }
+            hotKeys.onCreateEvent = { [weak self] in self?.calendarCoordinator.createEvent() }
             hotKeys.onRunCustomCommand = { [weak self] id in
                 self?.customCommandCoordinator.runCustomCommand(id: id)
             }
@@ -258,6 +283,17 @@ final class AppCore {
         paletteCoordinator.showPalette(mode: .launcher, restoreAnyMode: true)
     }
 
+    func handleOpenURL(_ url: URL) {
+        switch ExtensionOAuthSession.handleCallbackURL(url) {
+        case .delivered:
+            paletteCoordinator.showPalette(mode: .extensionCommand, restoreAnyMode: true)
+        case .expired:
+            showMessage("Sign-in expired — run the command again", tone: .danger)
+        case .ignored:
+            break
+        }
+    }
+
     /// The store-backed half of the conflict message; `HotKeyManager` names the catalogs itself.
     private func hotKeyDisplayName(for action: HotKeyAction) -> String? {
         switch action {
@@ -273,7 +309,8 @@ final class AppCore {
         case .extensionCommand(let entryID):
             return appIndex.apps.first { $0.kind == .extensionCommand && $0.id == entryID }?.name
         case .togglePalette, .toggleClipboard, .toggleEmoji, .searchFiles, .systemAction,
-            .showNotes, .createNote, .searchNotes, .windowCommand:
+            .showNotes, .createNote, .searchNotes, .windowCommand, .joinNextMeeting, .mySchedule,
+            .createEvent, .aiChat:
             return nil
         }
     }
@@ -289,6 +326,13 @@ final class AppCore {
         snippetTextInjector.prepareForTermination()
         snippetListener.stop()
         snippetsStore.stop()
+        aiChat.cancel()
+        chatGPTSubscription.stop()
+    }
+
+    func aiProvider() throws -> any AIProvider {
+        try AIProviderFactory.make(
+            settings: aiSettings, subscription: chatGPTSubscription)
     }
 
     // MARK: - Feature switches
@@ -311,6 +355,17 @@ final class AppCore {
             }, reproject: { $0.quicklinkCoordinator.applyQuicklinksPresence() })
         track({ _ = $0.fileSearchEnabled }, reproject: { $0.fileSearchCoordinator.applyEnabled() })
         track({ _ = $0.notesEnabled }, reproject: { $0.notesCoordinator.applyEnabled() })
+        track({ _ = $0.aiEnabled }, reproject: { $0.aiChatCoordinator.applyEnabled() })
+        track(
+            {
+                _ = $0.calendarEnabled
+                _ = $0.calendarShowInLauncher
+            }, reproject: { $0.calendarCoordinator.applyEnabled() })
+        track(
+            {
+                _ = $0.autoJoinMeetings
+                _ = $0.menuBarEvents
+            }, reproject: { $0.calendarCoordinator.applyClock() })
         track(
             {
                 _ = $0.fileSearchScopes
@@ -404,5 +459,10 @@ final class AppCore {
     /// The volume slider, so `dialogs` stays the single owner of every prompt in the app.
     func pickVolume(current: Float32) async -> Float32? {
         await dialogs.pickVolume(current: current)
+    }
+
+    /// The new-event prompt, for the same reason.
+    func createEvent() async -> EventDraft? {
+        await dialogs.createEvent()
     }
 }
