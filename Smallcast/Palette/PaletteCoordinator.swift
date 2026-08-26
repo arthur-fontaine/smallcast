@@ -86,6 +86,10 @@ final class PaletteCoordinator {
     }
 
     /// The compact bar's overflow: expand into the full launcher without typing.
+    /// Escape's "go back" — the same one step a bare backspace takes.
+    @discardableResult
+    func exitScreen() -> Bool { windowController.exitScreen() }
+
     func expandFromCompact() {
         palette.forceExpanded = true
     }
