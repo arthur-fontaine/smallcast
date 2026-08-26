@@ -122,21 +122,24 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    /// How long a typed search survives a close, whatever Pop to Root Search is set to. Glancing at
-    /// the window behind and coming back is the common case, and retyping is the annoying one.
-    private static let typedQueryGrace: TimeInterval = 30
+    /// How long work in progress survives a close, whatever Pop to Root Search is set to. Glancing at
+    /// the window behind and coming back is the common case, and starting over is the annoying one.
+    private static let workInProgressGrace: TimeInterval = 30
 
-    /// Pop to Root Search: reset now, or after the delay unless a reopen consumes it. A query that was
-    /// actually typed and then dismissed always gets at least the grace period.
+    /// Pop to Root Search: reset now, or after the delay unless a reopen consumes it. Something the
+    /// user was in the middle of, dismissed rather than finished, always gets at least the grace.
     private func schedulePopToRoot(reason: PaletteHideReason) {
         // Don't pop to root if an extension is waiting for OAuth authorization in the browser.
         guard !core.extensions.isAuthorizing else { return }
         popToRootTimer?.invalidate()
-        let typed =
-            reason == .dismissed && !core.palette.query.trimmingCharacters(in: .whitespaces).isEmpty
+        // A sub-screen counts the same as typed text: both are work, and neither is finished.
+        let workInProgress =
+            reason == .dismissed
+            && (!core.palette.query.trimmingCharacters(in: .whitespaces).isEmpty
+                || core.palette.mode != .launcher)
         let interval =
-            typed
-            ? max(core.settings.popToRootTimeout.interval, Self.typedQueryGrace)
+            workInProgress
+            ? max(core.settings.popToRootTimeout.interval, Self.workInProgressGrace)
             : core.settings.popToRootTimeout.interval
         guard interval > 0 else {
             core.palette.prepare(mode: .launcher)

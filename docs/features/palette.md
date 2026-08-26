@@ -65,10 +65,16 @@ chat drops its last attachment, and anything else returns to a fresh launcher. E
 from backspace at exactly this step, which is what made the file's own "ordered like a bare backspace"
 only nearly true.
 
-Dismissing with text — the toggle hotkeys, Escape, or clicking away — keeps the query for
-`PaletteWindowController.typedQueryGrace` (30 s), whatever Pop to Root Search is set to, so glancing at
-the window behind and coming back does not lose it. The next summon consumes the preserved state exactly
-as a within-timeout reopen already did.
+Dismissing mid-work — the toggle hotkeys, Escape, or clicking away — keeps what was there for
+`PaletteWindowController.workInProgressGrace` (30 s), whatever Pop to Root Search is set to, so glancing
+at the window behind and coming back does not lose it. The next summon consumes the preserved state
+exactly as a within-timeout reopen already did.
+
+**Mid-work means typed text or any sub-screen**, because both are something started and neither is
+finished. Being on the AI chat, the clipboard or a file search survives a dismissal the way a
+half-written query does; only an empty root search resets on the Pop to Root Search setting alone. The
+toggle hotkey therefore hides from any screen rather than switching a sub-screen back to root search —
+the chord that summoned a screen has to be able to put it away, and `restoreAnyMode` brings it back.
 
 `PaletteHideReason` is what keeps that honest: closing because an action *ran* (`.actionTaken`, the
 default) resets as before, since the search already did its job — only `.dismissed` holds on. The
