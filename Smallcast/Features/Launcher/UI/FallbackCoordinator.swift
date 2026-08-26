@@ -64,7 +64,9 @@ final class FallbackCoordinator {
         guard !text.isEmpty else { return }
         switch id {
         case .askAI:
-            core.aiCoordinator.askAI(prompt: text)
+            core.aiChatCoordinator.startNewChat()
+            core.aiChatCoordinator.showChat()
+            core.aiChatCoordinator.send(text)
         case .searchWeb:
             openWebSearch(text)
         case .searchFiles:

@@ -1,9 +1,9 @@
 # Window Management
 
-Rectangle-style window actions — halves, quarters, thirds, sizing, nudging, display moves, native
-fullscreen and Space switching — searchable in the palette and bindable to global shortcuts. 32
-commands, no new dependencies and no new permission: they reuse the Accessibility grant clipboard
-paste already needs.
+Rectangle-style window actions — halves, quarters, sixths, thirds, fourths, sizing, nudging, display
+moves, native fullscreen and Space switching — searchable in the palette and bindable to global
+shortcuts. 44 commands, no new dependencies and no new permission: they reuse the Accessibility grant
+clipboard paste already needs.
 
 Ships **off**. Settings › Window Management is the switch, and while it is off there are no launcher
 entries and a still-registered shortcut moves nothing.
@@ -43,7 +43,8 @@ overlay rather than in Foundation.
 
 Adding a command is four edits in `WindowCommand.swift` (a case in `ID`, plus `name`, `symbol` and
 `group` arms), an arm in `WindowLayout.placement` or `tileFractions`, and bumping
-`commands.count == 32` and its group count in the harness.
+`commands.count == 44` and its group count in the harness. A command opening a new family also needs
+a `Group` case and its `title` arm; `ID.allCases` stays in group order.
 
 ## Coordinate space
 
@@ -248,7 +249,7 @@ quantize to zero and the gesture would do nothing.
 
 ## Testing
 
-`Tests/window-command-test.swift` (319 assertions) covers the catalog, the AX-space convention lock,
+`Tests/window-command-test.swift` (388 assertions) covers the catalog, the AX-space convention lock,
 tiling on divisible and non-divisible screens, off-origin and negative-coordinate displays, gap
 arithmetic including degenerate values, sizing, the Make Larger/Smaller round trip, nudges, display
 moves and wrapping, restore recovery, every `WindowActionMemory` rule, and a fuzz sweep over every

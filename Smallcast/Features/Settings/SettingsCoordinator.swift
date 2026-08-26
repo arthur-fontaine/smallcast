@@ -46,8 +46,9 @@ final class SettingsCoordinator {
             .environment(core.quicklinks)
             .environment(core.launchHistory)
             .environment(core.launcherRanking)
-            .environment(core.aiConversations)
-            .environment(core.aiKeys)
+            .environment(core.calendarStore)
+            .environment(core.aiSettings)
+            .environment(core.chatGPTSubscription)
             // Propagates down so the window's materials show through, not each list's backing.
             .scrollContentBackground(.hidden)
     }

@@ -25,33 +25,6 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
   source it applied, so a switch made since, by the user or another app, stands. Never applied globally:
   the panel does not activate, so a global switch would land on whichever app is still frontmost.
 
-
-## Dismissal and the typed query
-
-A half-written search is worth more than a keystroke, so closing the palette treats it as pending work:
-
-- **Escape with text** clears the field and leaves the palette open; a second Escape closes it. An open
-  menu takes Escape first, and inside a running extension command it pops that command's own stack —
-  the extension owns its search bar.
-- **Escape with an empty field** closes, as it always did.
-- **Dismissing with text** — the toggle hotkeys, Escape, or clicking away — keeps the query for
-  `PaletteWindowController.typedQueryGrace` (30 s), whatever Pop to Root Search is set to, so glancing
-  at the window behind and coming back doesn't lose it. The next summon consumes the preserved state
-  exactly as a within-timeout reopen already did.
-
-`PaletteHideReason` is what keeps that honest: closing because an action *ran* (`.actionTaken`, the
-default) resets as before, since the search already did its job — only `.dismissed` holds on. The three
-dismissal sites name themselves; everything else inherits the safe default.
-
-Clearing routes through `CalculatorCoordinator.clearSearch`, because emptying the field is also the
-moment a calculation stops being edited and can still be remembered. See
-[calculator.md](calculator.md).
-
-An extension's own form fields are the exception, and they never reach that handler: AppKit gives Escape
-to the field editor first, which reverts the field itself. See
-[Chords `onKeyPress` never sees](#chords-onkeypress-never-sees) for why the panel then has to hand focus
-back, or the second Escape lands nowhere.
-
 ## Summoning
 
 ```
@@ -76,6 +49,27 @@ back, or the second Escape lands nowhere.
 Everything resolved "once per summon" is resolved there deliberately, not per render. `AppCore` holds
 only the closure wiring; the behaviour is `PaletteCoordinator`'s.
 
+## Dismissal and the typed query
+
+`PaletteEscapeAction.resolve` orders one Escape press: an open menu closes, then a non-empty query
+clears, then an extension command's own stack pops, and only an empty field on the launcher closes the
+palette. Clearing routes through `CalculatorCoordinator.clearSearch`, because emptying the field is also
+the moment a calculation stops being edited and can still be remembered. See
+[calculator.md](calculator.md).
+
+Dismissing with text — the toggle hotkeys, Escape, or clicking away — keeps the query for
+`PaletteWindowController.typedQueryGrace` (30 s), whatever Pop to Root Search is set to, so glancing at
+the window behind and coming back does not lose it. The next summon consumes the preserved state exactly
+as a within-timeout reopen already did.
+
+`PaletteHideReason` is what keeps that honest: closing because an action *ran* (`.actionTaken`, the
+default) resets as before, since the search already did its job — only `.dismissed` holds on. The
+dismissal sites name themselves; everything else inherits the safe default.
+
+An extension's own form fields never reach that handler: AppKit gives Escape to the field editor first,
+which reverts the field itself. See [Chords `onKeyPress` never sees](#chords-onkeypress-never-sees) for
+why the panel then has to hand focus back, or the second Escape lands nowhere.
+
 ## Screens
 
 `PaletteState` (mode / query / selection / `focusToken`) is the bridge between the panel and the app.
@@ -93,6 +87,7 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 | `.calculatorHistory` | `CalculatorHistoryScreen` | `CalculatorHistoryList` |
 | `.emoji` | `EmojiScreen` | `EmojiGridView` |
 | `.fileSearch` | `FileSearchScreen` | `FileSearchList` (see [file-search.md](file-search.md)) |
+| `.schedule` | `ScheduleScreen` | `ScheduleList` (see [calendar.md](calendar.md)) |
 | `.uninstall` | `UninstallScreen` | `UninstallList` (see [uninstall.md](uninstall.md)) |
 | `.quicklinks` | `QuicklinkListScreen` | `QuicklinkList` |
 | `.quicklinkArguments` | `QuicklinkArgumentsScreen` | `QuicklinkArgumentsView` (see [quicklinks.md](quicklinks.md#the-argument-prompt)) |
@@ -103,7 +98,8 @@ palette indexes into it. Adding a mode means adding a conformer, not a branch in
 Every mode but `.launcher` is a sub-screen that backs out to the launcher. **Tab cycles launcher ↔
 clipboard and nothing else** unless the selected row declares arguments, in which case it walks those
 fields first (see below); the rest are reached by a command or a global hotkey, and Uninstall only
-from a launcher app's Actions menu, scoped to that app.
+from a launcher app's Actions menu, scoped to that app. **Escape clears a non-empty query before it
+hides the palette or exits an extension screen**, so one press clears and the next leaves.
 
 `.aiChat` is the second mode where the search field is a composer rather than a filter; the argument
 screen below is the first, and `showActionGroup` names both.
@@ -112,7 +108,8 @@ The argument screen is the one mode where the search field is not a search field
 argument's input, so its placeholder names that argument and ↵ submits rather than activating a row.
 Its own state lives on `AppCore.quicklinkArguments`, the way `.uninstall`'s target lives on
 `UninstallSession`, and leaving the mode cancels the pending open. A bare backspace steps back an
-argument before it falls through to the usual exit-to-launcher.
+argument before it falls through to the usual exit-to-launcher; Escape erases the half-typed answer
+first, and a second press hides the palette, which ends the pending open with it.
 
 ### Inline command arguments
 
@@ -132,8 +129,8 @@ The typed values live on `PaletteState.commandArguments`, keyed by
 `PaletteState.argumentKey(entryID, name)`, and are cleared with the rest of the screen.
 
 The flat `selection` index is the single source of truth for highlight / activation and **must always
-match the visible row order**, including the inline calculator card at index 0 when present (see
-[calculator.md](calculator.md)).
+match the visible row order**, including the card at index 0 when present — the calculator's (see
+[calculator.md](calculator.md)) or the meeting join card (see [calendar.md](calendar.md)), never both.
 
 ## Window placement
 
@@ -306,11 +303,15 @@ frozen instead:
 
 ## Chords `onKeyPress` never sees
 
-Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Three kinds do not, and all of them are handled in
+Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Four kinds do not, and all of them are handled in
 `PalettePanel.sendEvent` before `super` hands the event to the responder chain:
 
 - **A bare backspace** — the field editor consumes it as an edit (`onBareBackspace`).
 - **Chords with no main menu item** — ⌘, and ⌘w, which an app with a menu bar would never see here.
+- **The physical number-row slots.** `FavoriteSlots` matches ⌘1…⌘0 by key code before fixed command
+  chords, then publishes the resolved position to the active screen. Only the launcher and clipboard
+  screens intercept these slots; other screens keep their own ⌘-number shortcuts. The launcher's
+  compact visibility setting is visual only and does not disable its favorite slots.
 - **Escape inside any field.** `cancelOperation:` reverts the field *and ends editing*, so the panel is
   left with no first responder and the next Escape reaches nothing at all — the palette becomes
   uncloseable from the keyboard. Clearing the field is wanted, so the panel lets it happen and then
@@ -322,7 +323,7 @@ Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Three kinds do not, and a
   which bumps `PaletteState.pinChordToken`; `RootPaletteView` observes that and resolves the row
   through the current screen, so **which** row gets pinned still comes from `screen.rows` alone.
 
-Adding a chord that "does nothing" is almost always one of these three — check `sendEvent` before
+Adding a chord that "does nothing" is almost always one of these four — check `sendEvent` before
 assuming the handler is wrong.
 
 ## Emacs navigation chords

@@ -122,6 +122,12 @@ private struct ExtensionActionRow: View {
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(item.isDestructive ? Color.red : Color.secondary)
                 .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
+        case .asset(let name):
+            Image(name)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .foregroundStyle(item.isDestructive ? Color.red : Color.secondary)
+                .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
         case .file(let path):
             ExtensionIconView(
                 resolved: ExtensionImage.Resolved(source: .file(path)), size: Theme.Size.menuIcon)

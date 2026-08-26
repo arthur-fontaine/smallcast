@@ -13,27 +13,46 @@ struct LauncherList: View {
     let showSections: Bool
     /// Changes only when the list should scroll, so mouse selection never yanks it.
     let scroll: ScrollIntent
-    /// The inline answer, at flat index 0 when present; needs a non-empty query.
-    var calc: CalcResult?
-    var calcSelected = false
-    var onActivateCalc: () -> Void = {}
-    var onCalcActions: () -> Void = {}
+    /// The card at flat index 0, when one leads. At most one ever does.
+    var card: LeadCard?
+    var cardSelected = false
+    var onActivateCard: () -> Void = {}
+    var onCardActions: () -> Void = {}
     let onActivate: (AppEntry) -> Void
     let onActions: (AppEntry) -> Void
     @Environment(RunningAppsMonitor.self) private var runningApps
 
-    private nonisolated static let calcRowID = "calc-card"
+    /// The calculator answers a typed query and the join card an empty one, so they cannot both
+    /// lead — which is what keeps the flat selection index a single-row offset.
+    enum LeadCard: Equatable {
+        case calc(CalcResult)
+        case meeting(MeetingEvent, now: Date)
+
+        var sectionTitle: String {
+            switch self {
+            case .calc: return "Calculator"
+            case .meeting: return "Meeting"
+            }
+        }
+
+        var rowID: String {
+            switch self {
+            case .calc: return "calc-card"
+            case .meeting: return "meeting-card"
+            }
+        }
+    }
 
     private enum Row: Identifiable {
         case header(String)
-        case calc(CalcResult)
+        case card(LeadCard)
         /// `slot` is the row's ⌘-digit, carried from the section build so no row has to search for it.
         case app(AppEntry, slot: Character?)
         case fallback(FallbackRow)
         var id: String {
             switch self {
             case .header(let title): return "header-" + title
-            case .calc: return LauncherList.calcRowID
+            case .card(let card): return card.rowID
             case .app(let app, _): return app.id
             case .fallback(let row): return "fallback-" + row.id
             }
@@ -42,7 +61,7 @@ struct LauncherList: View {
 
     /// Scroll target for the current selection.
     private var selectedRowID: String? {
-        if calcSelected { return Self.calcRowID }
+        if cardSelected { return card?.rowID }
         if let selectedFallbackID { return "fallback-" + selectedFallbackID }
         return selectedID
     }
@@ -53,20 +72,20 @@ struct LauncherList: View {
         return [.header("Use “\(query)” with…")] + fallbacks.map(Row.fallback)
     }
 
-    /// Whether the selection sits on flat index 0: the calc card, else the first result.
+    /// Whether the selection sits on flat index 0: the card, else the first result.
     private var firstRowSelected: Bool {
-        calc != nil ? calcSelected : selectedID != nil && selectedID == results.first?.id
+        card != nil ? cardSelected : selectedID != nil && selectedID == results.first?.id
     }
 
     private var rows: [Row] {
-        var calcRows: [Row] = []
-        if let calc { calcRows = [.header("Calculator"), .calc(calc)] }
+        var cardRows: [Row] = []
+        if let card { cardRows = [.header(card.sectionTitle), .card(card)] }
         guard showSections else {
-            guard !results.isEmpty else { return calcRows + fallbackRows }
-            return calcRows + [.header("Results")] + results.map { .app($0, slot: nil) }
+            guard !results.isEmpty else { return cardRows + fallbackRows }
+            return cardRows + [.header("Results")] + results.map { .app($0, slot: nil) }
                 + fallbackRows
         }
-        var rows: [Row] = calcRows
+        var rows: [Row] = cardRows
         let favorites = results.prefix(favoriteCount)
         let rest = results.dropFirst(favoriteCount)
         var grouped: [AppEntry.Kind: [AppEntry]] = [:]
@@ -80,7 +99,7 @@ struct LauncherList: View {
         }
         // Publication order, so rows match the flat index.
         let kinds: [AppEntry.Kind] = [
-            .application, .systemSettings, .extensionCommand, .quicklink, .snippet,
+            .meeting, .application, .systemSettings, .extensionCommand, .quicklink, .snippet,
             .systemAction, .windowCommand, .customCommand, .command
         ]
         for kind in kinds {
@@ -100,7 +119,7 @@ struct LauncherList: View {
     var body: some View {
         let rows = rows
         return Group {
-            if results.isEmpty && calc == nil && fallbacks.isEmpty {
+            if results.isEmpty && card == nil && fallbacks.isEmpty {
                 EmptyResults(text: "No apps found")
             } else {
                 ScrollViewReader { proxy in
@@ -110,13 +129,13 @@ struct LauncherList: View {
                                 switch row {
                                 case .header(let title):
                                     SectionHeader(title: title, isFirst: row.id == rows.first?.id)
-                                case .calc(let result):
-                                    CalculatorCard(result: result, selected: calcSelected)
+                                case .card(let card):
+                                    LeadCardView(card: card, selected: cardSelected)
                                         .contentShape(Rectangle())
-                                        .onTapGesture(perform: onActivateCalc)
-                                        .onRightClick(perform: onCalcActions)
+                                        .onTapGesture(perform: onActivateCard)
+                                        .onRightClick(perform: onCardActions)
                                         .padding(.bottom, Theme.Spacing.xs)
-                                        .selectionFrame(calcSelected)
+                                        .selectionFrame(cardSelected)
                                 case .app(let app, let slot):
                                     AppRow(
                                         app: app,
@@ -150,6 +169,21 @@ struct LauncherList: View {
                         scroll, row: selectedRowID, atOrigin: firstRowSelected, proxy: proxy)
                 }
             }
+        }
+    }
+}
+
+/// Draws whichever card leads; each feature still owns how its own card looks.
+private struct LeadCardView: View {
+    let card: LauncherList.LeadCard
+    let selected: Bool
+
+    var body: some View {
+        switch card {
+        case .calc(let result):
+            CalculatorCard(result: result, selected: selected)
+        case .meeting(let meeting, let now):
+            MeetingCard(meeting: meeting, now: now, selected: selected)
         }
     }
 }
