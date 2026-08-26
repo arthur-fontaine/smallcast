@@ -109,7 +109,7 @@ version" deletes without a conflict to warn you.
 | **Settings › Miscellaneous** — the currency consent switch | `Calculator/Settings/MiscellaneousSettingsView.swift` | `SettingsTab.miscellaneous` and the `SettingsDetailView` case. Upstream **deleted its own copy of this file**, so the conflict is modify/delete: keep ours |
 | **Calculation autosave** — remember one you only looked at | — | `PaletteState.onWillReset` (declared, and fired at the *start* of `prepare`); `AppCore` wiring it to `calculatorCoordinator.commitCalculation`; `CalculatorCoordinator.commitCalculation` plus the `palette:` and `currencyRates:` init parameters |
 | **Escape hands focus back from a field** | — | `PalettePanel.escapeEndsEditing` / `reportEndOfEditing` and `onFieldEditorEndedEditing`; `PaletteWindowController` bumping `palette.focusToken` from it. Upstream leaves the panel with no first responder |
-| **A typed search survives a dismissal** (30 s) | — | `PaletteHideReason`; `PaletteWindowController.typedQueryGrace`, `hide(restoreFocus:reason:)` and `schedulePopToRoot(reason:)` guarding on `interval > 0`; `PaletteCoordinator.hidePalette(restoreFocus:reason:)`; the four `.dismissed` sites (three toggles, Escape, `windowDidResignKey`) |
+| **Work in progress survives a dismissal** (30 s) | — | `PaletteHideReason`; `PaletteWindowController.workInProgressGrace`, `hide(restoreFocus:reason:)` and `schedulePopToRoot(reason:)` — whose `workInProgress` condition is **typed text *or* any non-launcher mode**, and which guards on `interval > 0`; `PaletteCoordinator.hidePalette(restoreFocus:reason:)` and its `togglePalette` hiding from any screen rather than only root search; the four `.dismissed` sites (three toggles, Escape, `windowDidResignKey`) |
 | **Consent before any exchange-rate fetch** | — | `Calculator/Service/CurrencyRateStore.swift` — `isEnabled`, `setEnabled`, `refreshNow`, `provider`, `providerURL`, and the gate in `init`, `start` and `fetchAndStore`. Upstream fetches unconditionally |
 | **Derived units** — `100km / 2hr`, `$30/hr * 40hr` | `Calculator/Model/CalcDimension.swift` (`CalcDimension`, `CompoundUnit`, `UnitFormatting`) | `CalcQuantity`: `QuantityValue.Kind.compound`, `unitForm`, `narrowed`, `composed`, the `^` whole-power branch, the `.compound` arms of `multiply` / `divide` / `addOrSubtract` / `convertedResult`, `compoundResult`, and `allowBareUnit` threaded through `parseExpression` / `parseOperand` / `parsePrefix` |
 | **Money as a dimension** — what makes a rate possible | — | `CalcUnits`: `UnitCategory.money`, `UnitDef.currency`, `UnitDef.priced(at:)`; `CalcCurrency.unitDef` |
@@ -173,6 +173,9 @@ no test covered the hook. Check these by hand, every time:
   calculation that was on screen.
 - **Escape on a sub-screen goes back, it does not close.** Only the launcher's own Escape dismisses.
 - **⌥↵ with text asks the AI**, and **Tab walks a row's argument fields** before it toggles anything.
+- **The toggle hotkey in a sub-screen dismisses**, and reopening within 30 s brings that screen back.
+- **The caret in an extension's argument field is dark in Light mode** — upstream hardcodes `.white`
+  there, so "take stage 3" restores the bug with no conflict.
 - **Escape inside an extension's form field** clears the field and leaves the palette closeable.
 - **Reopening within 30 s of dismissing keeps what was typed.** Lost once.
 - **A typo still finds the app** (`chorme` → Google Chrome), and `finder` still does *not* find Find My. Lost once.

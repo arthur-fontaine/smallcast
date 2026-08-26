@@ -33,8 +33,10 @@ final class PaletteCoordinator {
             ? windowController.previousApp : NSWorkspace.shared.frontmostApplication
     }
 
+    /// Hides from any screen, not just root search: the chord that summoned a sub-screen has to be
+    /// able to put it away again, and `restoreAnyMode` brings that screen back on the next press.
     func togglePalette() {
-        if windowController.isVisible, palette.mode == .launcher {
+        if windowController.isVisible {
             hidePalette(reason: .dismissed)
         } else {
             showPalette(mode: .launcher, restoreAnyMode: true)
