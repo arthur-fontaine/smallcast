@@ -22,6 +22,7 @@ struct AboutView: View {
     }()
 
     private static let iconSize: CGFloat = 88
+    private static let supportTile: CGFloat = 30
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,10 +32,12 @@ struct AboutView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Theme.Spacing.lg)
                 }
+                .settingsAnchor(.aboutAbout)
                 links
                 support
             }
             .formStyle(.grouped)
+            .settingsScrollTarget(.about)
 
             // Outside the form, so the copyright stays pinned to the bottom edge.
             footer
@@ -64,9 +67,13 @@ struct AboutView: View {
                     .overlay(
                         Capsule().strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
                     )
-                Button("Check for Updates…") { core.updateCoordinator.checkForUpdates() }
-                    .buttonStyle(.link)
-                    .font(.caption)
+                Button {
+                    core.updateCoordinator.checkForUpdates()
+                } label: {
+                    SettingsRowTitle(.aboutAbout, "Check for Updates")
+                }
+                .buttonStyle(.link)
+                .font(.caption)
             }
 
             Text("A tiny, native macOS launcher.")
@@ -81,26 +88,36 @@ struct AboutView: View {
                 AboutLinkRow(link: link)
             }
         } header: {
-            Text("Links")
+            SettingsSectionHeader(.aboutLinks)
         }
     }
 
     private var support: some View {
         Section {
-            HStack(alignment: .top, spacing: Theme.Spacing.lg) {
-                Image(systemName: "bolt.fill")
-                    .foregroundStyle(Theme.Colors.brand)
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Text("Buy Me Brave Origin")
-                    Text(
-                        "If you enjoy my work and would like to support me or buy me Brave Origin,"
-                            + " feel free to reach out on Discord, X, or via email."
+            HStack(spacing: Theme.Spacing.xl) {
+                // Brand is a fixed hue, so an alpha on it holds up in both appearances.
+                RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                    .fill(Theme.Colors.brand.opacity(0.16))
+                    .frame(width: Self.supportTile, height: Self.supportTile)
+                    .overlay(
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Theme.Colors.brand)
                     )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                    SettingsRowTitle(.aboutLinks, "Support")
+                        .font(.body.weight(.medium))
+                    Text("Free and open source, funded out of pocket.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                Spacer(minLength: Theme.Spacing.lg)
+                Button("Support…") { core.supportCoordinator.showSupport() }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.Colors.brand)
             }
+            .padding(.vertical, Theme.Spacing.xs)
         }
     }
 
