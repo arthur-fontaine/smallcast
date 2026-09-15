@@ -11,6 +11,8 @@ final class PalettePanel: NSPanel {
 
     /// Bare backspace, which the field editor swallows before `onKeyPress` could see it.
     var onBareBackspace: (() -> Bool)?
+    /// Editing ended with no first responder left, so the next keystroke would reach nothing.
+    var onFieldEditorEndedEditing: (() -> Void)?
     /// Escape, which an `AVPlayerView` in the preview answers before `onKeyPress` could see it.
     var onEscape: (() -> Bool)?
     /// Command chords the field editor swallows, plus the ones no main menu handles.
@@ -202,7 +204,23 @@ final class PalettePanel: NSPanel {
         {
             return
         }
+        let endsEditing = escapeEndsEditing(event)
         super.sendEvent(event)
+        if endsEditing { reportEndOfEditing() }
+    }
+
+    /// Escape is `cancelOperation:`, so the field editor ends editing before `onKeyPress` sees it.
+    private func escapeEndsEditing(_ event: NSEvent) -> Bool {
+        event.type == .keyDown && Int(event.keyCode) == kVK_Escape && fieldEditor != nil
+            && paletteState?.isComposing != true
+    }
+
+    /// Next turn: AppKit tears the field editor down only after the event returns.
+    private func reportEndOfEditing() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.fieldEditor == nil else { return }
+            self.onFieldEditorEndedEditing?()
+        }
     }
     init<Content: View>(rootView: Content) {
         super.init(

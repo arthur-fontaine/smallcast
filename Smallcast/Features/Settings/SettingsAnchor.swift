@@ -71,6 +71,7 @@ extension SettingsAnchor {
     static let windowManagementOptions = Self(tab: .windowManagement, title: "Options")
 
     static let clipboardClipboard = Self(tab: .clipboard, title: "Clipboard")
+    static let clipboardLauncher = Self(tab: .clipboard, title: "In the Launcher")
     static let clipboardCommands = Self(tab: .clipboard, title: "Commands")
     static let clipboardHistory = Self(tab: .clipboard, title: "History")
     static let clipboardDisabledApplications = Self(

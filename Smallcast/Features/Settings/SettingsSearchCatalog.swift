@@ -275,6 +275,7 @@ enum SettingsSearchCatalog {
         .init(.aiDefault, "Default model", keywords: ["llm", "gpt", "claude"]),
         .init(.aiDefault, "Reasoning effort", keywords: ["thinking", "effort", "deepseek"]),
         .init(.aiChat, "Web search", keywords: ["browse", "internet"]),
+        .init(.aiChat, "Ask from the launcher", keywords: ["chord", "option return", "tab", "shortcut"]),
         .init(
             .aiConversations, "Opens to",
             keywords: ["new chat", "last", "summon"]),
@@ -423,6 +424,7 @@ enum SettingsSearchCatalog {
         .init(
             pane: .clipboard,
             keywords: ["paste", "history", "copy", "pasteboard"]),
+        .init(.clipboardLauncher, "Tab opens the clipboard", keywords: ["tab", "ring", "cycle"]),
         .init(
             .clipboardClipboard, "Enable Clipboard History",
             keywords: ["disable", "turn off", "monitor", "record", "privacy"]),

@@ -39,6 +39,8 @@ final class SettingsCoordinator {
             .environment(core)
             .environment(core.settings)
             .environment(core.appIndex)
+            .environment(core.launchHistory)
+            .environment(core.launcherRanking)
             .environment(core.hotKeys)
             .environment(core.visibility)
             .environment(core.aliases)

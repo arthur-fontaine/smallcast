@@ -7,6 +7,7 @@ final class AppCore {
     static let shared = AppCore()
 
     let launcherRanking: LauncherRankingStore
+    let launchHistory = LaunchHistoryStore()
     let appIndex: AppIndex
     let customCommands = CustomCommandStore()
     let quicklinks = QuicklinkStore()
@@ -119,7 +120,7 @@ final class AppCore {
         core: self)
 
     @ObservationIgnored private(set) lazy var launcherCoordinator = LauncherCoordinator(
-        ranking: launcherRanking, windowController: windowController,
+        ranking: launcherRanking, launchHistory: launchHistory, windowController: windowController,
         paletteCoordinator: paletteCoordinator,
         settingsCoordinator: settingsCoordinator,
         customCommandCoordinator: customCommandCoordinator,
@@ -143,7 +144,8 @@ final class AppCore {
         frequentEmoji: frequentEmoji, settings: settings, windowController: windowController,
         paletteCoordinator: paletteCoordinator)
     @ObservationIgnored private(set) lazy var calculatorCoordinator = CalculatorCoordinator(
-        calcHistory: calcHistory, paletteCoordinator: paletteCoordinator, core: self)
+        calcHistory: calcHistory, palette: palette, currencyRates: currencyRates,
+        paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var calendarCoordinator = CalendarCoordinator(
         store: calendarStore, clock: meetingClock, appIndex: appIndex, settings: settings,
         paletteCoordinator: paletteCoordinator, core: self)
@@ -251,6 +253,8 @@ final class AppCore {
             Task { await appIndex.refresh() }
             Task { await emojiIndex.load() }
             currencyRates.start()
+            // A reset is where a calculation stops being edited, so that's where it is remembered.
+            palette.onWillReset = { [weak self] in self?.calculatorCoordinator.commitCalculation() }
             updateChecker.onUpdateAvailable = { [weak self] release in
                 self?.updateCoordinator.presentIfAvailable(release) ?? true
             }

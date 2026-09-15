@@ -24,6 +24,7 @@ extension View {
             .environment(core.aliases)
             .environment(core.fallbacks)
             .environment(core.calcHistory)
+            .environment(core.launchHistory)
             .environment(core.currencyRates)
             .environment(core.emojiIndex)
             .environment(core.frequentEmoji)

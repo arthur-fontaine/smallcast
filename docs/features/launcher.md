@@ -112,14 +112,15 @@ are it, not a tuning parameter.
 | `owner · exact` | 2_500 | | `translation · subsequence` | 800 |
 | `name · wordStart` | 2_400 | | `technical · wordStart` | 700 |
 | `translation · prefix` | 2_200 | | `technical · substring` | 600 |
-| `owner · prefix` | 2_000 | | | |
+| `owner · prefix` | 2_000 | | `name · typo` | 500 |
 | `name · substring` | 1_800 | | | |
 | `translation · wordStart` | 1_700 | | | |
 | `owner · wordStart` | 1_500 | | | |
 
 Read it two ways and both hold: fix a role and walk the tiers, or fix a tier and walk the roles —
 strictly decreasing either way. The cells `Looseness` refuses do not exist, so a literal-only role
-has no subsequence rung and the full bundle id is exact-only.
+has no subsequence rung and the full bundle id is exact-only. `name · typo` sits under the pool on
+purpose — see [Typo tolerance](#typo-tolerance).
 
 Three inequalities make the table binding, each asserted in `fuzz-test` over the published constants:
 
@@ -150,6 +151,21 @@ order. For the same reason a bundle id is matched with its leading component str
 (`apple.Photos`, not `com.apple.Photos`): `com` alone prefixes almost every installed app. The full id
 rides along as a second alias tightened to `Looseness.exact`, so a pasted identifier resolves and
 nothing looser can flood off it.
+
+### Typo tolerance
+
+`FuzzyMatch.Tier.typo` is the last resort: a query close enough to be a misspelling of the display
+name, or of one of its words (`managment` → Window Management). Its one cell, `name · typo`
+(`SearchRelevance.typoCell`, 500), sits *below* the whole pool on purpose — a typo can never outrank a
+real match, which is what keeps the feature from reordering anything you actually typed correctly.
+Only the display name has the cell: a translation, an owner or an identifier never typo-matches.
+
+The distance allowed (`FuzzyMatch.allowedDistance(forQueryLength:)`) scales with the query, and
+deliberately tightly: none under four characters, then roughly one edit per four. Two edits on a
+six-letter word made `finder` a hit for *Find My*, so the bound is narrow enough that `cat` is not a
+typo of *Chess* and `wick` does not reach *WhatsApp*. The distance is a bounded Damerau–Levenshtein
+against the best *prefix* of the candidate from each word start, so trailing characters are free.
+`fuzz-test` pins all of it. This tier is Smallcast's own; see [upstream.md](../upstream.md).
 
 ## One fold, everywhere
 
@@ -681,6 +697,32 @@ the move `selectFavorite` already makes. The palette stays open on the same quer
 untouched. One function answers both the menu row and the chord, and it re-tests eligibility rather
 than trusting the caller, so ⇧⌘H falls through to whatever else wants the press on a row that offers
 no such menu item.
+
+## The Recent list
+
+↑ from the empty launcher opens `PaletteMode.recent`: what you just did, newest first, under the same
+day headers the clipboard and calculator histories use. `LaunchHistoryStore` (`Launcher/Model/`) is
+the log and `HistoryFeed` (`Launcher/Service/`) merges it with the calculator history into one
+`HistoryItem` stream, so a remembered launch and a remembered calculation sort together. The screen
+is pushed, so Escape and the back chevron return to the launcher.
+
+It is a separate log from `LauncherRankingStore` on purpose, and the two record on different rules.
+Ranking learns query→entry pairs, so `LauncherCoordinator.launch` records there only when a query
+actually named the row — a category listing does not, or the row would rank under "s". The Recent
+list records **every** launch, query or not, because it is about what happened and not about what was
+typed.
+
+Rows are the launcher's and the calculator history's own views (`AppRow` and `CalcHistoryRow`, which
+is why neither is `private`), so an entry looks exactly as it does where it came from. The ⌘K menu is
+the underlying item's own menu plus **Remove from History** and **Clear History**. Reordering
+favorites is absent there: those rows need the visible favorites order, which this screen does not
+have, so `RecentScreen` hands `AppActionsMenu` a `FavoriteActions` whose move rows are switched off
+rather than a store call that would act on the wrong index.
+
+Settings › Search shows and resets what the ranking learned (`SearchSettingsView`,
+`Launcher/Settings/`), by time window through `LauncherRankingStore.reset(since:)`; clearing there is
+independent of clearing the Recent list. The list and the pane are Smallcast's own; see
+[upstream.md](../upstream.md).
 
 ## Reveal in Finder
 

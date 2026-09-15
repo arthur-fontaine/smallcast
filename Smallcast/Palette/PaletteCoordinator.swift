@@ -46,7 +46,7 @@ final class PaletteCoordinator {
 
     func togglePalette() {
         if isShowing(.launcher) {
-            hidePalette()
+            hidePalette(reason: .dismissed)
         } else {
             showPalette(mode: .launcher, restoreAnyMode: true)
         }
@@ -55,7 +55,7 @@ final class PaletteCoordinator {
     /// A carried query always opens: it is new input, not the second press that would close.
     func togglePalette(mode: PaletteMode, seeding query: String? = nil) {
         if isShowing(mode), query == nil {
-            hidePalette()
+            hidePalette(reason: .dismissed)
         } else {
             showPalette(mode: mode, seeding: query)
         }
@@ -88,11 +88,14 @@ final class PaletteCoordinator {
         if palette.mode == .launcher { Task { await appIndex.refresh() } }
     }
 
-    func hidePalette(restoreFocus: Bool = true) {
+    /// `reason` defaults to `.actionTaken`: every caller that hides the palette because something ran
+    /// wants the next summon to start clean. The dismissal paths (Escape, the toggle hotkeys and
+    /// clicking away) say so explicitly, and only those hold on to what was typed.
+    func hidePalette(restoreFocus: Bool = true, reason: PaletteHideReason = .actionTaken) {
         fileSearch.cancel()
         menuSearch.reset()
         windowSwitch.reset()
-        windowController.hide(restoreFocus: restoreFocus)
+        windowController.hide(restoreFocus: restoreFocus, reason: reason)
     }
 
     /// Reset to the root search now rather than after the Pop to Root Search delay.

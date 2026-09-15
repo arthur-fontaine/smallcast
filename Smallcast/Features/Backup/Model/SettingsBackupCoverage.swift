@@ -52,7 +52,9 @@ enum SettingsBackupCoverage {
         "calendarMenuBarDisplay": .calendarMenuBarDisplay,
         "menuBarLinkedEventsOnly": .menuBarLinkedEventsOnly,
         "hideCurrentEvent": .hideCurrentEvent,
-        "supportReminders": .supportReminders
+        "supportReminders": .supportReminders,
+        "aiChord": .aiChord,
+        "tabOpensClipboard": .tabOpensClipboard
     ]
 
     /// The `SettingsData` fields no `AppSettings` key stands behind, and what they read instead.

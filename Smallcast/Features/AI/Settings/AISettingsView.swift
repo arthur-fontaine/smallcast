@@ -123,7 +123,16 @@ struct AISettingsView: View {
 
     private var chatSection: some View {
         @Bindable var settings = settings
+        @Bindable var appSettings = appSettings
         return Section {
+            Picker(selection: $appSettings.aiChord) {
+                ForEach(PaletteAIChord.allCases) { chord in
+                    Text(chord.title).tag(chord)
+                }
+            } label: {
+                SettingsRowTitle(.aiChat, "Ask from the launcher")
+                Text("Sends what you typed in root search, whether or not anything matched it.")
+            }
             Toggle(isOn: $settings.webSearchEnabled) {
                 SettingsRowTitle(.aiChat, "Web search")
                 Text(

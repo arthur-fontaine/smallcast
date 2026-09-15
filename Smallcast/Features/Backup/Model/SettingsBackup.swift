@@ -76,6 +76,8 @@ struct SettingsBackup: Codable {
         var hideCurrentEvent: Int?
         // Safe to carry: it silences a prompt rather than granting anything.
         var supportReminders: Bool?
+        var aiChord: String?
+        var tabOpensClipboard: Bool?
     }
 
     /// One entry per bindable action. docs/features/hotkeys.md#persistence
@@ -164,7 +166,9 @@ extension SettingsBackup {
             calendarMenuBarDisplay: s.calendarMenuBarDisplay.rawValue,
             menuBarLinkedEventsOnly: s.menuBarLinkedEventsOnly,
             hideCurrentEvent: s.hideCurrentEvent.rawValue,
-            supportReminders: s.supportRemindersEnabled)
+            supportReminders: s.supportRemindersEnabled,
+            aiChord: s.aiChord.rawValue,
+            tabOpensClipboard: s.tabOpensClipboard)
 
         let hk = core.hotKeys
         var hotkeys = HotkeyBackup()
@@ -455,6 +459,14 @@ extension SettingsBackup {
         }
         if let raw = s.hideCurrentEvent, let hide = HideCurrentEvent(rawValue: raw) {
             settings.hideCurrentEvent = hide
+            count += 1
+        }
+        if let raw = s.aiChord, let chord = PaletteAIChord(rawValue: raw) {
+            settings.aiChord = chord
+            count += 1
+        }
+        if let flag = s.tabOpensClipboard {
+            settings.tabOpensClipboard = flag
             count += 1
         }
         if let flag = s.supportReminders {

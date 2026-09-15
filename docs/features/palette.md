@@ -95,6 +95,7 @@ answers through `perform(_:at:)`, so a new chord never adds a cast to the shell.
 | `.launcher` | `LauncherScreen` | `LauncherList` |
 | `.clipboard` | `ClipboardScreen` | `ClipboardList` + preview |
 | `.calculatorHistory` | `CalculatorHistoryScreen` | `CalculatorHistoryList` |
+| `.recent` | `RecentScreen` | `RecentList` (see [launcher.md](launcher.md#the-recent-list)) |
 | `.emoji` | `EmojiScreen` | `EmojiGridView` |
 | `.fileSearch` | `FileSearchScreen` | `FileSearchList` (see [file-search.md](file-search.md)) |
 | `.schedule` | `ScheduleScreen` | `ScheduleList` (see [calendar.md](calendar.md)) |
@@ -147,7 +148,24 @@ whole stack for that same root search from any depth.
 
 `EscapeKeyBehavior` (General settings) can trade the walk back for the old behavior: under
 `closeAndPopToRoot` an empty field closes the window and resets it immediately, whatever Pop to Root
-Search says. Clearing the query is still the first press either way.
+Search says. Clearing the query is still the first press either way. Clearing routes through
+`CalculatorCoordinator.clearSearch`, because emptying the field is also the moment a calculation stops
+being edited and can still be remembered. See [calculator.md](calculator.md).
+
+#### Dismissal and the typed query
+
+Dismissing mid-work — the toggle hotkeys, Escape, or clicking away — keeps what was there for
+`PaletteWindowController.workInProgressGrace` (30 s), whatever Pop to Root Search is set to, so glancing
+at the window behind and coming back does not lose it. The next summon consumes the preserved state
+exactly as a within-timeout reopen already did.
+
+**Mid-work means typed text or any sub-screen**, because both are something started and neither is
+finished. Being on the AI chat, the clipboard or a file search survives a dismissal the way a
+half-written query does; only an empty root search resets on the Pop to Root Search setting alone.
+`PaletteHideReason` is what keeps that honest: closing because an action *ran* (`.actionTaken`, the
+default) resets as before, since the search already did its job — only `.dismissed` holds on. The
+dismissal sites name themselves; everything else inherits the safe default. The grace is Smallcast's
+own; see [upstream.md](../upstream.md).
 
 The header draws a back chevron on **every** screen but the launcher: leaving is what the icon
 slot means once you are off the root, and a slot that changed shape with provenance would read
@@ -168,6 +186,11 @@ still a `.freshScreen`: that field holds a half-written message rather than a qu
 dropped into a filter matches nothing. `.ask` is its own case rather than a `carryQuery(.ai)` because
 the text is submitted, not seeded, and the hint reads the case back out (`== .ask`) instead of
 restating the rule.
+
+Settings › Clipboard's **Tab opens the clipboard** switch (`AppSettings.tabOpensClipboard`) is the
+ring's off switch: off, Tab still walks a row's argument fields and still steps *back* to the launcher,
+but never steps into chat or the clipboard. Independently, `AppSettings.aiChord` hands a typed root
+query to the AI on ⌥↵ (default), ⌃↵ or ⇥ — see [ai.md](ai.md#asking-from-the-launcher).
 
 **A ring hop is a step, so Escape walks back out the way Tab came in** — launcher → chat → clipboard
 takes two presses to unwind, and the back chevron's tooltip stops promising a step it cannot take.
@@ -488,6 +511,11 @@ handled in `PalettePanel.sendEvent` before `super` hands the event to the respon
   `onKeyPress(keys: ["."])` never fires. Pin (⌘.) therefore arrives through `onCommandShortcut`,
   which bumps `PaletteState.pinChordToken`; `RootPaletteView` observes that and resolves the row
   through the current screen, so **which** row gets pinned still comes from `screen.rows` alone.
+- **Escape inside any field.** `cancelOperation:` reverts the field *and ends editing*, so the panel is
+  left with no first responder and the next Escape reaches nothing at all — the palette becomes
+  uncloseable from the keyboard. Clearing the field is wanted, so the panel lets it happen and then
+  bumps `focusToken` through `onFieldEditorEndedEditing`, which puts focus back on the search field.
+  Only when the field editor really went away, and never mid-composition, where Escape cancels the IME.
 - **Chords the window server keeps for itself.** ⌘⎋ is the one that bites: macOS binds it before any
   app sees it, so unlike ⌘. there is no keystroke left for `sendEvent` to intercept — a handler in
   the responder chain compiles, runs never, and looks like a palette bug. `CommandEscapeTap` takes it

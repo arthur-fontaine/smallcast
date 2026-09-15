@@ -128,7 +128,7 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
 
 `AIModelSelection` has five cases: `.appleIntelligence`, `.codex`, `.claude`, `.openCode` and `.api`.
 The first needs no connection at all. The next three name a model from an installed command and carry
-no credential. `.api` points at one `AIConnection`; `AIProviderKind` exposes four named presets plus a
+no credential. `.api` points at one `AIConnection`; `AIProviderKind` exposes six named presets plus a
 custom OpenAI-compatible route. Decoding still accepts the old `.chatGPT` spelling and writes it back
 as `.codex`, so an existing selection survives the rename.
 
@@ -142,7 +142,39 @@ as `.codex`, so an existing selection survives the rename.
 | Anthropic Claude | Anthropic Messages | `https://api.anthropic.com` |
 | Google Gemini | Gemini's OpenAI-compatible API | `https://generativelanguage.googleapis.com/v1beta/openai` |
 | OpenRouter | OpenAI-compatible | `https://openrouter.ai/api/v1` |
+| Ollama | OpenAI-compatible | `http://localhost:11434/v1` |
+| LM Studio | OpenAI-compatible | `http://localhost:1234/v1` |
 | OpenAI Compatible | OpenAI-compatible | user-editable |
+
+The two local presets are Smallcast's own (see [upstream.md](../upstream.md)) and are the same
+transport pointed at a loopback port, not a second one: Ollama and LM Studio both serve OpenAI Chat
+Completions under `/v1`, so nothing about the request or the stream differs. Both ports are the
+installer defaults and are configurable in those apps, so the field stays editable like any other. A
+loopback address needs no API key, and `AIEndpointPolicy` already permits `http` only there.
+
+**Neither local port is assumed.** Choosing either preset in `AIConnectionEditorSheet` asks that server
+where it actually is, through `adoptLocalAddress(for:)`. The two answers come from different places:
+
+| | Asked | Why that source |
+| --- | --- | --- |
+| LM Studio | `lms server status --json` | Its CLI reports the *configured* port whether or not the server is up, in about 0.12 s |
+| Ollama | `OLLAMA_HOST`, then `launchctl getenv OLLAMA_HOST` | It publishes no status command; that variable is what [its own FAQ](https://docs.ollama.com/faq#how-can-i-expose-ollama-on-my-network) tells macOS users to set |
+
+`OLLAMA_HOST` is a *bind* address, and the FAQ's own example is `0.0.0.0`. Every wildcard resolves to
+`localhost`, because no request can be sent to one. A bare number is a port, a host with no port keeps
+11434, an IPv6 literal is bracketed for the URL, and a value carrying `https://` keeps it. The static
+defaults stay the fallback for a machine with no `lms`, an unset `OLLAMA_HOST`, or an answer that is
+not a usable port. A seed replaces only an address still equal to the preset's own default, so the
+user's own typing and a deliberately saved URL both survive.
+
+**The LM Studio row says whether the server is up, and starts it if not.** The connection editor is
+where someone finds out the endpoint is dead, so it reports running / stopped with the port `lms`
+named, and a start that worked re-fires discovery. There is no Stop button, deliberately: the server
+may be answering something other than Smallcast. `LMStudioServerStatus` and `OllamaHost` hold the
+parsing so `ai-provider-test` covers every accepted and rejected form; the spawns live in `Service/`
+behind a watchdog. `acceptsUnlistedModels` is what the two presets share with the custom route: a
+local server serves whatever was pulled, so a model discovery never reported still has to be nameable
+by hand. Discovery also drops any model whose id reads as an embedding one (`AIModelDiscovery.isEmbedding`).
 
 The base URL stays editable for every preset because gateways and organization proxies are legitimate
 destinations. `AIHTTPConfiguration.endpointURL` accepts a complete endpoint or appends the transport's
@@ -236,6 +268,20 @@ repair a message left streaming gets.
 `ChatHistoryStore` writes `ai-chats.sqlite3` below the bundle-specific Application Support directory.
 It uses the system SQLite already linked by Smallcast, stores no provider credentials, and repairs a
 reply left streaming by a prior process into an interrupted failure when loaded.
+
+## Asking from the launcher
+
+`AppSettings.aiChord` is a `PaletteAIChord` — ⌥↵ (default), ⌃↵ or ⇥ — and hands what is typed in root
+search straight to `AIChatCoordinator.ask`, the same call upstream's Tab `.ask` and the AI Chat
+fallback row make, so none of the three can answer differently. Deliberately a fixed set rather than a
+`ShortcutRecorder`: that records a *global* Carbon chord, which this is not.
+
+It fires from root search only, with something typed, no menu open, and AI on. It is never gated on the
+rows — a query that matched nothing is exactly when it is most wanted. ⌥↵ is free on the launcher:
+`pasteKeepingWindowOpen` is the protocol's own `false` there. `PaletteAIChord` names its own key and
+modifier rather than SwiftUI's `EventModifiers`, so the file stays Foundation-only and
+`ai-provider-test` can pin the stored spellings — they ride settings backups, so renaming one would
+silently reset the setting. The chord is Smallcast's own; see [upstream.md](../upstream.md).
 
 ## Palette integration
 

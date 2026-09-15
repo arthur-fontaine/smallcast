@@ -552,6 +552,24 @@ Money rounds to two decimals (`CalcFormatter.currency`), widening to four signif
 cent — in _plain_ notation, deliberately not `%g`, so `1 IDR to USD` reads `0.00005539 USD` rather
 than `5.539e-05`.
 
+### Consent
+
+Nothing is contacted until the switch in Settings › Miscellaneous is on. The consent flag lives on
+`CurrencyRateStore`, not in `AppSettings`, so no settings import can grant network access. It is off
+when absent, which is the only safe default for a network feature, and it gates three places: the
+constructor does not even read a snapshot left on disk, `start()` runs no loop, and `fetchAndStore()`
+refuses. Turning it off cancels the loop, drops the in-memory table, and deletes the cache file.
+The sheet that turns it on names the provider, how often it is contacted, and what leaves the Mac —
+nothing you type, no account, no identifiers. Upstream fetches unconditionally; the gate is
+Smallcast's, see [upstream.md](../upstream.md).
+
+### Month and year units
+
+`month` (`mo`) and `year` (`yr`) are time units, so a rate over either converts like any other:
+`$100/month * 12month` is `1,200.00 USD`. Calendar months and years vary, so a *rate* over one can only
+mean the average — a Gregorian year is 365.2425 days and a month exactly a twelfth of it. Date math
+(`today + 3 months`) stays with `CalcDateTime`, which walks the real calendar.
+
 ## Result and rendering
 
 `CalcResult` carries an `expression` (left), a `display` / `copyText` payload (right), and optional
@@ -562,6 +580,21 @@ Date answers that display and copy identically also reuse their formatted text.
 When the launcher or Calculator History query evaluates to a result the card is pinned at the top of
 the list (flat selection index 0, shifting rows by one) and Enter copies the answer + records it to
 `CalculatorHistoryStore`.
+
+### Remembering a calculation you only looked at
+
+A calculation is recorded when it stops being edited, not only when it is copied. `PaletteState`
+fires `onWillReset` at the *start* of every screen change, while the query is still readable — the
+one moment a calculation you never acted on can still be kept — and `AppCore` wires that to
+`CalculatorCoordinator.commitCalculation`. Escape clearing the field takes the same path through
+`CalculatorCoordinator.clearSearch`.
+
+Only the two screens that actually show the answer card commit: inside a running extension command
+the search field belongs to the extension, and `1+2` typed into its filter is not a calculation.
+Editing never commits, so `1+2` grown into `1+21` records only the latter, and re-opening within the
+grace period to keep typing replaces the entry rather than adding one.
+`CalculatorHistoryStore.record` drops a repeat of the newest entry, so committing the same thing
+twice is harmless.
 
 ## Additional units and transfer rates
 

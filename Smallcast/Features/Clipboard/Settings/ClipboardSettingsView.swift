@@ -22,6 +22,22 @@ struct ClipboardSettingsView: View {
                 .settingsEnabled(settings.clipboardEnabled)
 
             Section {
+                Toggle(isOn: $settings.tabOpensClipboard) {
+                    SettingsRowTitle(.clipboardLauncher, "Tab opens the clipboard")
+                    Text("From root search, through AI chat and back again. Off leaves Tab to the palette alone.")
+                }
+            } header: {
+                SettingsSectionHeader(.clipboardLauncher)
+            } footer: {
+                Text(
+                    "Tab always walks a selected row's argument fields first; it only reaches the "
+                        + "clipboard when the row declares none."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+
+            Section {
                 Picker(selection: $settings.clipboardRetention) {
                     ForEach(ClipboardRetention.allCases) { retention in
                         Text(retention.title).tag(retention)
