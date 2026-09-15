@@ -91,7 +91,7 @@ struct WindowCommandTests {
 
     static func testCatalog() {
         let commands = WindowCommandCatalog.all
-        expect(commands.count == 35, "catalog contains all 35 agreed commands")
+        expect(commands.count == 45, "catalog contains all 45 agreed commands")
         expect(commands.map(\.id) == WindowCommand.ID.allCases, "catalog covers every ID once")
         expect(
             Set(commands.map { $0.name.lowercased() }).count == commands.count, "names are unique")
@@ -151,7 +151,8 @@ struct WindowCommandTests {
             "every group is represented, in declaration order")
         expect(grouped.first { $0.group == .halves }?.commands.count == 4, "four halves")
         expect(grouped.first { $0.group == .quarters }?.commands.count == 4, "four quarters")
-        expect(grouped.first { $0.group == .fourths }?.commands.count == 2, "two fourths")
+        expect(grouped.first { $0.group == .sixths }?.commands.count == 6, "six sixths")
+        expect(grouped.first { $0.group == .fourths }?.commands.count == 6, "six fourths")
         expect(grouped.first { $0.group == .thirds }?.commands.count == 5, "five thirds")
         expect(grouped.first { $0.group == .sizing }?.commands.count == 11, "eleven sizing commands")
         expect(grouped.first { $0.group == .moving }?.commands.count == 6, "six moving commands")

@@ -1,9 +1,12 @@
 # Window Management
 
-Rectangle-style window actions — halves, quarters, fourths, thirds, sizing, nudging, display moves,
-native fullscreen and Space switching — searchable in the palette and bindable to global shortcuts.
-35 commands, no new dependencies and no new permission: they reuse the Accessibility grant clipboard
-paste already needs.
+Rectangle-style window actions — halves, quarters, sixths, fourths, thirds, sizing, nudging, display
+moves, native fullscreen and Space switching — searchable in the palette and bindable to global
+shortcuts. 45 commands, no new dependencies and no new permission: they reuse the Accessibility grant
+clipboard paste already needs.
+
+The six sixths and the four single fourths are Smallcast's own; upstream ships 35 commands, and its
+`fourths` group holds only First / Last Three Fourths. See [upstream.md](../upstream.md).
 
 Ships **off**. Settings › Window Management is the switch, and while it is off there are no launcher
 entries and a still-registered shortcut moves nothing.
@@ -53,7 +56,7 @@ overlay rather than in Foundation.
 
 Adding a command is four edits in `WindowCommand.swift` (a case in `ID`, plus `name`, `symbol` and
 `group` arms), an arm in `WindowPlacementEngine.placement` or `tileFractions`, and bumping
-`commands.count == 35` and its group count in the harness. A command opening a new family also needs
+`commands.count == 45` and its group count in the harness. A command opening a new family also needs
 a `Group` case and its `title` arm; `ID.allCases` stays in group order.
 
 ## Coordinate space
@@ -275,7 +278,7 @@ quantize to zero and the gesture would do nothing.
 
 ## Testing
 
-`Tests/window-command-test.swift` (357 assertions) covers the catalog, the AX-space convention lock,
+`Tests/window-command-test.swift` (550 assertions) covers the catalog, the AX-space convention lock,
 tiling on divisible and non-divisible screens, off-origin and negative-coordinate displays, gap
 arithmetic including degenerate values, sizing, the Make Larger/Smaller round trip, nudges, display
 moves and wrapping, both cycling modes including the strip walk and its wrap, restore recovery, every

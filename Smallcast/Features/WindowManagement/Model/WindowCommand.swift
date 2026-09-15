@@ -10,6 +10,16 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
         case topRightQuarter = "top-right-quarter"
         case bottomLeftQuarter = "bottom-left-quarter"
         case bottomRightQuarter = "bottom-right-quarter"
+        case topLeftSixth = "top-left-sixth"
+        case topCenterSixth = "top-center-sixth"
+        case topRightSixth = "top-right-sixth"
+        case bottomLeftSixth = "bottom-left-sixth"
+        case bottomCenterSixth = "bottom-center-sixth"
+        case bottomRightSixth = "bottom-right-sixth"
+        case firstFourth = "first-fourth"
+        case secondFourth = "second-fourth"
+        case thirdFourth = "third-fourth"
+        case lastFourth = "last-fourth"
         case firstThreeFourths = "first-three-fourths"
         case lastThreeFourths = "last-three-fourths"
         case firstThird = "first-third"
@@ -55,6 +65,7 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
     enum Group: String, CaseIterable, Sendable {
         case halves
         case quarters
+        case sixths
         case fourths
         case thirds
         case sizing
@@ -66,6 +77,7 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
             switch self {
             case .halves: return "Halves"
             case .quarters: return "Quarters"
+            case .sixths: return "Sixths"
             case .fourths: return "Fourths"
             case .thirds: return "Thirds"
             case .sizing: return "Sizing"
@@ -129,6 +141,16 @@ enum WindowCommandCatalog {
         case .topRightQuarter: return "Top Right Quarter"
         case .bottomLeftQuarter: return "Bottom Left Quarter"
         case .bottomRightQuarter: return "Bottom Right Quarter"
+        case .topLeftSixth: return "Top Left Sixth"
+        case .topCenterSixth: return "Top Center Sixth"
+        case .topRightSixth: return "Top Right Sixth"
+        case .bottomLeftSixth: return "Bottom Left Sixth"
+        case .bottomCenterSixth: return "Bottom Center Sixth"
+        case .bottomRightSixth: return "Bottom Right Sixth"
+        case .firstFourth: return "First Fourth"
+        case .secondFourth: return "Second Fourth"
+        case .thirdFourth: return "Third Fourth"
+        case .lastFourth: return "Last Fourth"
         case .firstThreeFourths: return "First Three Fourths"
         case .lastThreeFourths: return "Last Three Fourths"
         case .firstThird: return "First Third"
@@ -169,6 +191,11 @@ enum WindowCommandCatalog {
         case .topRightQuarter: return "rectangle.inset.toptrailing.filled"
         case .bottomLeftQuarter: return "rectangle.inset.bottomleading.filled"
         case .bottomRightQuarter: return "rectangle.inset.bottomtrailing.filled"
+        case .topLeftSixth, .bottomLeftSixth: return "rectangle.leadingthird.inset.filled"
+        case .topCenterSixth, .bottomCenterSixth: return "rectangle.center.inset.filled"
+        case .topRightSixth, .bottomRightSixth: return "rectangle.trailingthird.inset.filled"
+        case .firstFourth, .secondFourth, .thirdFourth, .lastFourth:
+            return "rectangle.split.3x1"
         case .firstThreeFourths: return "rectangle.lefthalf.inset.filled"
         case .lastThreeFourths: return "rectangle.righthalf.inset.filled"
         case .firstThird, .firstTwoThirds: return "rectangle.leadingthird.inset.filled"
@@ -212,7 +239,11 @@ enum WindowCommandCatalog {
             return .halves
         case .topLeftQuarter, .topRightQuarter, .bottomLeftQuarter, .bottomRightQuarter:
             return .quarters
-        case .firstThreeFourths, .lastThreeFourths:
+        case .topLeftSixth, .topCenterSixth, .topRightSixth, .bottomLeftSixth, .bottomCenterSixth,
+            .bottomRightSixth:
+            return .sixths
+        case .firstFourth, .secondFourth, .thirdFourth, .lastFourth, .firstThreeFourths,
+            .lastThreeFourths:
             return .fourths
         case .firstThird, .centerThird, .lastThird, .firstTwoThirds, .lastTwoThirds:
             return .thirds
