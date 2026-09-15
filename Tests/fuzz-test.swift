@@ -135,6 +135,7 @@ struct FuzzTest {
 
     static func main() async {
         displayNameRanking()
+        typoTolerance()
         fieldPriority()
         userAliases()
         ownerNames()
@@ -201,9 +202,48 @@ struct FuzzTest {
             FuzzyMatch.match(query: "tm", candidate: "Time Machine")?.tier == .subsequence)
         check("no match is nil", FuzzyMatch.match(query: "zzz", candidate: "Chess") == nil)
         check(
-            "only subsequence is non-literal",
+            "only subsequence and typo are non-literal",
             [FuzzyMatch.Tier.exact, .prefix, .wordStart, .substring].allSatisfy(\.isLiteral)
-                && !FuzzyMatch.Tier.subsequence.isLiteral)
+                && !FuzzyMatch.Tier.subsequence.isLiteral && !FuzzyMatch.Tier.typo.isLiteral)
+        check(
+            "typo tier", FuzzyMatch.match(query: "chorme", candidate: "Google Chrome")?.tier == .typo)
+    }
+
+    // MARK: - Typo tolerance
+
+    static func typoTolerance() {
+        print("\n# typo tolerance")
+
+        check("'chorme' still finds Google Chrome", score("chorme", "Google Chrome") != nil)
+        check("'terminla' still finds Terminal", score("terminla", "Terminal") != nil)
+        // Matching a word start, not only the whole name.
+        check("'sharring' finds Screen Sharing", score("sharring", "Screen Sharing") != nil)
+
+        // A typo never outranks a real match — that is the whole point of the cell.
+        let chess = rank("chesss")
+        check("'chesss' top is Chess", chess.first == "Chess", "got \(chess)")
+        check(
+            "an exact name beats another entry's typo",
+            score("chess", "Chess")! > score("chesss", "Chess")!)
+        check(
+            "a typo sits under every real hit",
+            cellOf(score("chorme", "Google Chrome")!) == SearchRelevance.typoCell
+                && SearchRelevance.typoCell < SearchRelevance.poolBottom)
+
+        // Short queries get no slack: at three characters almost everything is one edit away.
+        check("'cat' is not a typo of Chess", score("cat", "Chess") == nil)
+        check("'wick' does not typo-match WhatsApp", score("wick", "WhatsApp") == nil)
+        check("'finder' does not typo-match Find My", FuzzyMatch.match(query: "finder", candidate: "Find My") == nil)
+        check(
+            "the allowance grows with the query",
+            FuzzyMatch.allowedDistance(forQueryLength: 3) == 0
+                && FuzzyMatch.allowedDistance(forQueryLength: 5) == 1
+                && FuzzyMatch.allowedDistance(forQueryLength: 9) == 2)
+        // Only the display name tolerates a misspelling; a translation or an id never does.
+        check(
+            "a translation never typo-matches",
+            SearchRelevance.cell(.translation, .typo) == nil
+                && SearchRelevance.cell(.technical, .typo) == nil)
     }
 
     // MARK: - Field priority
