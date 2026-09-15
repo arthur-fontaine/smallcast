@@ -95,7 +95,8 @@ enum RecentActionsMenu {
                     canMoveDown: false,
                     toggle: { favorites.toggle(app) },
                     move: { _ in }),
-                onResetRanking: { core.launcherRanking.reset(itemKey: app.preferenceKey) })
+                onResetRanking: { core.launcherRanking.reset(itemKey: app.preferenceKey) },
+                onHideFromSearch: { core.visibility.setItemVisible(false, for: app) })
             let forget = PopoverMenuItem(
                 title: "Remove from History", systemImage: "trash", isDestructive: true
             ) { launchHistory.reset(itemKey: app.preferenceKey) }

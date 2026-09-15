@@ -51,7 +51,7 @@ enum HistoryFeed {
     private static func matches(_ query: String, _ item: HistoryItem) -> Bool {
         switch item {
         case .entry(let app, _):
-            return SearchRelevance.score(query: query, fields: app.searchFields) != nil
+            return SearchRelevance.quality(query: query, fields: SearchFields(app.aliases)) != nil
         case .calculation(let entry):
             return entry.expression.localizedCaseInsensitiveContains(query)
                 || entry.result.localizedCaseInsensitiveContains(query)

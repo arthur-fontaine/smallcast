@@ -14,8 +14,8 @@ contradicts the code is a defect, so fix it in the commit that made it wrong.
 | [development.md](development.md) | The local loop: setup, build, dev channel, editor, format/lint, generated data | the local toolchain changes |
 | [release.md](release.md) | How a build reaches a user: packaging, CI, releases, the Homebrew tap, the website | the pipeline changes |
 | [signing.md](signing.md) | The self-signed identity and the two CI secrets | the signing setup changes |
+| [upstream.md](upstream.md) | Merging upstream (`base/main`): the anchor-by-tree procedure, and an exhaustive table of what is Smallcast-only versus comparable | a feature is added on either side, or a sync finds something the table missed |
 | [ui.md](ui.md) | The design system: tokens, panel chrome, row grammar, glass, dialogs and HUDs | a token or a presentation rule changes |
-| [upstream.md](upstream.md) | Merging Smallcast (`base/main`): the anchor-by-tree procedure, and an exhaustive table of what is Smallcast-only versus comparable | a feature is added on either side, or a sync finds something the table missed |
 
 ## Features
 
@@ -25,23 +25,29 @@ open with an `## Invariants` section; read it before changing anything in that a
 
 [palette](features/palette.md) ·
 [launcher](features/launcher.md) ·
+[AI providers and chat](features/ai.md) ·
+[quick actions](features/quick-actions.md) ·
 [clipboard](features/clipboard.md) ·
 [calculator](features/calculator.md) ·
 [calendar](features/calendar.md) ·
+[camera](features/camera.md) ·
 [emoji](features/emoji.md) ·
 [file search](features/file-search.md) ·
+[menu search](features/menu-search.md) ·
 [notes](features/notes.md) ·
 [snippets](features/snippets.md) ·
 [quicklinks](features/quicklinks.md) ·
 [hotkeys](features/hotkeys.md) ·
+[navigation](features/navigation.md) ·
 [window management](features/window-management.md) ·
+[window layouts](features/window-layouts.md) ·
 [custom commands](features/custom-commands.md) ·
 [uninstall](features/uninstall.md) ·
 [backup](features/backup.md) ·
 [Raycast import](features/raycast-import.md) ·
 [Raycast extensions](features/extensions.md) ·
-[AI](features/ai.md) ·
-[updates](features/updates.md)
+[updates](features/updates.md) ·
+[support](features/support.md)
 
 ## Contributing
 

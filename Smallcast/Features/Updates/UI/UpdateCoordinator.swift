@@ -1,13 +1,11 @@
 import AppKit
 import SwiftUI
 
-/// The update feature's action surface. It owns the window, every gate and the relaunch; the
-/// installer only ever performs an update the coordinator has already decided is safe.
+/// The installer only performs an update the coordinator has decided is safe.
 @MainActor
 @Observable
 final class UpdateCoordinator {
-    /// One window, one state machine — the prompt, the progress and the report are all the same
-    /// surface, because a download cannot survive being moved into a dialog.
+    /// One surface for prompt, progress and report: a download cannot move into a dialog.
     enum Stage: Equatable {
         case checking
         case upToDate
@@ -54,7 +52,7 @@ final class UpdateCoordinator {
 
     // MARK: - Entry points
 
-    /// The manual action: always opens the window and always asks GitHub, freshness notwithstanding.
+    /// The manual action: always opens the window and always asks GitHub.
     func checkForUpdates() {
         guard store.channel.updatesItself else {
             stage = .localBuild
@@ -88,7 +86,7 @@ final class UpdateCoordinator {
         case .installing, .readyToRelaunch:
             return true
         case .checking, .upToDate, .localBuild, .available, .blocked, .failed:
-            guard UpdateReadiness.evaluate(activity) == nil else { return false }
+            guard UpdateReadiness.evaluate(core.currentActivity) == nil else { return false }
             stage = .available(release)
             present()
             return true
@@ -100,14 +98,13 @@ final class UpdateCoordinator {
     func install() {
         guard let release = pendingRelease else { return }
         // Re-asked at the moment of the click, never read from a flag that could have gone stale.
-        if let blocker = UpdateReadiness.evaluate(activity) {
+        if let blocker = UpdateReadiness.evaluate(core.currentActivity) {
             stage = .blocked(blocker, release)
             return
         }
         stage = .installing(release, .downloading(received: 0, expected: release.assetSize))
         let installer = self.installer
-        // Hoisted: the installer reports from off-main, and nesting the hop inside the task body
-        // would re-capture the task's own weak `self`.
+        // Hoisted: nesting the hop inside the task body would re-capture its weak `self`.
         let onProgress: @Sendable (UpdateInstaller.Phase) -> Void = { [weak self] phase in
             Task { @MainActor in self?.report(phase, for: release) }
         }
@@ -145,8 +142,7 @@ final class UpdateCoordinator {
         window.close()
     }
 
-    /// Through `NSApp.terminate`, never `exit`: that is what flushes a pending note draft and hands
-    /// back the Hyper Key's HID remap, which would otherwise outlive the process.
+    /// `NSApp.terminate`, never `exit`: it flushes a note draft and returns the HID remap.
     func relaunch() {
         RelaunchRunner.relaunchAfterExit(Bundle.main.bundleURL)
         NSApp.terminate(nil)
@@ -172,17 +168,6 @@ final class UpdateCoordinator {
         UpdateInstaller(
             bundleURL: Bundle.main.bundleURL,
             stagingDirectory: AppPaths.caches().appendingPathComponent("Updates", isDirectory: true))
-    }
-
-    private var activity: UpdateActivity {
-        UpdateActivity(
-            isExpandingSnippet: core.snippetTextInjector.isDelivering,
-            isRunningExtension: core.extensions.running != nil,
-            isUninstalling: core.uninstall.isTrashing,
-            isRecordingHotKey: core.hotKeys.recordingAction != nil,
-            isPromptingForArguments: core.quicklinkArguments.isActive,
-            isShowingDialog: core.isShowingDialog,
-            isPaletteVisible: core.paletteCoordinator.isVisible)
     }
 
     private func present() {

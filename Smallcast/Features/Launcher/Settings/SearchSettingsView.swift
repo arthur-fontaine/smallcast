@@ -27,7 +27,7 @@ struct SearchSettingsView: View {
             appIndex.apps.map { ($0.preferenceKey, $0) }, uniquingKeysWith: { first, _ in first })
         var queriesByKey: [String: [(query: String, count: Int)]] = [:]
         for record in ranking.records {
-            queriesByKey[record.itemKey, default: []].append((record.query, record.count))
+            queriesByKey[record.itemKey, default: []].append((record.submittedQuery, record.count))
         }
         return
             launchHistory.records
@@ -96,8 +96,6 @@ struct SearchSettingsView: View {
             } header: {
                 Text(learned.isEmpty ? "What It Learned" : "What It Learned (\(learned.count))")
             }
-
-            FallbackCommandsSection()
         }
         .formStyle(.grouped)
         .confirmationDialog(

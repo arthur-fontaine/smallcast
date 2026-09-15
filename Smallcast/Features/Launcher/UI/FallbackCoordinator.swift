@@ -1,99 +1,73 @@
-import AppKit
+import Foundation
 
-/// Runs a fallback row: the typed text becomes the command's input. One funnel, so the row, its
-/// Settings entry and the ⌘K row can never disagree about what a fallback does.
+/// Owns the launcher's fallback section: what it offers for a query, and where running one goes.
 @MainActor
 final class FallbackCoordinator {
-    private let settings: AppSettings
+    private let store: FallbackStore
     private let quicklinks: QuicklinkStore
-    private let palette: PaletteState
-    private let paletteCoordinator: PaletteCoordinator
-    private let fileSearchCoordinator: FileSearchCoordinator
-    private let quicklinkCoordinator: QuicklinkCoordinator
+    private let settings: AppSettings
+    /// The four destinations a fallback hands its query to; nothing here is this type's own state.
     private unowned let core: AppCore
 
-    init(
-        settings: AppSettings, quicklinks: QuicklinkStore, palette: PaletteState,
-        paletteCoordinator: PaletteCoordinator, fileSearchCoordinator: FileSearchCoordinator,
-        quicklinkCoordinator: QuicklinkCoordinator, core: AppCore
-    ) {
-        self.settings = settings
+    init(store: FallbackStore, quicklinks: QuicklinkStore, settings: AppSettings, core: AppCore) {
+        self.store = store
         self.quicklinks = quicklinks
-        self.palette = palette
-        self.paletteCoordinator = paletteCoordinator
-        self.fileSearchCoordinator = fileSearchCoordinator
-        self.quicklinkCoordinator = quicklinkCoordinator
+        self.settings = settings
         self.core = core
     }
 
-    /// What a no-result search offers, in the user's own order.
-    var rows: [FallbackRow] {
-        guard settings.fallbackCommandsEnabled else { return [] }
-        return FallbackCommands.resolved(
-            stored: FallbackCommands.decode(settings.fallbackCommands), availability: availability)
-            .map { FallbackRow(command: $0, name: name(of: $0)) }
-    }
+    /// Everything this Mac can offer today, in the reader's order — Settings lists exactly this.
+    var available: [Fallback] { store.ordered(candidates) }
 
-    /// The stored order as configured, unfiltered — what the Settings list edits.
-    var configured: [FallbackCommandID] {
-        FallbackCommands.decode(settings.fallbackCommands)
-    }
-
-    /// Everything a fallback could be, for the Settings list to add from.
-    var candidates: [FallbackCommandID] {
-        FallbackCommands.candidates(
-            stored: FallbackCommands.decode(settings.fallbackCommands), availability: availability,
-            quicklinkIDs: argumentQuicklinks.map(\.id))
-    }
-
-    var availability: FallbackCommands.Availability {
-        FallbackCommands.Availability(
-            aiEnabled: settings.aiEnabled, fileSearchEnabled: settings.fileSearchEnabled,
-            argumentQuicklinkIDs: Set(argumentQuicklinks.map(\.id)))
-    }
-
-    /// The name a row shows: a built-in's own, or the quicklink's.
-    func name(of id: FallbackCommandID) -> String {
-        if let name = id.builtInName { return name }
-        guard case .quicklink(let quicklink) = id else { return "Fallback" }
-        return quicklinks.quicklink(id: quicklink)?.name ?? "Quicklink"
-    }
-
-    func run(_ id: FallbackCommandID, query: String) {
-        let text = query.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
-        switch id {
-        case .askAI:
-            core.aiChatCoordinator.startNewChat()
-            core.aiChatCoordinator.showChat()
-            core.aiChatCoordinator.send(text)
-        case .searchWeb:
-            openWebSearch(text)
-        case .searchFiles:
-            fileSearchCoordinator.show(query: text)
-        case .quicklink(let quicklink):
-            quicklinkCoordinator.openQuicklink(id: quicklink, prefilledArgument: text)
+    /// The launcher's rows. An empty query is nobody's input, so it earns no section at all.
+    func entries(for query: String) -> [(fallback: Fallback, entry: AppEntry)] {
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
+        return available.filter(store.isEnabled).compactMap { fallback in
+            entry(for: fallback).map { (fallback, $0) }
         }
     }
 
-    /// Only a quicklink with an `{argument}` has somewhere to put the typed text.
-    private var argumentQuicklinks: [Quicklink] {
-        guard settings.quicklinksEnabled else { return [] }
-        return quicklinks.quicklinks.filter { SnippetTemplateEngine.usesArguments($0.link) }
+    /// Nil for a quicklink deleted since the order was stored.
+    func entry(for fallback: Fallback) -> AppEntry? {
+        switch fallback {
+        case .builtin(let builtin): return CommandCatalog.makeEntry(builtin.command)
+        case .quicklink(let id): return quicklinks.quicklink(id: id).map(AppEntry.init)
+        }
     }
 
-    private func openWebSearch(_ query: String) {
-        guard let url = FallbackCommands.webURL(template: settings.webSearchTemplate, query: query)
-        else {
-            Task {
-                await core.showNotice(
-                    title: "Couldn’t Search the Web",
-                    message: "The search URL in Settings › Search needs a {query} placeholder.",
-                    symbol: "globe", tone: .danger)
-            }
-            return
+    /// The one funnel; each destination takes the query as the input it was already asking for.
+    func run(_ fallback: Fallback, query: String) {
+        switch fallback {
+        case .builtin(.aiChat): core.aiChatCoordinator.ask(query)
+        case .builtin(.searchFiles): core.fileSearchCoordinator.show(query: query)
+        case .builtin(.runShellCommand): core.customCommandCoordinator.runShellCommand(query)
+        case .quicklink(let id): core.quicklinkCoordinator.openQuicklink(id: id, filling: query)
         }
-        paletteCoordinator.hidePalette(restoreFocus: false)
-        NSWorkspace.shared.open(url)
+    }
+
+    /// The section's gear and the row's own action; the palette closes behind the pane.
+    func showSettings() {
+        core.paletteCoordinator.hidePalette(restoreFocus: false)
+        core.settingsCoordinator.showSettings(tab: .fallbacks)
+    }
+
+    /// A fallback whose feature is switched off is offered nowhere, Settings included.
+    private var candidates: [Fallback] {
+        var result = Fallback.Builtin.allCases.filter(isAvailable).map(Fallback.builtin)
+        guard settings.quicklinksEnabled else { return result }
+        result += quicklinks.quicklinks
+            .filter { $0.isEnabled && QuicklinkDestination.containsPlaceholder($0.link) }
+            .sorted(by: Quicklink.precedes)
+            .map { .quicklink($0.id) }
+        return result
+    }
+
+    private func isAvailable(_ builtin: Fallback.Builtin) -> Bool {
+        switch builtin {
+        case .aiChat: return settings.aiEnabled
+        case .searchFiles: return settings.fileSearchEnabled
+        // Its own capability: this shell is not the custom-command library's switch to hold.
+        case .runShellCommand: return true
+        }
     }
 }

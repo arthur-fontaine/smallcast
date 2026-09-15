@@ -1,9 +1,8 @@
 # Smallcast
 
-A native macOS menu-bar launcher — a minimal Raycast: fuzzy app launcher, global and per-app hotkeys, a
-text/image clipboard history, an inline calculator, a floating note, snippets, quicklinks, window
-management, an emoji picker and a streamed AI chat against your own provider. It also **runs Raycast
-extensions** natively, in JavaScriptCore.
+A native macOS menu-bar launcher: fuzzy app launcher, global and per-app hotkeys, a text/image
+clipboard history, an inline calculator, a floating note, snippets, quicklinks, window management
+and an emoji picker. It also **runs Raycast extensions** natively, in JavaScriptCore.
 SwiftUI + AppKit, running as an accessory with no Dock icon (`LSUIElement`). Zero third-party
 dependencies.
 
@@ -83,28 +82,33 @@ feature's doc, under its own `## Invariants`.
   keystroke listening.
 - **Extensions stay inside `Features/Extensions/`.** Every view, row, menu, geometry and sizing
   constant an extension needs is written and owned there — never added to `DesignSystem/`, never bolted
-  onto `Theme`, and never shared with another feature. An extension renders untrusted third-party code
-  whose shape we do not control, so it must never be able to force a change on a launcher surface.
+  onto `Theme`, and never lifted somewhere another feature can build on it. Another surface may render
+  one as an opaque box — `LauncherScreen` does exactly that with `ExtensionArgumentsAccessory` — but it
+  never reaches inside one. An extension renders untrusted third-party code whose shape we do not
+  control, so it must never be able to force a change on a launcher surface.
   **Duplicating a view or a piece of layout maths to keep it here is the correct trade**, and the one
   place the no-duplication rule yields. What *is* shared: `Theme`'s base tokens (spacing, radius,
-  colour), `PopoverMenuItem` as a data shape, and `Platform/`. What is never shared: anything with
+  colour), `InterfaceMetrics` as the view over those same base tokens, `PopoverMenuItem` as a data
+  shape, and `Platform/`. What is never shared: anything with
   "how an extension looks or moves" in it. `ExtensionActionsPanel` and `ExtensionGridGeometry` exist
   precisely because the palette's own menu and the emoji grid must stay free to change without them.
-- **A secret goes in the Keychain, never in `AppSettings`.** `Features/AI/Service/APIKeyStore.swift`
-  and `Features/Extensions/Service/ExtensionOAuthKeychain.swift` are the two accessors, each scoped to
-  the running bundle. A settings backup enumerates `AppSettingsKey`, so a credential kept there would
-  travel to another Mac. A flag that doubles as consent — `snippetsEnabled`, `extensionsEnabled`,
-  `aiEnabled`, `calendarEnabled` — is excluded from a backup for the same reason.
-- **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section, per
-  `VisibilityStore` category and per Settings pane — never re-derive a category by sniffing an entry ID.
+- **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section and
+  per `VisibilityStore` category — never re-derive a category by sniffing an entry ID. Which *pane*
+  lists a command is a separate fact, and `SettingsTab.ownedCommands` is the only place that states it.
 - **Generated files are never hand-edited.** `EmojiData.generated.swift` comes from
-  `node Scripts/gen-emoji.js`, `CurrencyData.generated.swift` from `node Scripts/gen-currencies.js`, and
+  `node Scripts/gen-emoji.js`, `CurrencyData.generated.swift` from `node Scripts/gen-currencies.js`,
+  `CountryZoneData.generated.swift` from `node Scripts/gen-countries.js`, and
   `Resources/RaycastRuntime.generated.js` from `Scripts/raycast-runtime/build.mjs` — the runtime is
   committed so building the app never needs Node.
+- **A secret goes in the Keychain, never in `AppSettings`.** `Platform/KeychainSecretStore.swift` and
+  `Features/Extensions/Service/ExtensionOAuthKeychain.swift` are the two accessors, each scoped to the
+  running bundle. A settings backup enumerates `AppSettingsKey`, so a credential kept there would travel
+  to another Mac. A flag that doubles as consent — `snippetsEnabled`, `extensionsEnabled`, `aiEnabled`,
+  `calendarEnabled` — is excluded from a backup for the same reason.
 - **Smallcast is a fork, and upstream's version wins where the two converged.** Syncing `base/main`
-  is a feature-by-feature decision, not a merge: upstream rewrites its history, and nineteen Smallcast-only
-  features hook into files upstream also owns, so taking its file silently deletes them. Never sync
-  without walking the tables in [upstream.md](docs/upstream.md).
+  is a feature-by-feature decision, not a merge: upstream rewrites its history, and fourteen
+  Smallcast-only features hook into files upstream also owns, so taking its file silently deletes them.
+  Never sync without walking the tables in [upstream.md](docs/upstream.md).
 - **`DesignSystem/Scrolling/EdgeDissolve.swift` and `ThinScrollbar.swift` are off-limits.** Both are
   tuned by eye against the palette's floating bars, so any edit is a visual regression. Needing to touch
   one to fix a scroll bug means the real fix belongs elsewhere.

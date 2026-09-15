@@ -63,7 +63,7 @@ enum CalcCurrency {
             let input: Double
             if valueTokens.isEmpty {
                 input = 1
-            } else if let value = CalcParser.evaluate(valueTokens) {
+            } else if let value = CalcExpressionParser.scalar(valueTokens) {
                 input = value
             } else {
                 return nil
@@ -113,9 +113,14 @@ enum CalcCurrency {
         "SAR": ["riyal", "riyals"]  // 2
     ]
 
-    /// ISO 4217's own names where CLDR carries a different one; the standard is the source of truth.
+    /// ISO 4217's own names where CLDR differs; the standard is the source of truth.
     private static let isoNames: [String: [String]] = [
         "CNY": ["rmb", "renminbi"]  // ISO 4217 names CNY "Yuan Renminbi"; CLDR says "Chinese Yuan"
+    ]
+
+    /// Codes daily use spells from CLDR's sign, not ISO 4217. docs/features/calculator.md
+    private static let signCodes: [String: [String]] = [
+        "TWD": ["ntd"]  // CLDR writes TWD "NT$", so Taiwan types the sign's code, not TWD
     ]
 
     /// Hand-written because no standards body names a coin. docs/features/calculator.md
@@ -175,12 +180,10 @@ enum CalcCurrency {
             guard let def = defs[code] else { continue }
             for word in words { table[word] = def }
         }
+        for (code, words) in signCodes {
+            guard let def = defs[code] else { continue }
+            for word in words { table[word] = def }
+        }
         return table
     }()
-}
-
-extension CurrencyDef {
-    /// As a table unit, so a compound can carry money: `$/hr` is money¹·time⁻¹. Sized only once
-    /// `UnitDef.priced(at:)` has a snapshot, since a currency has no fixed magnitude of its own.
-    var unitDef: UnitDef { UnitDef(code, name, .money, 1, currency: code) }
 }

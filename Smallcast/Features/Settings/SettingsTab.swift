@@ -1,7 +1,7 @@
 enum SettingsTab: CaseIterable, Identifiable {
-    case general, applications, search, systemSettings, systemActions, commands, quicklinks, ai,
-        fileSearch, notes, snippets, windowManagement, clipboard, emoji, calendar, extensions,
-        permissions, backup, miscellaneous, about
+    case general, applications, search, systemSettings, systemActions, commands, quicklinks,
+        fallbacks, ai, quickActions, fileSearch, notes, snippets, navigation, windowManagement,
+        clipboard, emoji, calendar, extensions, permissions, backup, miscellaneous, about
     /// The case, never an index: a selectable `List` flattens section and row IDs together.
     var id: Self { self }
 
@@ -14,10 +14,13 @@ enum SettingsTab: CaseIterable, Identifiable {
         case .systemActions: return "System Actions"
         case .commands: return "Commands"
         case .quicklinks: return "Quicklinks"
+        case .fallbacks: return "Fallbacks"
         case .ai: return "AI"
+        case .quickActions: return "Quick Actions"
         case .fileSearch: return "File Search"
         case .notes: return "Notes"
         case .snippets: return "Snippets"
+        case .navigation: return "Navigation"
         case .windowManagement: return "Window Management"
         case .clipboard: return "Clipboard"
         case .emoji: return "Emoji & Symbols"
@@ -39,10 +42,13 @@ enum SettingsTab: CaseIterable, Identifiable {
         case .systemActions: return "bolt"
         case .commands: return "terminal"
         case .quicklinks: return "link"
+        case .fallbacks: return "arrow.turn.down.right"
         case .ai: return "sparkles"
+        case .quickActions: return "wand.and.sparkles"
         case .fileSearch: return "doc.text.magnifyingglass"
         case .notes: return "text.page"
         case .snippets: return "curlybraces"
+        case .navigation: return "arrow.left.arrow.right"
         case .windowManagement: return "macwindow"
         case .clipboard: return "doc.on.clipboard"
         case .emoji: return "face.smiling"
@@ -77,11 +83,12 @@ enum SettingsSection: CaseIterable, Identifiable {
         case .launcher:
             return [
                 .applications, .search, .systemSettings, .systemActions, .commands, .quicklinks,
+                .fallbacks,
             ]
         case .features:
             return [
-                .ai, .fileSearch, .notes, .snippets, .windowManagement, .clipboard, .emoji, .calendar,
-                .extensions
+                .ai, .quickActions, .fileSearch, .notes, .snippets, .navigation,
+                .windowManagement, .clipboard, .emoji, .calendar, .extensions
             ]
         case .advanced: return [.backup, .miscellaneous, .about]
         }

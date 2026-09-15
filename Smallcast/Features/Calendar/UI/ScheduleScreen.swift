@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// My Schedule: today and tomorrow, filtered by the query. Enter joins, ⌘K carries the rest.
+/// My Schedule: the store's span, filtered by the query. Enter joins, ⌘K carries the rest.
 struct ScheduleScreen: PaletteScreen {
     let store: CalendarStore
     let clock: MeetingClock
@@ -10,7 +10,7 @@ struct ScheduleScreen: PaletteScreen {
 
     var rows: [MeetingEvent] {
         let query = vm.query.trimmingCharacters(in: .whitespaces)
-        let agenda = UpcomingWindow.agenda(from: store.events)
+        let agenda = UpcomingWindow.agenda(from: store.events, now: clock.now)
         guard !query.isEmpty else { return agenda }
         return agenda.filter {
             $0.title.localizedCaseInsensitiveContains(query)
@@ -73,6 +73,6 @@ struct ScheduleScreen: PaletteScreen {
     private var emptyMessage: String {
         if store.access != .granted { return "Smallcast has no access to your calendar" }
         if !vm.query.trimmingCharacters(in: .whitespaces).isEmpty { return "No matching meetings" }
-        return "Nothing scheduled today or tomorrow"
+        return "Nothing scheduled \(store.span.orPhrase)"
     }
 }
