@@ -18,6 +18,9 @@ struct AIConnectionEditorSheet: View {
     @State private var discovery: ModelDiscoveryState = .waitingForKey
     @State private var discoveryRevision = 0
     @State private var error: String?
+    @State private var serverStatus: LMStudioServerStatus?
+    @State private var startingServer = false
+    @State private var serverFailure: String?
 
     private let modelDiscovery = AIModelDiscoveryService()
 
@@ -70,6 +73,7 @@ struct AIConnectionEditorSheet: View {
                         .font(.caption)
                         .foregroundStyle(.orange)
                     }
+                    if connection.provider == .lmStudio { lmStudioServerRow }
                     if let error {
                         Text(error).foregroundStyle(.orange)
                     }
@@ -115,6 +119,10 @@ struct AIConnectionEditorSheet: View {
             guard !Task.isCancelled else { return }
             await discoverModels()
         }
+        .task(id: connection.provider) {
+            guard connection.provider == .lmStudio else { return }
+            serverStatus = await LMStudioServerLocator.status()
+        }
         .onChange(of: key) { discoveryRevision += 1 }
         .onChange(of: connection.baseURL) { discoveryRevision += 1 }
         .onChange(of: connection.provider) { oldProvider, newProvider in
@@ -122,7 +130,73 @@ struct AIConnectionEditorSheet: View {
                 connection.baseURL = newProvider.defaultBaseURL
             }
             connection.reasoningOptions = nil
+            adoptLocalAddress(for: newProvider)
             discoveryRevision += 1
+        }
+    }
+
+    /// The pane is where someone finds out the endpoint is dead, so it says so here rather than
+    /// leaving discovery's "checking…" label sitting there against nothing.
+    @ViewBuilder private var lmStudioServerRow: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            switch serverStatus {
+            case .some(let status) where status.running:
+                Label("Server running on port \(status.port)", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            case .some(let status):
+                Label("Server stopped on port \(status.port)", systemImage: "stop.circle")
+                    .foregroundStyle(.secondary)
+            case nil:
+                Label("LM Studio's `lms` command was not found", systemImage: "questionmark.circle")
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if startingServer {
+                ProgressView().controlSize(.small)
+            } else if let serverStatus, !serverStatus.running {
+                // Start only: the server may be answering something else, so stopping it is LM
+                // Studio's own call to offer, not this pane's.
+                Button("Start Server", action: startLMStudioServer)
+            }
+        }
+        .font(.caption)
+        if let serverFailure {
+            Text(serverFailure).font(.caption).foregroundStyle(.orange)
+        }
+    }
+
+    /// A start that worked re-fires discovery, which is the whole point: the model list was empty
+    /// only because nothing was listening.
+    private func startLMStudioServer() {
+        startingServer = true
+        serverFailure = nil
+        Task {
+            let started = await LMStudioServerLocator.start()
+            startingServer = false
+            guard let started else {
+                serverFailure = "Couldn’t start the server. Start it from LM Studio instead."
+                return
+            }
+            serverStatus = started
+            discoveryRevision += 1
+        }
+    }
+
+    /// Neither local server is reliably on its documented port, so each is asked once its preset is
+    /// chosen — LM Studio through its own CLI, Ollama through the `OLLAMA_HOST` its FAQ sets. Only an
+    /// address still equal to the static default is replaced: anything else is either the user's own
+    /// typing or a URL they saved deliberately.
+    private func adoptLocalAddress(for provider: AIProviderKind) {
+        guard provider == .lmStudio || provider == .ollama else { return }
+        Task {
+            let detected: String? =
+                provider == .lmStudio
+                ? await LMStudioServerLocator.status()?.baseURL
+                : await OllamaServerLocator.host()?.baseURL
+            guard let detected, connection.provider == provider,
+                connection.baseURL == provider.defaultBaseURL
+            else { return }
+            connection.baseURL = detected
         }
     }
 
@@ -189,7 +263,7 @@ struct AIConnectionEditorSheet: View {
             } else {
                 Label("No available model matches this key.", systemImage: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                if connection.provider == .openAICompatible {
+                if connection.provider.acceptsUnlistedModels {
                     Button("Use “\(query)” anyway") { addModel(query) }
                 }
             }
