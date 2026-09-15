@@ -516,6 +516,10 @@ struct CalcTests {
         expectDisplay("pi * (2m)^2 to m2", "12.56637061 m²")
         expectDisplay("sin(30deg) * 10m", "5 m")
         expectDisplay("100km / 2h to km/h", "50 km/h")
+        // Calendar months and years vary, so a *rate* over one means the Gregorian average.
+        expectDisplay("$100/month * 12month", "1,200.00 USD")
+        expectDisplay("1 year to months", "12 month")
+        expectDisplay("1 month to days", "30.436875 day")
         expectDisplay("90km/h * 20min to km", "30 km")
         expectDisplay("100km / 50km/h to h", "2 hr")
         expectDisplay("1GB / 100mbps to s", "80 s")
