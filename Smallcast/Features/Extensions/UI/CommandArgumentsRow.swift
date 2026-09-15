@@ -76,7 +76,7 @@ private struct ArgumentField: View {
         )
         .textFieldStyle(.plain)
         .font(metrics.typography.rowTrailing)
-        .tint(.white)
+        .tint(Theme.Colors.textPrimary)
         .onSubmit(onSubmit)
         .multilineTextAlignment(.center)
         // Sized to the placeholder so a three-argument command still fits.
