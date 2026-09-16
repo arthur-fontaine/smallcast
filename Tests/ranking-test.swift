@@ -137,6 +137,21 @@ struct RankingTest {
         reloaded.resetAll()
         check("global reset clears all learned ranking", reloaded.isEmpty)
 
+        // Settings › Search lists what the ranking itself knows, so its totals come from here.
+        reloaded.record(itemKey: whatsApp, query: "wha")
+        reloaded.record(itemKey: whatsApp, query: "wha")
+        clock.addTimeInterval(60)
+        reloaded.record(itemKey: whatsApp, query: "whatsapp")
+        reloaded.record(itemKey: wick, query: "wick")
+        let learned = reloaded.learnedEntries()
+        check("learned entries sum every query's picks", learned[whatsApp]?.count == 3)
+        check("learned entries keep the latest pick", learned[whatsApp]?.lastUsed == clock)
+        check(
+            "learned entries fold a prefix into the spelling that extends it",
+            learned[whatsApp]?.distinctQueries == ["whatsapp"])
+        check("learned entries are per item", learned[wick]?.count == 1 && learned.count == 2)
+        reloaded.resetAll()
+
         // What learning may and may not do, now that it is denominated in picks.
         store.resetAll()
         for _ in 0..<500 { store.record(itemKey: "ChatGPT", query: "codex") }

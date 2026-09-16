@@ -720,8 +720,10 @@ have, so `RecentScreen` hands `AppActionsMenu` a `FavoriteActions` whose move ro
 rather than a store call that would act on the wrong index.
 
 Settings › Search shows and resets what the ranking learned (`SearchSettingsView`,
-`Launcher/Settings/`), by time window through `LauncherRankingStore.reset(since:)`; clearing there is
-independent of clearing the Recent list. The list and the pane are Smallcast's own; see
+`Launcher/Settings/`). Its rows come from `LauncherRankingStore.learnedEntries()` — picks summed per
+entry, latest pick, the queries that led there — and never from the Recent list's log, so a launch
+the ranking never saw is not listed as learned. Resetting there clears both stores, by time window
+through each store's `reset(since:)`. The list and the pane are Smallcast's own; see
 [upstream.md](../upstream.md).
 
 ## Reveal in Finder
