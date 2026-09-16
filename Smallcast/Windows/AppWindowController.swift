@@ -45,6 +45,7 @@ final class AppWindowController: NSObject, NSWindowDelegate {
             raise(window)
             return false
         }
+        activation.windowWillOpen()
         let window = makeWindow(content: contentViewController())
         // After the content so the inset lands on a mounted view; before `raise` to avoid a flash.
         self.chrome = chrome
