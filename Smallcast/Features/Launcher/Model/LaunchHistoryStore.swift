@@ -41,7 +41,7 @@ struct LaunchRecord: Codable, Hashable, Sendable {
 /// Per-entry recency, kept apart from `LauncherRankingStore` because the two answer different
 /// questions: ranking learns *which query meant which entry*, and only sees a launch that came from
 /// typing. This sees every launch — a favorite, ⌘1, a hotkey — which is what "what did I just do"
-/// needs. It is also the table Settings › Search shows and clears.
+/// needs. Settings › Search clears it alongside the ranking, but shows the ranking's own table.
 @MainActor
 @Observable
 final class LaunchHistoryStore {

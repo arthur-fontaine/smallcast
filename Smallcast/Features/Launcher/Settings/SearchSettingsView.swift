@@ -13,36 +13,19 @@ struct SearchSettingsView: View {
     /// One learned entry, resolved back to what it points at.
     private struct Learned: Identifiable {
         let entry: AppEntry
-        let record: LaunchRecord
-        /// The queries that led here, most-used first — what the ranking actually associated.
-        let queries: [String]
+        let record: LearnedEntry
 
         var id: String { entry.id }
     }
 
-    /// Most recently used first. A key with nothing behind it any more — an uninstalled app, a
-    /// command from a disabled feature — can't rank anything, so it isn't shown.
+    /// Most recent first. A hotkey launch taught nothing; an uninstalled key ranks nothing.
     private var learned: [Learned] {
         let byKey = Dictionary(
             appIndex.apps.map { ($0.preferenceKey, $0) }, uniquingKeysWith: { first, _ in first })
-        var queriesByKey: [String: [(query: String, count: Int)]] = [:]
-        for record in ranking.records {
-            queriesByKey[record.itemKey, default: []].append((record.submittedQuery, record.count))
-        }
         return
-            launchHistory.records
+            ranking.learnedEntries()
             .compactMap { key, record -> Learned? in
-                guard let entry = byKey[key] else { return nil }
-                // Only the longest spelling of each habit: every prefix of it is stored too.
-                let queries =
-                    (queriesByKey[key] ?? [])
-                    .sorted { $0.count != $1.count ? $0.count > $1.count : $0.query.count > $1.query.count }
-                    .map(\.query)
-                    .reduce(into: [String]()) { kept, query in
-                        guard !kept.contains(where: { $0.hasPrefix(query) }) else { return }
-                        kept.append(query)
-                    }
-                return Learned(entry: entry, record: record, queries: Array(queries.prefix(3)))
+                byKey[key].map { Learned(entry: $0, record: record) }
             }
             .sorted {
                 $0.record.lastUsed != $1.record.lastUsed
@@ -89,7 +72,8 @@ struct SearchSettingsView: View {
                         LearnedRow(
                             name: item.entry.name, kind: item.entry.kindLabel,
                             icon: item.entry.icon, count: item.record.count, peak: peak,
-                            lastUsed: item.record.lastUsed, queries: item.queries,
+                            lastUsed: item.record.lastUsed,
+                            queries: Array(item.record.distinctQueries.prefix(3)),
                             onForget: { forget(item) })
                     }
                 }

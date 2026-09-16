@@ -9,6 +9,28 @@ struct LauncherRankingRecord: Codable, Hashable, Sendable {
     var lastUsed: Date
 }
 
+/// One entry as the ranking knows it: how many picks, the last one, and the queries that led there.
+struct LearnedEntry: Sendable {
+    var count: Int
+    var lastUsed: Date
+    var queries: [(query: String, count: Int)]
+
+    /// Only the longest spelling of each habit, most-used first: "wha" folds into "whatsapp".
+    var distinctQueries: [String] {
+        var folded: [(query: String, count: Int)] = []
+        for candidate in queries {
+            let extended = queries.contains {
+                $0.query != candidate.query && $0.query.hasPrefix(candidate.query)
+            }
+            guard !extended else { continue }
+            let count = queries.filter { candidate.query.hasPrefix($0.query) }.reduce(0) { $0 + $1.count }
+            folded.append((candidate.query, count))
+        }
+        folded.sort { $0.count != $1.count ? $0.count > $1.count : $0.query.count > $1.query.count }
+        return folded.map(\.query)
+    }
+}
+
 /// Learns which result a query leads to, as bounded on-device frecency data.
 @MainActor
 @Observable
@@ -108,6 +130,19 @@ final class LauncherRankingStore {
 
     func hasRanking(for itemKey: String) -> Bool {
         records.contains { $0.itemKey == itemKey }
+    }
+
+    /// Every learned entry with its picks summed and its latest pick, for a pane listing them.
+    func learnedEntries() -> [String: LearnedEntry] {
+        var entries: [String: LearnedEntry] = [:]
+        for record in records {
+            let running = entries[record.itemKey]
+            entries[record.itemKey] = LearnedEntry(
+                count: (running?.count ?? 0) + record.count,
+                lastUsed: max(running?.lastUsed ?? .distantPast, record.lastUsed),
+                queries: (running?.queries ?? []) + [(record.submittedQuery, record.count)])
+        }
+        return entries
     }
 
     func reset(itemKey: String) {
