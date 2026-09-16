@@ -29,6 +29,9 @@ final class CodexAppServerClient {
     var onExit: ((String) -> Void)?
 
     private let codexHome: URL?
+    /// Resolved once: the login shell costs a stall, and `start()` runs on every relaunch.
+    private var userCodexHome: String?
+    private var didResolveUserCodexHome = false
     let workspace: URL
     private var process: Process?
     private var input: FileHandle?
@@ -49,7 +52,11 @@ final class CodexAppServerClient {
         guard let executable = await ExecutableLocator.locate("codex") else {
             throw ClientError.executableMissing
         }
-        // A second caller may have started it during the lookup.
+        if codexHome == nil, !didResolveUserCodexHome {
+            userCodexHome = await CodexHomeLocator.home()
+            didResolveUserCodexHome = true
+        }
+        // A second caller may have started it during the lookups.
         if isRunning { return }
         do {
             try FileManager.default.createDirectory(
@@ -102,8 +109,12 @@ final class CodexAppServerClient {
                 "PATH": (commandPaths + [inheritedPath]).joined(separator: ":")
             ]
         ) { _, value in value }
-        // Tests can isolate app-server state; production deliberately inherits the user's Codex home.
-        if let codexHome { environment["CODEX_HOME"] = codexHome.path }
+        // Tests isolate app-server state; production points at the home the user's `codex` reads.
+        if let codexHome {
+            environment["CODEX_HOME"] = codexHome.path
+        } else if let userCodexHome {
+            environment["CODEX_HOME"] = userCodexHome
+        }
         process.environment = environment
         process.standardInput = stdin
         process.standardOutput = stdout

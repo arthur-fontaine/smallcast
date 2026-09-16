@@ -159,6 +159,7 @@ where it actually is, through `adoptLocalAddress(for:)`. The two answers come fr
 | --- | --- | --- |
 | LM Studio | `lms server status --json` | Its CLI reports the *configured* port whether or not the server is up, in about 0.12 s |
 | Ollama | `OLLAMA_HOST`, then `launchctl getenv OLLAMA_HOST` | It publishes no status command; that variable is what [its own FAQ](https://docs.ollama.com/faq#how-can-i-expose-ollama-on-my-network) tells macOS users to set |
+| Codex home | `CODEX_HOME`, then `zsh -ilc` | The login lives under it, and the export is usually in an rc file; see [Installed commands](#installed-commands) |
 
 `OLLAMA_HOST` is a *bind* address, and the FAQ's own example is `0.0.0.0`. Every wildcard resolves to
 `localhost`, because no request can be sent to one. A bare number is a port, a host with no port keeps
@@ -361,9 +362,13 @@ command to copy. `InstalledAIManager` probes Claude and OpenCode off-main, in pa
 status gates three model aliases; a successful OpenCode model list is both its auth check and catalog.
 
 `ChatGPTSubscriptionManager` retains its historical type name but now owns only the installed Codex
-app-server lifecycle and discovered account metadata. Production never sets `CODEX_HOME`, so the
-server uses the same login and credential store as the user's normal Codex command. Smallcast supplies
-only a private working directory. The server stops after ten idle minutes, when AI is switched off or
+app-server lifecycle and discovered account metadata. Production sets `CODEX_HOME` only to what the
+user's own shell exports — `CodexHomeLocator` reads the inherited variable, then asks an interactive
+login shell, because the export usually lives in an rc file Finder-launched processes never read — so
+the server uses the same login and credential store as the user's normal Codex command. Without it, a
+user who moved their Codex home is told to sign in while `codex login status` says they are. The
+answer is resolved once per client, since the server relaunches after every idle stop. Smallcast
+supplies only a private working directory. The server stops after ten idle minutes, when AI is switched off or
 when the app terminates, and restarts on demand. Account state, model availability and rate-limit
 windows come from the supported app-server protocol.
 

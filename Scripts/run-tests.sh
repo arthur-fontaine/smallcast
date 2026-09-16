@@ -483,6 +483,7 @@ run slow codex-turn-test   Smallcast/Platform/AppPaths.swift \
                            Smallcast/Features/AI/Service/AIProvider.swift \
                            Smallcast/Features/AI/Service/ChatGPTSubscriptionManager.swift \
                            Smallcast/Features/AI/Service/CodexAppServerClient.swift \
+                           Smallcast/Features/AI/Service/CodexHomeLocator.swift \
                            Smallcast/Platform/ExecutableLocator.swift \
                            Smallcast/Features/AI/Service/CodexTurnRunner.swift
 run installed-ai-test     Smallcast/Features/AI/Model/*.swift \
