@@ -40,6 +40,7 @@ struct AISettingsView: View {
             Group {
                 defaultModelSection
                 chatSection
+                VoiceSettingsSection()
                 conversationsSection
                 systemPromptSection
                 MCPSettingsSection()

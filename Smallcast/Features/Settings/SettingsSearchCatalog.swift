@@ -277,6 +277,13 @@ enum SettingsSearchCatalog {
         .init(.aiChat, "Web search", keywords: ["browse", "internet"]),
         .init(.aiChat, "Ask from the launcher", keywords: ["chord", "option return", "tab", "shortcut"]),
         .init(
+            .aiVoice, "Hold the launcher shortcut to talk",
+            keywords: ["voice", "speech", "dictation", "microphone", "push to talk", "hold"]),
+        .init(
+            .aiVoice, "Engine",
+            keywords: ["whisper", "parakeet", "nemotron", "cohere", "apple speech", "transcribe", "model"]),
+        .init(.aiVoice, "Language", keywords: ["voice", "speech", "locale"]),
+        .init(
             .aiConversations, "Opens to",
             keywords: ["new chat", "last", "summon"]),
         .init(

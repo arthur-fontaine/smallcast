@@ -5,6 +5,9 @@ import Foundation
 @Observable
 final class HotKeyManager {
     var onTogglePalette: (() -> Void)?
+    /// The toggle combo held past `HoldDetector.threshold`, and its release after that.
+    var onTogglePaletteHeld: (() -> Void)?
+    var onTogglePaletteReleased: (() -> Void)?
     /// The launcher's own command funnel, so a shortcut and a palette row run the same thing.
     var onRunCommand: ((CommandID) -> Void)?
     var onRunCustomCommand: ((UUID) -> Void)?
@@ -26,6 +29,9 @@ final class HotKeyManager {
             let recording = recordingAction != nil
             center.isPaused = recording
             doubleTapMonitor.isPaused = recording
+            // A pause can swallow the release, so the next press must not read as a repeat.
+            holdTimer?.cancel()
+            hold.reset()
             if let recordingAction {
                 capture.start(action: recordingAction, hotKeys: self)
             } else {
@@ -39,6 +45,8 @@ final class HotKeyManager {
     let capture = ShortcutCaptureSession()
 
     private let center = HotKeyCenter()
+    @ObservationIgnored private var hold = HoldDetector()
+    @ObservationIgnored private var holdTimer: Task<Void, Never>?
     private var doubleTaps: [DoubleTapModifier: HotKeyAction] = [:]
     /// Every binding, loaded once in `start()` and written through on change.
     private var bindings: [HotKeyAction: HotKeyBinding] = [:]
@@ -228,8 +236,32 @@ final class HotKeyManager {
     /// Hands a combo to Carbon; a double-tap has no per-action registration to make.
     private func register(_ action: HotKeyAction) {
         guard let shortcut = binding(for: action)?.shortcut else { return }
-        center.register(id: action.defaultsKey, shortcut: shortcut) { [weak self] in
-            self?.perform(action)
+        // Only the toggle listens for its release: a double-tap fires on release, so it cannot hold.
+        let onKeyUp: (() -> Void)? =
+            action == .togglePalette ? { [weak self] in self?.toggleReleased() } : nil
+        center.register(
+            id: action.defaultsKey, shortcut: shortcut,
+            onKeyDown: { [weak self] in self?.perform(action) }, onKeyUp: onKeyUp)
+    }
+
+    /// Toggles at once — the palette must not wait on the hold — then arms the threshold timer.
+    private func togglePressed() {
+        let now = ProcessInfo.processInfo.systemUptime
+        guard hold.press(at: now) else { return }
+        onTogglePalette?()
+        holdTimer?.cancel()
+        holdTimer = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(HoldDetector.threshold))
+            guard let self, !Task.isCancelled else { return }
+            if hold.elapse(at: ProcessInfo.processInfo.systemUptime) { onTogglePaletteHeld?() }
+        }
+    }
+
+    private func toggleReleased() {
+        holdTimer?.cancel()
+        holdTimer = nil
+        if hold.release(at: ProcessInfo.processInfo.systemUptime) == .hold {
+            onTogglePaletteReleased?()
         }
     }
 
@@ -247,7 +279,7 @@ final class HotKeyManager {
         // The category switch, the way each feature switch already guards its own funnel.
         guard allowsAction?(action) ?? true else { return }
         switch action {
-        case .togglePalette: onTogglePalette?()
+        case .togglePalette: togglePressed()
         case .command(let id): onRunCommand?(id)
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)

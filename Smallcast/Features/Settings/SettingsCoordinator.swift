@@ -51,6 +51,8 @@ final class SettingsCoordinator {
             .environment(core.windowLayouts)
             .environment(core.calendarStore)
             .environment(core.aiSettings)
+            .environment(core.voiceSettings)
+            .environment(core.voiceModels)
             .environment(core.mcpSettings)
             .environment(core.quickActionSettings)
             .environment(core.customQuickActions)

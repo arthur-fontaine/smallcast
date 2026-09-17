@@ -65,6 +65,8 @@
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Smallcast uses automation to perform system actions you explicitly run.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Smallcast listens while you hold the launcher shortcut, and sends only the words it heard to the AI you chose.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Smallcast shows a camera preview so you can check yourself, and take a photo to the clipboard.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>

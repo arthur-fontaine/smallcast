@@ -264,6 +264,7 @@ run fallback-test          Smallcast/Features/Launcher/Model/Fallback.swift \
                            Smallcast/Features/WindowManagement/Model/WindowCommand.swift
 run hotkey-test            Smallcast/Features/HotKeys/Model/DoubleTapModifier.swift \
                            Smallcast/Features/HotKeys/Model/DoubleTapDetector.swift \
+                           Smallcast/Features/HotKeys/Model/HoldDetector.swift \
                            Smallcast/Features/HotKeys/Model/HyperKey.swift \
                            Smallcast/Platform/ASCIIKeyboardLayout.swift \
                            Smallcast/Features/HotKeys/Service/KeyShortcut.swift \
@@ -463,6 +464,10 @@ run quick-action-test      Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/AI/Model/InstalledAI.swift \
                            Smallcast/Features/QuickActions/Model/*.swift \
                            Smallcast/Features/QuickActions/Settings/QuickActionSettingsStore.swift
+run voice-test             Smallcast/Features/Voice/Model/*.swift
+run slow voice-engine-test Smallcast/Platform/AppPaths.swift \
+                           Smallcast/Features/Voice/Model/*.swift \
+                           Smallcast/Features/Voice/Service/*.swift
 run apple-intelligence-test Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/AI/Model/*.swift \
                            Smallcast/Features/AI/Service/AIProvider.swift \

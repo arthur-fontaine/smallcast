@@ -16,8 +16,9 @@ private func hotKeyCarbonEventHandler(
         &hotKeyID
     )
     guard error == noErr else { return error }
+    let released = GetEventKind(event) == UInt32(kEventHotKeyReleased)
     let center = Unmanaged<HotKeyCenter>.fromOpaque(userData).takeUnretainedValue()
-    return MainActor.assumeIsolated { center.handle(hotKeyID) }
+    return MainActor.assumeIsolated { center.handle(hotKeyID, released: released) }
 }
 
 /// The Carbon layer only; which shortcuts exist is `HotKeyManager`'s business.
@@ -26,6 +27,7 @@ final class HotKeyCenter {
     private struct Entry {
         let shortcut: KeyShortcut
         let onKeyDown: () -> Void
+        let onKeyUp: (() -> Void)?
         let carbonID: UInt32
         var ref: EventHotKeyRef?
     }
@@ -48,11 +50,15 @@ final class HotKeyCenter {
     }
 
     /// Registers `shortcut` under `id`, dropping any previous one so no combo leaks.
-    func register(id: String, shortcut: KeyShortcut, onKeyDown: @escaping () -> Void) {
+    func register(
+        id: String, shortcut: KeyShortcut, onKeyDown: @escaping () -> Void,
+        onKeyUp: (() -> Void)? = nil
+    ) {
         unregister(id: id)
         nextCarbonID += 1
         entries[id] = Entry(
-            shortcut: shortcut, onKeyDown: onKeyDown, carbonID: nextCarbonID, ref: nil)
+            shortcut: shortcut, onKeyDown: onKeyDown, onKeyUp: onKeyUp, carbonID: nextCarbonID,
+            ref: nil)
         idToKey[nextCarbonID] = id
         if !isPaused { activate(id) }
     }
@@ -95,7 +101,9 @@ final class HotKeyCenter {
         guard eventHandler == nil, let dispatcher = GetEventDispatcherTarget() else { return }
         var eventTypes = [
             EventTypeSpec(
-                eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+                eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed)),
+            EventTypeSpec(
+                eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyReleased)),
         ]
         InstallEventHandler(
             dispatcher,
@@ -107,13 +115,17 @@ final class HotKeyCenter {
         )
     }
 
-    fileprivate func handle(_ hotKeyID: EventHotKeyID) -> OSStatus {
+    fileprivate func handle(_ hotKeyID: EventHotKeyID, released: Bool) -> OSStatus {
         guard
             hotKeyID.signature == signature,
             let key = idToKey[hotKeyID.id],
             let entry = entries[key]
         else { return OSStatus(eventNotHandledErr) }
-        entry.onKeyDown()
+        if released {
+            entry.onKeyUp?()
+        } else {
+            entry.onKeyDown()
+        }
         return noErr
     }
 }

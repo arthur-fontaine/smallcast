@@ -272,6 +272,9 @@ reply left streaming by a prior process into an interrupted failure when loaded.
 
 ## Asking from the launcher
 
+Holding the palette's toggle shortcut asks by voice through the same `ask(_:)`; the engines and the
+hold live in [voice.md](voice.md).
+
 `AppSettings.aiChord` is a `PaletteAIChord` — ⌥↵ (default), ⌃↵ or ⇥ — and hands what is typed in root
 search straight to `AIChatCoordinator.ask`, the same call upstream's Tab `.ask` and the AI Chat
 fallback row make, so none of the three can answer differently. Deliberately a fixed set rather than a
@@ -316,8 +319,9 @@ the menu, as a native menu's click-away does.
 
 Seven more `@MainActor @Observable` types join the shared state: `AISettingsStore`,
 `ChatGPTSubscriptionManager`, `InstalledAIManager`, `ChatHistoryStore`, `AIChatState`,
-`MCPSettingsStore` and `MCPServerManager`. `AIChatCoordinator` is the nineteenth feature coordinator
-and `MCPCoordinator` the twentieth.
+`MCPSettingsStore` and `MCPServerManager`. `AIChatCoordinator` is the nineteenth feature coordinator,
+`MCPCoordinator` the twentieth and `VoiceCoordinator` — hold the toggle shortcut to ask by voice, see
+[voice.md](voice.md) — the twenty-first.
 
 ### Manual sweep
 

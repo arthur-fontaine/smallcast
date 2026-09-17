@@ -65,6 +65,7 @@ struct DoubleTapDetectorTests {
         interruptions()
         repeats()
         resetting()
+        holding()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -385,5 +386,29 @@ struct DoubleTapDetectorTests {
         stuck.tap(.command, at: 0.10)
         stuck.tap(.command, at: 0.25)
         expect(stuck.fired, [.command], "reset clears a half-held press")
+    }
+
+    // MARK: - Hold to talk
+
+    static func holding() {
+        var hold = HoldDetector()
+        expect(hold.press(at: 0), "a press from idle is accepted")
+        expect(!hold.press(at: 0.1), "a repeat while down is not a second press")
+        expect(!hold.elapse(at: 0.2), "the hold has not begun before the threshold")
+        expect(hold.release(at: 0.3) == .tap, "released before the threshold reads as a tap")
+        expect(hold.release(at: 0.31) == nil, "a release with nothing in flight is ignored")
+
+        expect(hold.press(at: 1), "the detector is reusable after a tap")
+        expect(!hold.elapse(at: 1.4), "the hold has not begun just short of the threshold")
+        expect(hold.elapse(at: 1.5), "the hold begins once the threshold has passed")
+        expect(!hold.elapse(at: 1.6), "the hold begins once, not on every timer tick")
+        expect(hold.isHolding, "the hold stays in flight until the release")
+        expect(hold.release(at: 2) == .hold, "released after the threshold reads as a hold")
+        expect(!hold.isHolding, "the release ends the hold")
+
+        expect(hold.press(at: 3), "a press after a hold is accepted")
+        hold.reset()
+        expect(hold.release(at: 3.9) == nil, "a reset forgets the press in flight")
+        expect(hold.press(at: 4), "a reset detector accepts a new press")
     }
 }

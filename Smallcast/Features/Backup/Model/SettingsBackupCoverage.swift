@@ -127,6 +127,13 @@ enum SettingsBackupCoverage {
         AppSettingsKey.quickActionModel.rawValue:
             "Names an external AI destination for text taken from whatever app is frontmost; an "
             + "import must not choose one.",
+        AppSettingsKey.voiceHoldToTalk.rawValue:
+            "Arms the microphone on a held shortcut; a flag that grants a capability is never carried "
+            + "by a backup.",
+        AppSettingsKey.voiceEngine.rawValue:
+            "Names a model to download from Hugging Face; an import must not start a download.",
+        AppSettingsKey.voiceLanguage.rawValue:
+            "Paces the engine choice it accompanies, which stays on the Mac that made it.",
         AppSettingsKey.quickActionModelOverrides.rawValue:
             "Sends one action's text to its own AI destination, some keyed by actions that exist only "
             + "on the Mac that made them.",

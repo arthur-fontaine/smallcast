@@ -53,6 +53,9 @@ final class AppCore {
     let aiChat: AIChatState
     let aiSettings = AISettingsStore(
         isAppleIntelligenceAvailable: { AppleIntelligenceProvider.status().isAvailable })
+    let voiceSettings = VoiceSettingsStore()
+    let voiceModels = VoiceModelStore()
+    let voice = VoiceSession()
     let mcpSettings = MCPSettingsStore()
     let mcp = MCPServerManager()
     let quickActionSettings = QuickActionSettingsStore()
@@ -174,6 +177,9 @@ final class AppCore {
         chat: aiChat, settings: settings, appIndex: appIndex, palette: palette,
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
         core: self)
+    @ObservationIgnored private(set) lazy var voiceCoordinator = VoiceCoordinator(
+        session: voice, settings: settings, voiceSettings: voiceSettings, models: voiceModels,
+        paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator, core: self)
 
     @ObservationIgnored private lazy var windowController = PaletteWindowController(core: self)
     @ObservationIgnored private lazy var messageHUD = MessageHUDController(settings: settings)
@@ -226,6 +232,7 @@ final class AppCore {
             fileSearchCoordinator.applyPolicy()
             notesCoordinator.applyEnabled()
             aiChatCoordinator.applyEnabled()
+            voiceCoordinator.warmUp()
             mcpCoordinator.applyEnabled()
             customQuickActions.onChange = { [weak self] _ in
                 self?.quickActionCoordinator.applyCustomQuickActionsPresence()
@@ -267,6 +274,8 @@ final class AppCore {
             snippetListener.healthTicker = healthTicker
 
             hotKeys.onTogglePalette = { [weak self] in self?.paletteCoordinator.togglePalette() }
+            hotKeys.onTogglePaletteHeld = { [weak self] in self?.voiceCoordinator.beginHold() }
+            hotKeys.onTogglePaletteReleased = { [weak self] in self?.voiceCoordinator.endHold() }
             hotKeys.onRunCommand = { [weak self] id in self?.launcherCoordinator.runCommand(id) }
             hotKeys.onRunCustomCommand = { [weak self] id in
                 self?.customCommandCoordinator.runCustomCommand(id: id)
@@ -507,7 +516,12 @@ final class AppCore {
                 $0.menuSearchCoordinator.applyEnabled()
             })
         track({ _ = $0.notesEnabled }, reproject: { $0.notesCoordinator.applyEnabled() })
-        track({ _ = $0.aiEnabled }, reproject: { $0.aiChatCoordinator.applyEnabled() })
+        track(
+            { _ = $0.aiEnabled },
+            reproject: {
+                $0.aiChatCoordinator.applyEnabled()
+                $0.voiceCoordinator.applyEngine()
+            })
         track(
             {
                 _ = $0.aiEnabled
