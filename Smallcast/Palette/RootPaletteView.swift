@@ -93,7 +93,8 @@ struct RootPaletteView: View {
         case .ai:
             return AIScreen(
                 vm: vm, metrics: metrics, chat: core.aiChat, settings: core.aiSettings,
-                coordinator: core.aiChatCoordinator)
+                coordinator: core.aiChatCoordinator, voice: core.voice,
+                voiceCoordinator: core.voiceCoordinator)
         case .aiHistory:
             return ChatHistoryScreen(
                 history: core.chatHistory, chat: core.aiChat, coordinator: core.aiChatCoordinator,

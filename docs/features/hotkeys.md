@@ -33,6 +33,11 @@ the keycap rendering — only the _engine_ differs.
   with the clock injected as a parameter, for `hotkey-test`. Every `CGEvent` call lives in
   `Service/DoubleTapMonitor.swift`, which is listen-only, installs *only* while something is bound to a
   double-tap, and never prompts for Accessibility.
+- **A held toggle never delays the toggle.** `HotKeyCenter` now listens for `kEventHotKeyReleased`
+  too, and only `.togglePalette` registers a key-up. `HotKeyManager` toggles on the press as before,
+  then arms a timer; `Model/HoldDetector.swift` is the pure, clock-injected recogniser (`hotkey-test`)
+  that says whether the release was a tap or a hold. Only a `.combo` can hold — a `.doubleTap` fires
+  on its second release. See [voice.md](voice.md).
 - **`KeyShortcut.hyperChord(includesShift:)` is the only spelling of the Hyper chord**, read by both the
   ✦ collapse and the re-point below. `HyperKeyTap` composes its own flags because it also needs the
   left-side device bits, which no display path wants.
@@ -118,6 +123,15 @@ details are load-bearing:
 
 ⇧ is bindable this way even though `KeyShortcut` rejects a bare ⇧ combo: a double-_tap_ is unambiguous
 where a bare ⇧ combo would shadow typing.
+
+## Hold to talk
+
+`HoldDetector` tracks one press: `press(at:)` refuses a repeat while the key is down, `elapse(at:)`
+answers true once when `threshold` (450 ms) has passed, and `release(at:)` reads `.tap` or `.hold`.
+`HotKeyManager.togglePressed` calls `onTogglePalette` at once and sleeps a `Task` to the threshold;
+`toggleReleased` cancels it and fires `onTogglePaletteReleased` only after a hold. A recorder pause
+resets the detector, since Carbon can swallow the release while the center is paused. What a hold
+*does* is `VoiceCoordinator`'s business — [voice.md](voice.md).
 
 ## The Hyper Key
 

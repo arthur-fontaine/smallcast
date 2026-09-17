@@ -53,6 +53,19 @@ enum Permissions {
         await AVCaptureDevice.requestAccess(for: .video)
     }
 
+    static func microphoneAccess() -> MicrophoneAccess {
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .authorized: return .granted
+        case .notDetermined: return .notDetermined
+        default: return .denied
+        }
+    }
+
+    /// The one microphone prompt, raised from the hold that asked for it.
+    nonisolated static func requestMicrophoneAccess() async -> Bool {
+        await AVCaptureDevice.requestAccess(for: .audio)
+    }
+
     @MainActor
     static func openCalendarSettings() {
         guard

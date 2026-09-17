@@ -7,6 +7,8 @@ struct AIScreen: PaletteScreen {
     let chat: AIChatState
     let settings: AISettingsStore
     let coordinator: AIChatCoordinator
+    let voice: VoiceSession
+    let voiceCoordinator: VoiceCoordinator
 
     struct Row: Identifiable {
         let id = "ai-chat"
@@ -15,7 +17,10 @@ struct AIScreen: PaletteScreen {
     let rows = [Row()]
 
     /// One footer pill for Return's two jobs: Send, or Stop while a response streams.
-    var primaryActionTitle: String { chat.isStreaming ? "Stop" : "Send" }
+    var primaryActionTitle: String {
+        if voice.isActive { return voice.phase == .listening ? "Listening" : "Transcribing" }
+        return chat.isStreaming ? "Stop" : "Send"
+    }
 
     func actions(at selection: Int) -> PopoverMenuContent? {
         var items: [PopoverMenuItem] = []
@@ -59,7 +64,10 @@ struct AIScreen: PaletteScreen {
 
     /// Return and the pill are the same action; an empty composer sends nothing.
     func activate(at selection: Int) {
-        if chat.isStreaming {
+        // A hold in flight owns the screen; Return ends it rather than sending a stray draft.
+        if voice.isActive {
+            voiceCoordinator.cancel()
+        } else if chat.isStreaming {
             coordinator.stopResponse()
         } else if coordinator.send(vm.query) {
             vm.query = ""
@@ -92,7 +100,10 @@ struct AIScreen: PaletteScreen {
     }
 
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {
-        AnyView(
+        if voice.isActive {
+            return AnyView(VoiceListeningView(session: voice))
+        }
+        return AnyView(
             AIChatView(
                 chat: chat, settings: settings, availability: coordinator.availability,
                 onConfigure: coordinator.showSettings, onAppear: coordinator.prepareForChat))

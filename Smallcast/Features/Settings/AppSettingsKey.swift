@@ -83,4 +83,7 @@ enum AppSettingsKey: String, CaseIterable {
     case supportReminders = "supportReminders"
     case aiChord = "aiChord"
     case tabOpensClipboard = "tabOpensClipboard"
+    case voiceHoldToTalk = "aiVoiceHoldToTalk"
+    case voiceEngine = "aiVoiceEngine"
+    case voiceLanguage = "aiVoiceLanguage"
 }
