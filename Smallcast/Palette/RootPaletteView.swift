@@ -72,8 +72,8 @@ struct RootPaletteView: View {
                 store: snippets, core: core, vm: vm, openActions: openActions)
         case .emoji:
             return EmojiScreen(
-                index: emojiIndex, frequent: frequentEmoji, core: core, vm: vm,
-                tone: settings.emojiSkinTone, openActions: openActions)
+                index: emojiIndex, frequent: frequentEmoji, suggestions: core.emojiSuggestions,
+                core: core, vm: vm, tone: settings.emojiSkinTone, openActions: openActions)
         case .fileSearch:
             return FileSearchScreen(
                 session: fileSearch, core: core, vm: vm, openActions: openActions)

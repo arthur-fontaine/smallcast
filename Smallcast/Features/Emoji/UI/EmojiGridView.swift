@@ -12,10 +12,10 @@ struct EmojiGridSection: Identifiable {
 enum EmojiGrid {
     static let columns = 8
 
-    /// Ranked results while searching, otherwise Frequently Used plus every category.
+    /// Ranked results while searching, otherwise Suggested, Frequently Used and every category.
     @MainActor
     static func sections(
-        query: String, index: EmojiIndex, frequent: FrequentEmojiStore
+        query: String, index: EmojiIndex, frequent: FrequentEmojiStore, suggested: [String]
     ) -> [EmojiGridSection] {
         var sections: [EmojiGridSection] = []
         var start = 0
@@ -25,6 +25,7 @@ enum EmojiGrid {
             start += entries.count
         }
         if query.trimmingCharacters(in: .whitespaces).isEmpty {
+            append("Suggested", suggested.compactMap(index.entry(for:)))
             append("Frequently Used", frequent.top().compactMap(index.entry(for:)))
             for section in index.categorySections {
                 append(section.category.title, section.entries)

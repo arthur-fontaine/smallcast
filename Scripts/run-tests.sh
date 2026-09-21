@@ -189,6 +189,12 @@ run index emoji-search-performance \
                            Smallcast/Features/Emoji/Service/FrequentEmojiStore.swift \
                            Smallcast/Features/Launcher/Model/SearchRelevance.swift \
                            Smallcast/Platform/AppPaths.swift Smallcast/Platform/Memo.swift
+run emo-test               Smallcast/Features/Emoji/Model/EmoTokenizer.swift \
+                           Smallcast/Features/Emoji/Model/EmoModelInputs.swift \
+                           Smallcast/Features/Emoji/Model/TypedTextPolicy.swift \
+                           Smallcast/Features/Emoji/Service/EmoSuggester.swift \
+                           Smallcast/Features/Emoji/Service/EmoModelStore.swift \
+                           Smallcast/Platform/AppPaths.swift
 run palette-selection-test Smallcast/Features/PaletteRowIndex.swift \
                            Smallcast/Features/Emoji/Model/EmojiGridGeometry.swift
 run appearance-test        Smallcast/Platform/Appearance.swift \
@@ -339,6 +345,7 @@ run quicklink-test         Smallcast/Features/Quicklinks/Model/Quicklink.swift \
                            Smallcast/Features/Quicklinks/Model/RaycastQuicklinkImport.swift
 run slow snippets-test     Smallcast/Platform/NotificationToken.swift \
                            Smallcast/Platform/HealthTicker.swift \
+                           Smallcast/Platform/KeystrokeTap.swift \
                            Smallcast/Platform/AccessibilityText.swift \
                            Smallcast/Features/Snippets/Model/*.swift \
                            Smallcast/Features/Snippets/Service/*.swift \

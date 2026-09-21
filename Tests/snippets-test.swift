@@ -1758,33 +1758,15 @@ struct SnippetsTests {
                 && tap.installCount == 2
                 && tap.state == .active)
 
-        listener.processEvent(
-            typeRaw: CGEventType.keyDown.rawValue,
-            keyCode: 0,
-            flagsRaw: 0,
-            text: "x",
-            eventUserData: 0,
-            secureEventInputEnabled: false)
-        listener.processEvent(
-            typeRaw: CGEventType.keyDown.rawValue,
-            keyCode: 0,
-            flagsRaw: 0,
-            text: "x",
-            eventUserData: 123,
-            secureEventInputEnabled: false)
+        listener.handle(keyDown("x", userData: 0))
+        listener.handle(keyDown("x", userData: 123))
         check(
             "real user input invalidates pending automatic delivery while Smallcast events do not",
             activityCount == 1)
 
         listener.isPromptingForArguments = true
         for text in ["a", "b", "c", "d", "\r"] {
-            listener.processEvent(
-                typeRaw: CGEventType.keyDown.rawValue,
-                keyCode: 0,
-                flagsRaw: 0,
-                text: text,
-                eventUserData: 0,
-                secureEventInputEnabled: false)
+            listener.handle(keyDown(text, userData: 0))
         }
         listener.userActivity()
         check("argument typing and Expand clicks preserve pending delivery", activityCount == 1)
@@ -1804,9 +1786,7 @@ struct SnippetsTests {
         listener.start(onUserActivity: { activityCount += 1 }, onMatch: { _, _, _, _ in matches += 1 })
         func typeKeyword() {
             for character in "#test" {
-                listener.processEvent(
-                    typeRaw: CGEventType.keyDown.rawValue, keyCode: 0, flagsRaw: 0,
-                    text: String(character), eventUserData: 0, secureEventInputEnabled: false)
+                listener.handle(keyDown(String(character), userData: 0))
             }
         }
         typeKeyword()
@@ -1983,6 +1963,13 @@ private final class UUIDSequence: @unchecked Sendable {
 @MainActor
 private final class FakeSnippetPermissions {
     var accessibility = false
+}
+
+
+private func keyDown(_ text: String, userData: Int64 = 0) -> KeystrokeEvent {
+    KeystrokeEvent(
+        isKeyDown: true, isFlagsChanged: false, keyCode: 0, hasCommandOrControl: false,
+        text: text, eventUserData: userData, secureEventInputEnabled: false)
 }
 
 @MainActor

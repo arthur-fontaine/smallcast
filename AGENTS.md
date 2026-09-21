@@ -104,7 +104,7 @@ feature's doc, under its own `## Invariants`.
   `Features/Extensions/Service/ExtensionOAuthKeychain.swift` are the two accessors, each scoped to the
   running bundle. A settings backup enumerates `AppSettingsKey`, so a credential kept there would travel
   to another Mac. A flag that doubles as consent — `snippetsEnabled`, `extensionsEnabled`, `aiEnabled`,
-  `calendarEnabled` — is excluded from a backup for the same reason.
+  `calendarEnabled`, `emojiSuggestionsEnabled` — is excluded from a backup for the same reason.
 - **Smallcast is a fork, and upstream's version wins where the two converged.** Syncing `base/main`
   is a feature-by-feature decision, not a merge: upstream rewrites its history, and fourteen
   Smallcast-only features hook into files upstream also owns, so taking its file silently deletes them.

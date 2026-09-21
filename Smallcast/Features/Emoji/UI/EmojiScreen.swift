@@ -4,13 +4,16 @@ import SwiftUI
 struct EmojiScreen: PaletteScreen {
     let index: EmojiIndex
     let frequent: FrequentEmojiStore
+    let suggestions: EmojiSuggestionManager
     let core: AppCore
     let vm: PaletteState
     let tone: EmojiSkinTone
     let openActions: () -> Void
 
     private var sections: [EmojiGridSection] {
-        EmojiGrid.sections(query: vm.query, index: index, frequent: frequent)
+        EmojiGrid.sections(
+            query: vm.query, index: index, frequent: frequent,
+            suggested: suggestions.suggestions.map(\.glyph))
     }
 
     /// Flat grid order across sections — what the selection indexes.

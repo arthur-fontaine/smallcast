@@ -457,7 +457,10 @@ enum SettingsSearchCatalog {
             keywords: ["shortcut", "hotkey", "launcher", "picker"]),
         .init(
             .emojiAppearance, "Emoji Skin Tone",
-            keywords: ["colour", "color", "fitzpatrick", "default"])
+            keywords: ["colour", "color", "fitzpatrick", "default"]),
+        .init(
+            .emojiSuggestions, "Suggest emoji from what you type",
+            keywords: ["recommend", "typing", "keystrokes", "model", "emo", "desert ant", "ai"])
     ]
 
     private static let calendar: [SettingsSearchEntry] = [
