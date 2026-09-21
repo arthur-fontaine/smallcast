@@ -192,7 +192,9 @@ run index emoji-search-performance \
 run emo-test               Smallcast/Features/Emoji/Model/EmoTokenizer.swift \
                            Smallcast/Features/Emoji/Model/EmoModelInputs.swift \
                            Smallcast/Features/Emoji/Model/TypedTextPolicy.swift \
-                           Smallcast/Features/Emoji/Service/EmoSuggester.swift
+                           Smallcast/Features/Emoji/Service/EmoSuggester.swift \
+                           Smallcast/Features/Emoji/Service/EmoModelStore.swift \
+                           Smallcast/Platform/AppPaths.swift
 run palette-selection-test Smallcast/Features/PaletteRowIndex.swift \
                            Smallcast/Features/Emoji/Model/EmojiGridGeometry.swift
 run appearance-test        Smallcast/Platform/Appearance.swift \

@@ -64,11 +64,11 @@ final class EmoModelStore {
     }
 
     var isDownloaded: Bool {
-        Self.files.allSatisfy { file in
-            let attributes = try? FileManager.default.attributesOfItem(
-                atPath: directory.appendingPathComponent(file.path).path)
-            return (attributes?[.size] as? Int64) == file.size
-        }
+        Self.files.allSatisfy { Self.sizeOnDisk(directory.appendingPathComponent($0.path)) == $0.size }
+    }
+
+    private nonisolated static func sizeOnDisk(_ url: URL) -> Int64? {
+        (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init)
     }
 
     /// Fetches whatever is missing, verifying each file before it lands under `directory`.
@@ -79,9 +79,7 @@ final class EmoModelStore {
         var received: Int64 = 0
         for file in Self.files {
             let destination = directory.appendingPathComponent(file.path)
-            if (try? FileManager.default.attributesOfItem(atPath: destination.path)[.size] as? Int64)
-                != file.size
-            {
+            if Self.sizeOnDisk(destination) != file.size {
                 let data = try await Self.fetch(file)
                 try FileManager.default.createDirectory(
                     at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)

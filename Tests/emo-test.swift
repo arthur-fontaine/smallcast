@@ -183,7 +183,7 @@ struct EmoTests {
             TypedTextPolicy.classify(
                 text: "v", isSynthetic: false, secureEventInputEnabled: false, isKeyDown: true,
                 hasCommandOrControl: true, isNavigationKey: false, isDeleteBackward: false)
-                == .reset, "a command chord resets the record")
+                == .ignored, "the hotkey chord that summons the picker leaves the record intact")
         expect(
             TypedTextPolicy.classify(
                 text: nil, isSynthetic: false, secureEventInputEnabled: false, isKeyDown: false,
@@ -203,6 +203,10 @@ struct EmoTests {
             return
         }
         let directory = URL(fileURLWithPath: path)
+        expect(EmoModelStore(directory: directory).isDownloaded, "a complete model folder reads as downloaded")
+        expect(
+            !EmoModelStore(directory: directory.appendingPathComponent("missing")).isDownloaded,
+            "an empty folder reads as not downloaded")
         let suggester = try await Task.detached { try EmoSuggester(directory: directory) }.value
         for (phrase, glyph) in [
             ("Dentist appointment", "🦷"), ("réserver un vol pour Tokyo", "✈️"),

@@ -19,13 +19,13 @@ struct TypedTextPolicy: Sendable {
     private(set) var buffer = ""
     private var lastInput: Date?
 
-    /// Modifier chords, navigation keys and Secure Event Input all make the record stale.
+    /// A ⌘/⌃ chord is ignored, not a reset: the one summoning the picker arrives before it reads.
     static func classify(
         text: String?, isSynthetic: Bool, secureEventInputEnabled: Bool, isKeyDown: Bool,
         hasCommandOrControl: Bool, isNavigationKey: Bool, isDeleteBackward: Bool
     ) -> Input {
-        if isSynthetic { return .ignored }
-        if secureEventInputEnabled || hasCommandOrControl || isNavigationKey { return .reset }
+        if isSynthetic || hasCommandOrControl { return .ignored }
+        if secureEventInputEnabled || isNavigationKey { return .reset }
         guard isKeyDown else { return .ignored }
         if isDeleteBackward { return .deleteBackward }
         guard let text else { return .reset }

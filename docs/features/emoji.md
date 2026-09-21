@@ -50,9 +50,10 @@ sentence being typed in the app behind the palette.
   a full teardown: the tap goes, the record is forgotten and the model files are deleted.
 - **The record is the last sentence.** `TypedTextRecorder` installs a `KeystrokeTap`
   (`Platform/KeystrokeTap.swift`, shared with snippet keywords) and feeds `TypedTextPolicy`: 240
-  characters at most, reset on a click, a navigation key, a ⌘/⌃ chord, an app switch, Secure Event Input
-  or a minute of silence, and ignored entirely while a Smallcast window holds key. `phrase` is the text
-  after the last `.` `!` `?` or newline, cut to its last sixteen words.
+  characters at most, reset on a click, a navigation key, an app switch, Secure Event Input or a minute
+  of silence, and ignored entirely while a Smallcast window holds key. A ⌘/⌃ chord is ignored rather
+  than reset, because the chord that summons the picker reaches the tap before the picker reads the
+  record. `phrase` is the text after the last `.` `!` `?` or newline, cut to its last sixteen words.
 - **Suggestions are computed once per summon.** `PaletteCoordinator.showPalette` reads the record as the
   emoji screen opens, before anything typed into the picker could disturb it, and runs the model off-main.
   Probabilities below 0.02 are dropped, so a phrase the model has no opinion on shows no row at all.
