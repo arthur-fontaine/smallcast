@@ -10,6 +10,7 @@ final class PaletteCoordinator {
     private let menuSearch: MenuSearchSession
     private let windowSwitch: WindowSwitchSession
     private let windowController: PaletteWindowController
+    private let emojiSuggestions: EmojiSuggestionManager
 
     init(
         palette: PaletteState,
@@ -18,7 +19,8 @@ final class PaletteCoordinator {
         fileSearch: FileSearchSession,
         menuSearch: MenuSearchSession,
         windowSwitch: WindowSwitchSession,
-        windowController: PaletteWindowController
+        windowController: PaletteWindowController,
+        emojiSuggestions: EmojiSuggestionManager
     ) {
         self.palette = palette
         self.settings = settings
@@ -27,6 +29,7 @@ final class PaletteCoordinator {
         self.menuSearch = menuSearch
         self.windowSwitch = windowSwitch
         self.windowController = windowController
+        self.emojiSuggestions = emojiSuggestions
     }
 
     // MARK: - Palette control
@@ -86,6 +89,8 @@ final class PaletteCoordinator {
         if palette.mode == .fileSearch { fileSearch.search(palette.query) }
         if palette.mode == .menuSearch { menuSearch.filter(palette.query) }
         if palette.mode == .switchWindows { windowSwitch.filter(palette.query) }
+        // Read the typed record now, before anything typed into the picker could disturb it.
+        if palette.mode == .emoji { emojiSuggestions.refresh() }
         // Re-scan on open so an app uninstalled since the last scan drops out of the launcher.
         if palette.mode == .launcher { Task { await appIndex.refresh() } }
     }

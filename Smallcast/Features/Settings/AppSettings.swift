@@ -176,6 +176,11 @@ final class AppSettings {
         didSet { defaults.set(emojiSkinTone.rawValue, forKey: Key.emojiSkinTone.rawValue) }
     }
 
+    /// Also consent to record typing and download a model, so it confirms first and never rides a backup.
+    var emojiSuggestionsEnabled: Bool {
+        didSet { defaults.set(emojiSuggestionsEnabled, forKey: Key.emojiSuggestionsEnabled.rawValue) }
+    }
+
     /// How long a closed palette keeps its state before popping back to the root launcher.
     var popToRootTimeout: PopToRootTimeout {
         didSet { defaults.set(popToRootTimeout.rawValue, forKey: Key.popToRootTimeout.rawValue) }
@@ -531,6 +536,7 @@ final class AppSettings {
             ?? .none
         emojiSkinTone =
             defaults.string(forKey: Key.emojiSkinTone.rawValue).flatMap(EmojiSkinTone.init) ?? .none
+        emojiSuggestionsEnabled = defaults.bool(forKey: Key.emojiSuggestionsEnabled.rawValue)
         popToRootTimeout =
             PopToRootTimeout(rawValue: defaults.integer(forKey: Key.popToRootTimeout.rawValue))
             ?? .immediately

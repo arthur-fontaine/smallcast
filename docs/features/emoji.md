@@ -8,6 +8,14 @@ A palette sub-screen (reached like Clipboard / Calculator History) presenting a 
   compiled by `emoji-test`, so an `import AppKit` there breaks the test suite.
 - **`EmojiData.generated.swift` is emitted by `node Scripts/gen-emoji.js`** (Node 18+ for global `fetch`)
   and is never edited by hand. Regenerate and commit instead.
+- **Suggestions ship off, and their switch doubles as consent** — to record typing and to download the
+  model. `emojiSuggestionsEnabled` is excluded from settings backups, and Accessibility is requested only
+  from that Settings gesture, never from startup or a health check.
+- **The typed record lives in memory only.** `TypedTextPolicy` is a capped string on the recorder; nothing
+  it holds is ever written to disk, logged or sent anywhere. The model runs on device.
+- **`EmoTokenizer.swift` is a port, not ours.** It carries Desert Ant Labs' copyright and licence header
+  and stays byte-for-byte faithful to the SDK's featurizer: `emo-test` pins it to golden vectors produced
+  by the original. A change there is a model-compatibility change, not a refactor.
 
 ## Layout
 
@@ -18,11 +26,45 @@ A palette sub-screen (reached like Clipboard / Calculator History) presenting a 
 | `Model/EmojiData.generated.swift` | The dataset |
 | `Service/EmojiIndex.swift` | Search index over the catalog |
 | `Service/FrequentEmojiStore.swift` | Persisted most-frequently-used emoji |
+| `Model/EmoTokenizer.swift` | The Emo featurizer — hashed n-grams and the unigram tokenizer (ported) |
+| `Model/EmoModelInputs.swift` | The `emo_meta.json` sidecar, the six input tensors, the output ranking |
+| `Model/TypedTextPolicy.swift` | The capped typed record and the phrase it offers |
+| `Service/EmoModelStore.swift` | Downloads and hash-checks the pinned model files |
+| `Service/EmoSuggester.swift` | The Core ML session: phrase in, ranked emoji out |
+| `Service/TypedTextRecorder.swift` | The listen-only keystroke tap feeding the record |
+| `Service/EmojiSuggestionManager.swift` | Owns the three above and the `Suggested` row's state |
 | `UI/EmojiGridView.swift` | The SwiftUI grid |
 | `UI/EmojiScreen.swift`, `UI/EmojiCoordinator.swift` | The palette screen and its action surface |
 
-The index and the store are **effects**, so they live under `Service/` — only the three files above them
-are pure.
+The index, the stores, the tap and the classifier are **effects**, so they live under `Service/` — the
+`Model/` files are pure, and `emoji-test` plus `emo-test` compile them to prove it.
+
+## Suggestions
+
+**Settings → Emoji & Symbols → Suggestions** adds a `Suggested` row above `Frequently Used` when the
+query is empty: up to eight emoji the [Emo](https://desertant.com/models/emo/) classifier picks for the
+sentence being typed in the app behind the palette.
+
+- **Enabling confirms first.** The dialog names both costs — Accessibility for the listen-only tap, and a
+  one-time 5.5 MB download from `huggingface.co` — then stores the flag and requests the grant. Off is
+  a full teardown: the tap goes, the record is forgotten and the model files are deleted.
+- **The record is the last sentence.** `TypedTextRecorder` installs a `KeystrokeTap`
+  (`Platform/KeystrokeTap.swift`, shared with snippet keywords) and feeds `TypedTextPolicy`: 240
+  characters at most, reset on a click, a navigation key, a ⌘/⌃ chord, an app switch, Secure Event Input
+  or a minute of silence, and ignored entirely while a Smallcast window holds key. `phrase` is the text
+  after the last `.` `!` `?` or newline, cut to its last sixteen words.
+- **Suggestions are computed once per summon.** `PaletteCoordinator.showPalette` reads the record as the
+  emoji screen opens, before anything typed into the picker could disturb it, and runs the model off-main.
+  Probabilities below 0.02 are dropped, so a phrase the model has no opinion on shows no row at all.
+- **The model is pinned.** `EmoModelStore` fetches revision `v0.7.0` on a private `.ephemeral`,
+  `urlCache = nil` session into `Caches/<bundle-id>/emo-v0.7.0/`, verifying every file's SHA-256 before
+  it lands. `EmoSuggester` loads the compiled `.mlmodelc` CPU-only — the graph is small enough that the
+  Neural Engine's dispatch would cost more than it saves — and reads the Float16 output contiguously.
+- **Labels match the catalog exactly.** All 812 labels, VS16 included, are glyphs in
+  `EmojiData.generated.swift`, so `index.entry(for:)` needs no normalisation; a label the catalog lacks
+  would simply be skipped.
+- **Attribution is a licence term.** The pane's footer carries "Powered by Emo from Desert Ant Labs"
+  linking to `desertant.com`; `NOTICE.md` records the port and the model's licence.
 
 ## Search
 

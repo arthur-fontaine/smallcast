@@ -52,3 +52,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Emo — `Smallcast/Features/Emoji/Model/EmoTokenizer.swift` and the downloaded model
+
+Emoji suggestions use **Emo**, an on-device emoji classifier by Desert Ant Labs B.V.
+(<https://desertant.com>, <https://huggingface.co/desert-ant-labs/emo>). Nothing of it ships in the
+repository or the binary: when the feature is switched on, Smallcast downloads the Core ML export,
+its tokenizer and its label sidecar at revision `v0.7.0` and verifies each against a recorded SHA-256.
+
+`EmoTokenizer.swift` is a port of `Sources/Emo/Tokenizer.swift` from
+<https://github.com/Desert-Ant-Labs/desert-ant-core> (v3.2.0), rewritten to compile with no
+dependency on that package. It and the model are licensed under the **Desert Ant Labs Source-Available
+License 1.0** (<https://license.desertant.com/1.0>, SPDX `LicenseRef-DAL-Source-Available-1.0`), not
+under Smallcast's AGPL: free below 100,000 monthly active devices per platform, no use of the model or
+its outputs to train a competing model, and attribution where users can find it — the Emoji pane's
+footer carries "Powered by Emo from Desert Ant Labs". Anyone redistributing Smallcast should read that
+licence, in particular its clause on distributing the SDKs themselves.
