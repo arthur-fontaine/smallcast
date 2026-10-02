@@ -115,10 +115,8 @@ run() {
 
 L=Smallcast/Features/Launcher/Model
 run slow -O fuzz-test      $L/SearchRelevance.swift $L/ScriptRomanization.swift \
-                           $L/EntryNaming.swift $L/LauncherOrder.swift
-run slow -O corpus-test    $L/SearchRelevance.swift $L/ScriptRomanization.swift \
-                           $L/EntryNaming.swift $L/LauncherOrder.swift \
-                           $L/LauncherRankingStore.swift
+                           $L/LauncherMatch.swift $L/EntryNaming.swift $L/LauncherOrder.swift \
+                           $L/LauncherRankingStore.swift $L/LauncherSuggestions.swift
 run file-search-test       $L/SearchRelevance.swift \
                            Smallcast/Features/FileSearch/Model/*.swift
 run file-search-session-test Smallcast/Platform/Signposts.swift \
@@ -134,13 +132,15 @@ run index file-search-performance Smallcast/Platform/Signposts.swift \
                            $L/SearchRelevance.swift \
                            Smallcast/Features/FileSearch/Model/*.swift \
                            Smallcast/Features/FileSearch/Service/FileSearchService.swift
-run ranking-test           $L/SearchRelevance.swift $L/LauncherRankingStore.swift
+run ranking-test           $L/SearchRelevance.swift $L/ScriptRomanization.swift \
+                           $L/LauncherMatch.swift $L/LauncherRankingStore.swift
 run launch-history-test    $L/LaunchHistoryStore.swift
 run scopes-test            $L/SearchScopes.swift
 run app-name-test          Smallcast/Platform/AppDisplayName.swift \
                            Smallcast/Platform/BundleLocalization.swift \
                            $L/SearchRelevance.swift
 run favorites-test         $L/FavoriteSlots.swift
+run apple-shortcut-test    Smallcast/Features/AppleShortcuts/Model/*.swift
 run calc-test              Smallcast/Features/Calculator/Model/*.swift
 run index calc-performance Smallcast/Features/Calculator/Model/*.swift
 run calendar-test          Smallcast/Features/Calendar/Model/*.swift
@@ -153,13 +153,16 @@ run clipboard-test         Smallcast/Features/Clipboard/Model/ClipboardStore.swi
 # `Q` is the URL detector a drag payload builds its link with, rather than a second one.
 Q=Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift
 run clipboard-search-test  Smallcast/Features/Clipboard/Model/*.swift $Q
+run paste-sequence-test    Smallcast/Features/Clipboard/Model/*.swift $Q
 run clipboard-text-test    Smallcast/Features/Clipboard/Model/*.swift $Q \
                            Smallcast/Features/Clipboard/Service/ClipboardTextExtractor.swift \
                            Smallcast/Features/Clipboard/Service/ClipboardTextIndexer.swift \
-                           Smallcast/Features/Clipboard/Service/ClipboardTextWorker.swift
+                           Smallcast/Features/Clipboard/Service/ClipboardTextWorker.swift \
+                           Smallcast/Platform/ProcessExit.swift
 run pasteboard-test        Smallcast/Platform/PasteboardFiles.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
+                           Smallcast/Features/Clipboard/Model/ClipboardFileKind.swift \
                            Smallcast/Features/Clipboard/Model/ColorValue.swift \
                            Smallcast/Features/Clipboard/Model/ColorFormat.swift \
                            Smallcast/Features/Clipboard/Model/ColorSpaces.swift \
@@ -169,6 +172,7 @@ run index clipboard-file-performance \
                            Smallcast/Platform/PasteboardFiles.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
+                           Smallcast/Features/Clipboard/Model/ClipboardFileKind.swift \
                            Smallcast/Features/Clipboard/Model/ColorValue.swift \
                            Smallcast/Features/Clipboard/Model/ColorFormat.swift \
                            Smallcast/Features/Clipboard/Model/ColorSpaces.swift \
@@ -180,6 +184,7 @@ run emoji-search-test      Smallcast/Features/Emoji/Model/EmojiCatalog.swift \
                            Smallcast/Features/Emoji/Model/EmojiData.generated.swift \
                            Smallcast/Features/Emoji/Service/EmojiIndex.swift \
                            Smallcast/Features/Emoji/Service/FrequentEmojiStore.swift \
+                           Smallcast/Features/Emoji/Service/PinnedEmojiStore.swift \
                            Smallcast/Features/Launcher/Model/SearchRelevance.swift \
                            Smallcast/Platform/AppPaths.swift Smallcast/Platform/Memo.swift
 run index emoji-search-performance \
@@ -213,8 +218,10 @@ run ai-instructions-test   Smallcast/Features/AI/Model/AIInstructions.swift \
 run hover-arming-test      Smallcast/Palette/HoverArming.swift \
                            Smallcast/Palette/PaletteState.swift \
                            Smallcast/Palette/PaletteMode.swift \
+                           Smallcast/Features/Emoji/Model/EmojiCatalog.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
+                           Smallcast/Features/Clipboard/Model/ClipboardFileKind.swift \
                            Smallcast/Features/FileSearch/Model/FileSearchFilter.swift \
                            Smallcast/Features/Clipboard/Model/ColorValue.swift \
                            Smallcast/Features/Clipboard/Model/ColorFormat.swift \
@@ -232,8 +239,10 @@ run palette-escape-test    Smallcast/Palette/PaletteMode.swift \
 run palette-navigation-test Smallcast/Palette/PaletteState.swift \
                            Smallcast/Palette/PaletteMode.swift \
                            Smallcast/Palette/HoverArming.swift \
+                           Smallcast/Features/Emoji/Model/EmojiCatalog.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
+                           Smallcast/Features/Clipboard/Model/ClipboardFileKind.swift \
                            Smallcast/Features/FileSearch/Model/FileSearchFilter.swift \
                            Smallcast/Features/Clipboard/Model/ColorValue.swift \
                            Smallcast/Features/Clipboard/Model/ColorFormat.swift \
@@ -246,7 +255,10 @@ run palette-filter-test    Smallcast/Palette/PaletteMode.swift \
                            Smallcast/Features/Quicklinks/Model/Quicklink.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Smallcast/Features/CustomCommands/Model/CustomCommand.swift
+run action-menu-search-test Smallcast/Palette/ActionMenuSearchQuery.swift \
+                            Smallcast/Features/Launcher/Model/SearchRelevance.swift
 run palette-shortcut-test  Smallcast/Palette/PaletteShortcut.swift
+run ascii-layout-test      Smallcast/Platform/ASCIIKeyboardLayout.swift
 run palette-tab-test       Smallcast/Palette/PaletteMode.swift \
                            Smallcast/Palette/PaletteTabAction.swift \
                            Smallcast/Features/Quicklinks/Model/Quicklink.swift \
@@ -261,9 +273,15 @@ run fallback-test          Smallcast/Features/Launcher/Model/Fallback.swift \
                            Smallcast/Features/Quicklinks/Model/Quicklink.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Smallcast/Features/SystemActions/Model/SystemAction.swift \
-                           Smallcast/Features/WindowManagement/Model/WindowCommand.swift
+                           Smallcast/Features/WindowManagement/Model/WindowCommand.swift \
+                           Smallcast/Features/Snippets/Model/Snippet.swift
+run dictionary-test        Smallcast/Features/Dictionary/Model/DictionaryEntry.swift \
+                           Smallcast/Features/Dictionary/Model/DictionaryMarkup.swift
 run hotkey-test            Smallcast/Features/HotKeys/Model/DoubleTapModifier.swift \
                            Smallcast/Features/HotKeys/Model/DoubleTapDetector.swift \
+                           Smallcast/Features/HotKeys/Model/GlobeTapDetector.swift \
+                           Smallcast/Features/HotKeys/Model/HotKeyBinding.swift \
+                           Smallcast/Features/HotKeys/Model/HotKeySpelling.swift \
                            Smallcast/Features/HotKeys/Model/HyperKey.swift \
                            Smallcast/Platform/ASCIIKeyboardLayout.swift \
                            Smallcast/Features/HotKeys/Service/KeyShortcut.swift \
@@ -275,8 +293,9 @@ run hotkey-test            Smallcast/Features/HotKeys/Model/DoubleTapModifier.sw
                            Smallcast/Features/Quicklinks/Model/Quicklink.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Smallcast/Features/SystemActions/Model/SystemAction.swift \
-                           Smallcast/Features/WindowManagement/Model/WindowCommand.swift
-run callout-test           Smallcast/Platform/Appearance.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowCommand.swift \
+                           Smallcast/Features/Snippets/Model/Snippet.swift
+run callout-test          Smallcast/Platform/Appearance.swift \
                            Smallcast/DesignSystem/Theme.swift \
                            Smallcast/DesignSystem/InterfaceMetrics.swift \
                            Smallcast/Features/HotKeys/UI/CalloutPlacement.swift
@@ -286,6 +305,7 @@ run entry-icon-test        Smallcast/Platform/Appearance.swift \
                            Smallcast/Platform/Images/IconCache.swift \
                            Smallcast/Platform/Images/FileIconStamp.swift
 run ext-icon-test          Smallcast/Platform/Appearance.swift \
+                           Smallcast/Platform/AppDisplayName.swift \
                            Smallcast/Platform/Images/IconCache.swift \
                            Smallcast/Platform/Compression/Zlib.swift \
                            Smallcast/DesignSystem/Theme.swift \
@@ -298,19 +318,29 @@ run ext-icon-test          Smallcast/Platform/Appearance.swift \
                            Smallcast/Features/Extensions/Model/RenderNode.swift \
                            Smallcast/Features/Extensions/Service/ExtensionCatalog.swift \
                            Smallcast/Features/Extensions/Service/ExtensionFetcher.swift \
+                           Smallcast/Platform/ProcessExit.swift \
                            Smallcast/Features/Extensions/Service/ExtensionNodeShims.swift \
                            Smallcast/Features/Extensions/Service/ExtensionOAuthKeychain.swift \
                            Smallcast/Features/Extensions/Service/ExtensionOAuthSession.swift \
                            Smallcast/Features/Extensions/Service/ExtensionRuntime.swift \
                            Smallcast/Features/Extensions/Service/ExtensionIconCache.swift \
                            Smallcast/Features/Extensions/UI/ExtensionAnimatedImage.swift \
-                           Smallcast/Features/Extensions/UI/ExtensionImage.swift
+                           Smallcast/Features/Extensions/UI/ExtensionImage.swift \
+                           Smallcast/Features/Clipboard/Model/ColorValue.swift \
+                           Smallcast/Features/Clipboard/Model/ColorSpaces.swift
 run system-action-test     Smallcast/Features/SystemActions/Model/SystemAction.swift
 run volume-test            Smallcast/Features/SystemActions/Model/VolumeLevel.swift
 run window-command-test    Smallcast/Features/WindowManagement/Model/WindowCommand.swift \
                            Smallcast/Features/WindowManagement/Model/WindowCycle.swift \
                            Smallcast/Features/WindowManagement/Model/WindowPlacementEngine.swift \
                            Smallcast/Features/WindowManagement/Model/WindowActionMemory.swift
+run window-preset-test     Smallcast/Features/WindowManagement/Model/WindowCommand.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowShortcutPreset.swift \
+                           Smallcast/Features/HotKeys/Model/DoubleTapModifier.swift \
+                           Smallcast/Features/HotKeys/Model/HotKeyBinding.swift \
+                           Smallcast/Features/HotKeys/Model/HyperKey.swift \
+                           Smallcast/Platform/ASCIIKeyboardLayout.swift \
+                           Smallcast/Features/HotKeys/Service/KeyShortcut.swift
 run space-gesture-test     Smallcast/Features/WindowManagement/Model/WindowCommand.swift \
                            Smallcast/Features/WindowManagement/Model/SpaceGesture.swift
 run window-layout-test     Smallcast/Features/WindowManagement/Model/WindowCommand.swift \
@@ -321,12 +351,50 @@ run window-layout-test     Smallcast/Features/WindowManagement/Model/WindowComma
                            Smallcast/Features/WindowManagement/Model/WindowLayout.swift \
                            Smallcast/Features/WindowManagement/Model/WindowLayoutGeometry.swift \
                            Smallcast/Features/WindowManagement/Model/WindowLayoutPlan.swift \
-                           Smallcast/Features/WindowManagement/Model/WindowLayoutStore.swift
+                           Smallcast/Features/WindowManagement/Model/WindowLayoutStore.swift \
+                           Smallcast/Features/WindowManagement/Model/CustomWindowSize.swift \
+                           Smallcast/Features/WindowManagement/Model/CustomWindowSizeStore.swift
+run window-room-test       Smallcast/Features/WindowManagement/Model/WindowCommand.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowCycle.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowPlacementEngine.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowLayoutAnchor.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowLayoutDisplay.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowLayout.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowLayoutGeometry.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowLayoutPlan.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomLayoutKind.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomLayoutEngine.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomGrid.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomWindow.swift \
+                           Smallcast/Features/WindowManagement/Model/Room.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomWindowMatcher.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomParking.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomPlan.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomArrangement.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomStore.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomMinimumSizeStore.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomParkingLedger.swift
+run window-file-test       Smallcast/Features/WindowManagement/Model/WindowCommand.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowCycle.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowPlacementEngine.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowLayoutAnchor.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowLayoutDisplay.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowLayout.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowLayoutGeometry.swift \
+                           Smallcast/Features/WindowManagement/Model/CustomWindowSize.swift \
+                           Smallcast/Features/WindowManagement/Model/Room.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomWindow.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomLayoutKind.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomGrid.swift \
+                           Smallcast/Features/WindowManagement/Model/RoomLayoutEngine.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowManagementFileFormat.swift \
+                           Smallcast/Features/Settings/Model/SettingsFileJSON.swift \
+                           Smallcast/Features/Settings/Model/SettingsFileIdentity.swift
 run custom-command-test    Smallcast/Platform/PseudoTerminal.swift \
+                           Smallcast/Platform/ProcessExit.swift \
                            Smallcast/Features/CustomCommands/Model/CustomCommand.swift \
                            Smallcast/Features/CustomCommands/Model/RaycastScriptImport.swift \
-                           Smallcast/Features/CustomCommands/Service/ShellCommandRunner.swift \
-                           Smallcast/Features/CustomCommands/Service/CustomCommandArgumentSession.swift
+                           Smallcast/Features/CustomCommands/Service/ShellCommandRunner.swift
 run uninstall-test         Smallcast/Features/Uninstall/Model/UninstallTarget.swift \
                            Smallcast/Features/Uninstall/Model/UninstallSearchRoot.swift \
                            Smallcast/Features/Uninstall/Model/UninstallRules.swift \
@@ -351,8 +419,51 @@ run notes-editor-test      Smallcast/Platform/Signposts.swift \
                            Smallcast/Platform/Appearance.swift \
                            Smallcast/DesignSystem/Theme.swift \
                            Smallcast/DesignSystem/InterfaceMetrics.swift \
+                           Smallcast/Platform/NotificationToken.swift \
                            Smallcast/Features/TextInjection/Service/InjectableTextView.swift \
                            Smallcast/Features/Notes/Model/NoteDocument.swift \
+                           Smallcast/Features/Notes/Model/NoteMarkdown.swift \
+                           Smallcast/Features/Notes/Model/NoteMarkdownParser.swift \
+                           Smallcast/Features/Notes/Model/NoteInlineScanner.swift \
+                           Smallcast/Features/Notes/Model/NoteEditPlan.swift \
+                           Smallcast/Features/Notes/Model/NoteEditAction.swift \
+                           Smallcast/Features/Notes/Model/NoteFormatting.swift \
+                           Smallcast/Features/Notes/Model/NoteMarkdownEditing.swift \
+                           Smallcast/Features/Notes/Model/NoteRevealPolicy.swift \
+                           Smallcast/Features/Notes/UI/NoteMarkdownTypography.swift \
+                           Smallcast/Features/Notes/UI/NoteBlockDecoration.swift \
+                           Smallcast/Features/Notes/UI/NoteMarkdownStyler.swift \
+                           Smallcast/Features/Notes/UI/NoteMarkdownRenderer.swift \
+                           Smallcast/Features/Notes/UI/NoteCheckboxGeometry.swift \
+                           Smallcast/Features/Notes/UI/NoteBlockLayoutFragment.swift \
+                           Smallcast/Features/Notes/UI/NoteLayoutFragmentProvider.swift \
+                           Smallcast/Features/Notes/UI/NoteTextViewEditing.swift \
+                           Smallcast/Features/Notes/UI/NoteTextView.swift \
+                           Smallcast/Features/Notes/UI/NoteEditorView.swift
+run -O index notes-editor-performance \
+                           Smallcast/Platform/Signposts.swift \
+                           Smallcast/Platform/Appearance.swift \
+                           Smallcast/DesignSystem/Theme.swift \
+                           Smallcast/DesignSystem/InterfaceMetrics.swift \
+                           Smallcast/Platform/NotificationToken.swift \
+                           Smallcast/Features/TextInjection/Service/InjectableTextView.swift \
+                           Smallcast/Features/Notes/Model/NoteDocument.swift \
+                           Smallcast/Features/Notes/Model/NoteMarkdown.swift \
+                           Smallcast/Features/Notes/Model/NoteMarkdownParser.swift \
+                           Smallcast/Features/Notes/Model/NoteInlineScanner.swift \
+                           Smallcast/Features/Notes/Model/NoteEditPlan.swift \
+                           Smallcast/Features/Notes/Model/NoteEditAction.swift \
+                           Smallcast/Features/Notes/Model/NoteFormatting.swift \
+                           Smallcast/Features/Notes/Model/NoteMarkdownEditing.swift \
+                           Smallcast/Features/Notes/Model/NoteRevealPolicy.swift \
+                           Smallcast/Features/Notes/UI/NoteMarkdownTypography.swift \
+                           Smallcast/Features/Notes/UI/NoteBlockDecoration.swift \
+                           Smallcast/Features/Notes/UI/NoteMarkdownStyler.swift \
+                           Smallcast/Features/Notes/UI/NoteMarkdownRenderer.swift \
+                           Smallcast/Features/Notes/UI/NoteCheckboxGeometry.swift \
+                           Smallcast/Features/Notes/UI/NoteBlockLayoutFragment.swift \
+                           Smallcast/Features/Notes/UI/NoteLayoutFragmentProvider.swift \
+                           Smallcast/Features/Notes/UI/NoteTextViewEditing.swift \
                            Smallcast/Features/Notes/UI/NoteTextView.swift \
                            Smallcast/Features/Notes/UI/NoteEditorView.swift
 run slow -O raycast-test   Smallcast/Features/Backup/Model/RaycastImportError.swift \
@@ -361,6 +472,10 @@ run slow -O raycast-test   Smallcast/Features/Backup/Model/RaycastImportError.sw
                            Smallcast/Platform/Compression/Zlib.swift
 run settings-backup-test   Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/Backup/Model/SettingsBackupCoverage.swift
+run settings-file-test     Smallcast/Features/Settings/Model/*.swift \
+                           Smallcast/Features/Settings/Service/SettingsFileMonitor.swift \
+                           Smallcast/Features/Settings/Service/SettingsFileRepository.swift \
+                           Smallcast/Platform/AppPaths.swift
 run backup-archive-test    Smallcast/Platform/AppPaths.swift \
                            Smallcast/Features/Backup/Model/BackupArchive.swift \
                            Smallcast/Features/Backup/Model/BackupBundle.swift \
@@ -372,17 +487,23 @@ E=Smallcast/Features/Extensions
 run symbols-test           $E/Service/SymbolCatalog.swift
 run ext-cleanup-test       $E/Service/ExtensionCleanup.swift \
                            $E/Service/ExtensionCatalog.swift \
+                           Smallcast/Platform/AppDisplayName.swift \
                            $E/Model/ExtensionManifest.swift \
                            $E/Model/ExtensionLaunchType.swift \
                            $E/Model/ExtensionRefreshPolicy.swift \
                            $E/Model/ExtensionRefreshState.swift
 run ext-refresh-test       $E/Model/ExtensionManifest.swift \
+                           Smallcast/Platform/AppDisplayName.swift \
                            $E/Model/ExtensionLaunchType.swift \
                            $E/Model/ExtensionRefreshPolicy.swift \
                            $E/Model/ExtensionRefreshState.swift
 run ext-metadata-test      $E/Model/ExtensionCommandMetadata.swift \
+                           $E/Model/ExtensionMenuBarSnapshot.swift \
                            $E/Service/ExtensionCommandMetadataStore.swift
-run ext-store-test         $E/Model/ExtensionRegistry.swift \
+run ext-version-test       $E/Model/ExtensionListing.swift \
+                           $E/Service/ExtensionVersionStore.swift
+run ext-store-test         $E/Model/ExtensionGitHubSource.swift \
+                           $E/Model/ExtensionListing.swift \
                            $E/Model/ExtensionPackageManager.swift \
                            $E/Model/ExtensionStoreResponse.swift
 run ext-form-test          $E/Model/ExtensionFormMetrics.swift \
@@ -391,12 +512,24 @@ run ext-form-test          $E/Model/ExtensionFormMetrics.swift \
                            $E/Model/ExtensionDateExpression.swift \
                            $E/UI/ExtensionListKey.swift \
                            Tests/ext-list-key-test.swift
+run ext-image-size-test   $E/Model/ExtensionImageSize.swift
 run ext-accessory-test     $E/Model/RenderNode.swift \
                            $E/Model/ExtensionPickerItem.swift \
                            $E/Model/ExtensionSearchAccessory.swift \
                            $E/Service/ExtensionStorage.swift
 run slow ext-test          -parse-as-library \
+                           Tests/ext-menu-bar-test.swift \
+                           Tests/ext-fetch-test.swift \
+                           $E/Model/ExtensionLaunchError.swift \
+                           $E/Model/ExtensionMenuBarSnapshot.swift \
+                           $E/Service/ExtensionStorage.swift \
+                           $E/Service/ExtensionMenuBarManager.swift \
+                           $E/Model/ExtensionCommandMetadata.swift \
+                           $E/Service/ExtensionCommandMetadataStore.swift \
+                           $E/UI/ExtensionMenuBarController.swift \
+                           $E/UI/ExtensionMenuBarImage.swift \
                            Smallcast/Platform/Appearance.swift \
+                           Smallcast/Platform/AppDisplayName.swift \
                            Smallcast/Platform/Images/IconCache.swift \
                            Smallcast/DesignSystem/Theme.swift \
                            Smallcast/DesignSystem/InterfaceMetrics.swift \
@@ -413,16 +546,21 @@ run slow ext-test          -parse-as-library \
                            $E/Model/ExtensionSearchAccessory.swift \
                            $E/Service/ExtensionCatalog.swift \
                            $E/Service/ExtensionFetcher.swift \
+                           Smallcast/Platform/ProcessExit.swift \
                            $E/Service/ExtensionIconCache.swift \
                            $E/Service/ExtensionNodeShims.swift \
                            $E/Service/ExtensionOAuthKeychain.swift \
                            $E/Service/ExtensionOAuthSession.swift \
                            $E/Service/ExtensionRuntime.swift \
+                           $E/Service/ExtensionNameResolver.swift \
+                           $E/Service/ExtensionWebSocketBridge.swift \
                            $E/UI/ExtensionAnimatedImage.swift \
                            $E/UI/ExtensionImage.swift \
                            $E/UI/ExtensionScreen.swift \
                            $L/SearchRelevance.swift \
-                           Smallcast/Platform/Compression/Zlib.swift
+                           Smallcast/Platform/Compression/Zlib.swift \
+                           Smallcast/Features/Clipboard/Model/ColorValue.swift \
+                           Smallcast/Features/Clipboard/Model/ColorSpaces.swift
 run settings-history-test  Smallcast/Features/Settings/SettingsTab.swift \
                            Smallcast/Features/Settings/SettingsHistory.swift \
                            Smallcast/Features/Settings/SettingsAnchor.swift \
@@ -436,21 +574,59 @@ run ai-provider-test       Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/AI/Model/*.swift \
                            Smallcast/Features/AI/Settings/AISettingsStore.swift
 run ai-chat-test           Smallcast/Features/AI/Model/AIRequest.swift \
+                           Smallcast/Features/AI/Model/AIConnection.swift \
+                           Smallcast/Features/AI/Model/AppleIntelligence.swift \
                            Smallcast/Features/AI/Model/AIAttachmentPolicy.swift \
                            Smallcast/Features/AI/Model/AIRetention.swift \
                            Smallcast/Features/AI/Model/AITool.swift \
                            Smallcast/Features/AI/Model/JSONValue.swift \
                            Smallcast/Features/AI/Model/ChatMessage.swift \
                            Smallcast/Features/AI/Model/ChatSession.swift \
+                           Smallcast/Features/AI/Model/ChatChoices.swift \
+                           Smallcast/Features/AI/Model/ChatReferences.swift \
+                           Smallcast/Features/AI/Model/ChatTitle.swift \
+                           Smallcast/Features/AI/Model/ChatFind.swift \
+                           Smallcast/Features/AI/Model/ChatCitations.swift \
+                           Smallcast/Features/AI/Model/ChatToolScope.swift \
                            Smallcast/Features/AI/Model/MarkdownBlock.swift \
+                           Smallcast/Features/AI/Model/MarkdownMath.swift \
+                           Smallcast/Features/AI/Model/MathFormula.swift \
+                           Smallcast/Features/AI/Model/MathNode.swift \
+                           Smallcast/Features/AI/Model/MathSymbolCatalog.swift \
                            Smallcast/Features/AI/Service/AIProvider.swift \
                            Smallcast/Features/AI/Service/ChatHistoryStore.swift \
                            Smallcast/Features/AI/Service/AIToolLoopProvider.swift \
-                           Smallcast/Features/AI/UI/AIChatState.swift
+                           Smallcast/Features/AI/UI/AIChatState.swift \
+                           Smallcast/Features/AI/UI/AIChatSurfacesState.swift \
+                           Smallcast/Features/AI/UI/ChatFindState.swift
+run chat-markdown-test     Smallcast/Platform/Appearance.swift \
+                           Smallcast/DesignSystem/Theme.swift \
+                           Smallcast/DesignSystem/InterfaceMetrics.swift \
+                           Smallcast/Features/Settings/InterfaceSize.swift \
+                           Smallcast/Features/AI/Model/AIRequest.swift \
+                           Smallcast/Features/AI/Model/AITool.swift \
+                           Smallcast/Features/AI/Model/JSONValue.swift \
+                           Smallcast/Features/AI/Model/ChatMessage.swift \
+                           Smallcast/Features/AI/Model/ChatChoices.swift \
+                           Smallcast/Features/AI/Model/ChatReferences.swift \
+                           Smallcast/Features/AI/Model/ChatCitations.swift \
+                           Smallcast/Features/AI/Model/ChatFind.swift \
+                           Smallcast/Features/AI/Model/MarkdownBlock.swift \
+                           Smallcast/Features/AI/Model/MarkdownMath.swift \
+                           Smallcast/Features/AI/Model/MathFormula.swift \
+                           Smallcast/Features/AI/Model/MathNode.swift \
+                           Smallcast/Features/AI/Model/MathSymbolCatalog.swift \
+                           Smallcast/Features/AI/UI/ChatTextHighlight.swift \
+                           Smallcast/Features/AI/UI/ChatMarkdownRenderer.swift \
+                           Smallcast/Features/AI/UI/MathAttachmentCell.swift \
+                           Smallcast/Features/AI/UI/MathBox.swift \
+                           Smallcast/Features/AI/UI/MathFont.swift \
+                           Smallcast/Features/AI/UI/MathLayoutEngine.swift
 run mcp-test               Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/AI/Model/AIConnection.swift \
                            Smallcast/Features/AI/Model/AppleIntelligence.swift \
                            Smallcast/Features/AI/Model/AITool.swift \
+                           Smallcast/Features/AI/Model/AIToolServer.swift \
                            Smallcast/Features/AI/Model/JSONValue.swift \
                            Smallcast/Features/MCP/Model/*.swift \
                            Smallcast/Features/MCP/Settings/MCPSettingsStore.swift
@@ -467,13 +643,30 @@ run apple-intelligence-test Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/AI/Model/*.swift \
                            Smallcast/Features/AI/Service/AIProvider.swift \
                            Smallcast/Features/AI/Service/AppleIntelligenceProvider.swift
-run slow mcp-stdio-test    Smallcast/Platform/ExecutableLocator.swift \
+run mcp-oauth-test         Smallcast/Platform/ExecutableLocator.swift \
+                           Smallcast/Platform/ProcessExit.swift \
                            Smallcast/Platform/KeychainSecretStore.swift \
                            Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/AI/Model/AIConnection.swift \
                            Smallcast/Features/AI/Model/AppleIntelligence.swift \
                            Smallcast/Features/AI/Model/AITool.swift \
+                           Smallcast/Features/AI/Model/AIToolServer.swift \
                            Smallcast/Features/AI/Model/AIStreamDecoder.swift \
+                           Smallcast/Features/AI/Model/AIThinkTagDecoder.swift \
+                           Smallcast/Features/AI/Model/AIRequest.swift \
+                           Smallcast/Features/AI/Model/JSONValue.swift \
+                           Smallcast/Features/MCP/Model/*.swift \
+                           Smallcast/Features/MCP/Service/*.swift
+run slow mcp-stdio-test    Smallcast/Platform/ExecutableLocator.swift \
+                           Smallcast/Platform/ProcessExit.swift \
+                           Smallcast/Platform/KeychainSecretStore.swift \
+                           Smallcast/Features/Settings/AppSettingsKey.swift \
+                           Smallcast/Features/AI/Model/AIConnection.swift \
+                           Smallcast/Features/AI/Model/AppleIntelligence.swift \
+                           Smallcast/Features/AI/Model/AITool.swift \
+                           Smallcast/Features/AI/Model/AIToolServer.swift \
+                           Smallcast/Features/AI/Model/AIStreamDecoder.swift \
+                           Smallcast/Features/AI/Model/AIThinkTagDecoder.swift \
                            Smallcast/Features/AI/Model/AIRequest.swift \
                            Smallcast/Features/AI/Model/JSONValue.swift \
                            Smallcast/Features/MCP/Model/*.swift \
@@ -484,12 +677,18 @@ run slow codex-turn-test   Smallcast/Platform/AppPaths.swift \
                            Smallcast/Features/AI/Service/ChatGPTSubscriptionManager.swift \
                            Smallcast/Features/AI/Service/CodexAppServerClient.swift \
                            Smallcast/Features/AI/Service/CodexHomeLocator.swift \
+                           Smallcast/Features/AI/Service/InstalledAIProbe.swift \
                            Smallcast/Platform/ExecutableLocator.swift \
+                           Smallcast/Platform/ProcessExit.swift \
                            Smallcast/Features/AI/Service/CodexTurnRunner.swift
 run installed-ai-test     Smallcast/Features/AI/Model/*.swift \
                           Smallcast/Features/AI/Service/AIProvider.swift \
+                          Smallcast/Platform/AppPaths.swift \
                           Smallcast/Platform/ExecutableLocator.swift \
-                          Smallcast/Features/AI/Service/InstalledCLIProvider.swift
+                          Smallcast/Platform/ProcessExit.swift \
+                          Smallcast/Features/AI/Service/InstalledCLIProvider.swift \
+                          Smallcast/Features/AI/Service/InstalledAIProbe.swift \
+                          Smallcast/Features/AI/Service/InstalledAIManager.swift
 
 if [ "$emit_db" -eq 1 ]; then
     printf ']\n' >> "$DB"

@@ -331,7 +331,7 @@ enum CalcDateTime {
         let seconds = base.date.timeIntervalSince(other.date)
         let payload: CalcResult.Payload
         if let unit = targetUnit {
-            payload = .number(seconds / unit.factor, suffix: " \(unit.symbol)")
+            payload = .measurement(seconds / unit.factor, unit: unit)
         } else if hasTime {
             let text = CalcFormatter.timespan(seconds)
             payload = .value(display: text, copyText: text)
@@ -782,8 +782,9 @@ enum CalcDateTime {
     }
 
     private static func timeString(_ date: Date, calendar: Calendar) -> String {
-        let pattern = calendar.component(.second, from: date) == 0 ? "h:mm a" : "h:mm:ss a"
-        return format(date, calendar: calendar, pattern: pattern)
+        let template = calendar.component(.second, from: date) == 0 ? "jmm" : "jmmss"
+        return CalcDateFormatters.string(
+            from: date, calendar: calendar, zone: calendar.timeZone, template: template)
     }
 
     /// The answer's own weekday, which the date itself never spells out.

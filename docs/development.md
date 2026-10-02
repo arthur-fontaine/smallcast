@@ -50,8 +50,10 @@ executable name stays fixed even when release builds override the app's product 
 Debug builds are a separate channel: **`Smallcast Dev.app`**, bundle id `com.smallcast.app.dev`. Every
 persisted thing is keyed by bundle id — `~/Library/Preferences/<id>.plist` (settings and hotkey
 bindings), `~/Library/Application Support/<id>/` (the onboarding marker, Notes, snippets, quicklinks,
-clipboard history, calculator history, launch ranking and frequent emoji),
-`~/Library/Caches/<id>/` (exchange rates, the update check, staged downloads), the `SMAppService`
+clipboard history, calculator history, launch ranking and frequent emoji; Notes and snippets unless
+a folder is chosen),
+`~/Library/Caches/<id>/` (exchange rates, the update check, staged downloads), the opt-in
+`~/.config/smallcast-dev/settings.json` (`smallcast` on stable), the `SMAppService`
 login item, and the Accessibility / Input Monitoring (TCC) grants — so a local build can neither read
 nor clobber an installed app's state, and both run side by side.
 
@@ -162,9 +164,8 @@ Xcode's re-indent (⌃I), as it always has been. Two consequences worth knowing:
 - `force_try` is an error; `force_cast` only warns, because the AX and AppKit bridges have four
   legitimate ones.
 
-Errors block, warnings do not. CI runs this same script on every PR and annotates the diff with each
-violation — see [release.md](release.md#continuous-integration) — so run it locally first rather than
-finding out from a review.
+Errors block, warnings do not. No CI runs this script; CodeRabbit runs SwiftLint on each PR but not
+the settings-search check, so run it locally before you open one.
 
 ## Generated data
 
@@ -173,9 +174,14 @@ run them online, then commit the result:
 
 ```sh
 node Scripts/gen-emoji.js            # -> Smallcast/Features/Emoji/Model/EmojiData.generated.swift
+                                     #    + Smallcast/Resources/EmojiKeywords/<language>.txt
 node Scripts/gen-currencies.js       # -> Smallcast/Features/Calculator/Model/CurrencyData.generated.swift
 node Scripts/gen-countries.js        # -> Smallcast/Features/Calculator/Model/CountryZoneData.generated.swift
 ```
+
+`gen-emoji.js` also writes one CLDR keyword pack per language in its `KEYWORD_LOCALES`; adding a
+language is one line there. Pass a directory to keep the downloads between runs:
+`node Scripts/gen-emoji.js /tmp/emoji-sources`.
 
 `gen-countries.js` joins IANA's `zone.tab` with CLDR's `en` territory names on the ISO 3166 code. Re-run
 it when IANA adds or moves a country's zone; see [calculator.md](features/calculator.md#time-zones).

@@ -1,7 +1,7 @@
 enum SettingsTab: CaseIterable, Identifiable {
-    case general, applications, search, systemSettings, systemActions, commands, quicklinks,
-        fallbacks, ai, quickActions, fileSearch, notes, snippets, navigation, windowManagement,
-        clipboard, emoji, calendar, extensions, permissions, backup, miscellaneous, about
+    case general, applications, systemSettings, systemActions, commands, quicklinks, appleShortcuts,
+        fallbacks, clipboard, snippets, fileSearch, windowManagement, navigation, notes, calendar, emoji,
+        ai, quickActions, extensions, permissions, backup, about
     /// The case, never an index: a selectable `List` flattens section and row IDs together.
     var id: Self { self }
 
@@ -9,11 +9,11 @@ enum SettingsTab: CaseIterable, Identifiable {
         switch self {
         case .general: return "General"
         case .applications: return "Applications"
-        case .search: return "Search"
         case .systemSettings: return "System Settings"
         case .systemActions: return "System Actions"
         case .commands: return "Commands"
         case .quicklinks: return "Quicklinks"
+        case .appleShortcuts: return "Apple Shortcuts"
         case .fallbacks: return "Fallbacks"
         case .ai: return "AI"
         case .quickActions: return "Quick Actions"
@@ -28,7 +28,6 @@ enum SettingsTab: CaseIterable, Identifiable {
         case .extensions: return "Extensions"
         case .permissions: return "Permissions"
         case .backup: return "Backup"
-        case .miscellaneous: return "Miscellaneous"
         case .about: return "About"
         }
     }
@@ -37,11 +36,11 @@ enum SettingsTab: CaseIterable, Identifiable {
         switch self {
         case .general: return "switch.2"
         case .applications: return "square.grid.2x2"
-        case .search: return "magnifyingglass"
         case .systemSettings: return "gearshape"
         case .systemActions: return "bolt"
         case .commands: return "terminal"
         case .quicklinks: return "link"
+        case .appleShortcuts: return "square.2.layers.3d"
         case .fallbacks: return "arrow.turn.down.right"
         case .ai: return "sparkles"
         case .quickActions: return "wand.and.sparkles"
@@ -56,7 +55,6 @@ enum SettingsTab: CaseIterable, Identifiable {
         case .extensions: return "puzzlepiece.extension"
         case .permissions: return "lock.shield"
         case .backup: return "arrow.up.arrow.down.circle"
-        case .miscellaneous: return "ellipsis.circle"
         case .about: return "info.circle"
         }
     }
@@ -82,15 +80,16 @@ enum SettingsSection: CaseIterable, Identifiable {
         case .general: return [.general, .permissions]
         case .launcher:
             return [
-                .applications, .search, .systemSettings, .systemActions, .commands, .quicklinks,
-                .fallbacks,
+                .applications, .systemSettings, .systemActions, .commands, .quicklinks,
+                .appleShortcuts, .fallbacks
             ]
         case .features:
+            // Everyday tools first; AI and extensions are opt-in extras.
             return [
-                .ai, .quickActions, .fileSearch, .notes, .snippets, .navigation,
-                .windowManagement, .clipboard, .emoji, .calendar, .extensions
+                .clipboard, .snippets, .fileSearch, .windowManagement, .navigation, .notes,
+                .calendar, .emoji, .ai, .quickActions, .extensions
             ]
-        case .advanced: return [.backup, .miscellaneous, .about]
+        case .advanced: return [.backup, .about]
         }
     }
 }

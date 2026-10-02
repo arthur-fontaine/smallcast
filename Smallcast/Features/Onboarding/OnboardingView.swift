@@ -195,7 +195,7 @@ struct OnboardingView: View {
                     subtitle: "The password you set when exporting from Raycast.",
                     systemImage: "key", tint: .gray
                 ) {
-                    SecureField("Passphrase", text: $model.passphrase)
+                    RevealableSecureField(title: "Passphrase", text: $model.passphrase)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 150)
                         .onSubmit { model.run(core: core) }
@@ -387,7 +387,7 @@ final class OnboardingModel {
 
     var fileSubtitle: String {
         guard let name = file?.lastPathComponent else {
-            return "Choose a .rayconfig file exported from Raycast."
+            return "Choose a .rayconfig file exported from Raycast v2.0 or newer."
         }
         return "\(name) — \(isRaycastExport ? "Raycast export" : "not a Raycast export")"
     }

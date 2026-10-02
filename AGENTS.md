@@ -53,7 +53,6 @@ system-wide chord, and HIToolbox's TIS APIs remain the public input-source mecha
 | add or restyle any view | [ui.md](docs/ui.md) |
 | touch one feature's internals | [features/](docs/features/) — each opens with its invariants |
 | package or ship a build | [release.md](docs/release.md) |
-| merge `base/main` — Tinycast — into this fork | [upstream.md](docs/upstream.md) |
 
 ## Non-negotiables
 
@@ -73,13 +72,13 @@ feature's doc, under its own `## Invariants`.
   the forced-dark build shipped, restated rather than re-derived. Retune a light branch freely — change
   a dark one only when the task is to change Dark. `AppAppearance` drives `NSApp.appearance`, and
   `.system` maps to `nil` so AppKit follows macOS on its own.
-- **Smallcast presents its own dialogs — never `NSAlert`, `NSSlider` or a system popover.** A question
+- **Smallcast presents its own dialogs — never `NSAlert` or a system popover.** A question
   goes through `DialogController`, a report through a HUD via `HUDPresenter`.
 - **A networked feature fetches on a private `.ephemeral`, `urlCache = nil` session**, never
   `URLSession.shared`, so its own cache file stays the only copy on disk. `CurrencyRateStore` is the
   reference — copy it rather than inventing a second shape. A flag that grants a capability is never
-  carried by a backup: `snippetsEnabled` is excluded from settings backups so an import cannot grant
-  keystroke listening.
+  carried by a backup or by `settings.json`: `snippetsEnabled` is excluded from settings backups so an
+  import cannot grant keystroke listening.
 - **Extensions stay inside `Features/Extensions/`.** Every view, row, menu, geometry and sizing
   constant an extension needs is written and owned there — never added to `DesignSystem/`, never bolted
   onto `Theme`, and never lifted somewhere another feature can build on it. Another surface may render
@@ -95,26 +94,20 @@ feature's doc, under its own `## Invariants`.
 - **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section and
   per `VisibilityStore` category — never re-derive a category by sniffing an entry ID. Which *pane*
   lists a command is a separate fact, and `SettingsTab.ownedCommands` is the only place that states it.
-- **Generated files are never hand-edited.** `EmojiData.generated.swift` comes from
-  `node Scripts/gen-emoji.js`, `CurrencyData.generated.swift` from `node Scripts/gen-currencies.js`,
+- **Generated files are never hand-edited.** `EmojiData.generated.swift` and
+  `Resources/EmojiKeywords/` come from `node Scripts/gen-emoji.js`, `CurrencyData.generated.swift` from `node Scripts/gen-currencies.js`,
   `CountryZoneData.generated.swift` from `node Scripts/gen-countries.js`, and
   `Resources/RaycastRuntime.generated.js` from `Scripts/raycast-runtime/build.mjs` — the runtime is
   committed so building the app never needs Node.
-- **A secret goes in the Keychain, never in `AppSettings`.** `Platform/KeychainSecretStore.swift` and
-  `Features/Extensions/Service/ExtensionOAuthKeychain.swift` are the two accessors, each scoped to the
-  running bundle. A settings backup enumerates `AppSettingsKey`, so a credential kept there would travel
-  to another Mac. A flag that doubles as consent — `snippetsEnabled`, `extensionsEnabled`, `aiEnabled`,
-  `calendarEnabled` — is excluded from a backup for the same reason.
-- **Smallcast is a fork, and upstream's version wins where the two converged.** Syncing `base/main`
-  is a feature-by-feature decision, not a merge: upstream rewrites its history, and fourteen
-  Smallcast-only features hook into files upstream also owns, so taking its file silently deletes them.
-  Never sync without walking the tables in [upstream.md](docs/upstream.md).
 - **`DesignSystem/Scrolling/EdgeDissolve.swift` and `ThinScrollbar.swift` are off-limits.** Both are
   tuned by eye against the palette's floating bars, so any edit is a visual regression. Needing to touch
   one to fix a scroll bug means the real fix belongs elsewhere.
 
 ## Conventions worth knowing up front
 
+- **A new preference also gets a `SettingsFileKey`** and its binding in `SettingsFileSchema`, so the
+  opt-in `settings.json` mirror carries it; the exhaustive switch fails the build until it is bound.
+  See [settings-file.md](docs/features/settings-file.md).
 - **A type's suffix says what it *is*** — `Store`, `Coordinator`, `Controller`, `Manager`, `Engine`,
   `Policy` and the rest each name a specific responsibility. **Semantic correctness always wins over
   suffix consistency:** pick the suffix that describes the type honestly, add a new one when none fits,

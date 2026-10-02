@@ -15,6 +15,7 @@ struct SettingsDetailView: View {
             case .systemActions: SystemActionsSettingsView()
             case .commands: CommandsSettingsView()
             case .quicklinks: QuicklinksSettingsView()
+            case .appleShortcuts: AppleShortcutsSettingsView()
             case .fallbacks: FallbacksSettingsView()
             case .ai: AISettingsView()
             case .quickActions: QuickActionsSettingsView()
@@ -34,10 +35,6 @@ struct SettingsDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            VisualEffectView(material: .contentBackground, blending: .behindWindow)
-                .ignoresSafeArea()
-        )
         // One host for every pane, above their scroll views so a callout is never clipped.
         .shortcutRecorderPopoverHost()
     }
