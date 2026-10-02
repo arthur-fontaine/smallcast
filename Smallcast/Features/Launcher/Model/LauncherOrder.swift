@@ -112,6 +112,8 @@ enum LauncherOrder {
         let subtitleExact: Bool
         let subtitle: Int
         let term: TermHit
+        /// Set only when nothing matched and the title is a near-miss of the query.
+        let typo: Int?
 
         init?(profile: SearchProfile, signals: Signals, query: Query, sensitivity: SearchSensitivity) {
             let latinLength = query.latin.units.count
@@ -133,7 +135,8 @@ enum LauncherOrder {
                 || profile.keywords.contains {
                     passes(LauncherMatch.match(query.latin, in: $0), latinLength)
                 }
-            guard isMatching else { return nil }
+            typo = isMatching ? nil : LauncherMatch.typoDistance(query.latin, in: profile.title)
+            guard isMatching || typo != nil else { return nil }
 
             titleExact = titleMatch == .exact || alternates.contains { $0 == .exact }
             title = alternates.reduce(Self.value(titleMatch)) { max($0, Self.value($1)) }
@@ -198,6 +201,11 @@ enum LauncherOrder {
     /// Negative puts `a` first; the first rule that separates the two decides.
     private static func compare(_ a: Candidate, _ b: Candidate, length: Int) -> Int {
         guard let x = a.facts, let y = b.facts else { return tiebreak(a, b) }
+        // A typo is a guess at the name, so every real match ranks above it.
+        if x.typo != nil || y.typo != nil {
+            guard let left = x.typo, let right = y.typo else { return x.typo == nil ? -1 : 1 }
+            return first(descending(right, left), frecency(a, b)) ?? tiebreak(a, b)
+        }
         if x.alias != y.alias, x.alias == .exact || y.alias == .exact {
             return x.alias == .exact ? -1 : 1
         }
