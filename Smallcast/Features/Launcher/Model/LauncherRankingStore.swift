@@ -18,6 +18,14 @@ struct LauncherUsage: Sendable, Equatable {
     static let unused = LauncherUsage(frecency: 1, searchTerms: [])
 }
 
+/// One entry as the ranking knows it, for Settings › Search to list.
+struct LearnedEntry: Sendable, Equatable {
+    let score: Double
+    let lastUsed: Date
+    /// Most recent first.
+    let queries: [String]
+}
+
 /// Learns what the user opens, and by which query, as bounded on-device frecency data.
 @MainActor
 @Observable
@@ -102,6 +110,24 @@ final class LauncherRankingStore {
         guard !visits.isEmpty else { return }
         visits = [:]
         didMutate()
+    }
+
+    /// Forgets the entries opened since `cutoff`, so undoing an afternoon spares the months before.
+    func reset(since cutoff: Date?) {
+        guard let cutoff else { return resetAll() }
+        let kept = visits.filter { $0.value.openedAt < cutoff }
+        guard kept.count != visits.count else { return }
+        visits = kept
+        didMutate()
+    }
+
+    func learnedEntries() -> [String: LearnedEntry] {
+        let timestamp = now()
+        return visits.mapValues {
+            LearnedEntry(
+                score: Self.frecency(anchor: $0.anchor, at: timestamp), lastUsed: $0.openedAt,
+                queries: $0.searchTerms.reversed())
+        }
     }
 
     /// Replaces the table wholesale from a backup, dropping what the initialiser would.

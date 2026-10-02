@@ -36,7 +36,7 @@ struct SearchSettingsView: View {
 
     var body: some View {
         let learned = learned
-        let peak = learned.map(\.record.count).max() ?? 1
+        let peak = learned.map(\.record.score).max() ?? 1
         return Form {
             Section {
                 SettingsRow(title: "Forget", subtitle: resetSubtitle(entries: learned.count)) {
@@ -71,9 +71,8 @@ struct SearchSettingsView: View {
                     ForEach(learned) { item in
                         LearnedRow(
                             name: item.entry.name, kind: item.entry.kindLabel,
-                            icon: item.entry.icon, count: item.record.count, peak: peak,
-                            lastUsed: item.record.lastUsed,
-                            queries: Array(item.record.distinctQueries.prefix(3)),
+                            icon: item.entry.icon, score: item.record.score, peak: peak,
+                            lastUsed: item.record.lastUsed, queries: item.record.queries,
                             onForget: { forget(item) })
                     }
                 }
@@ -110,13 +109,13 @@ struct SearchSettingsView: View {
     }
 }
 
-/// One learned entry: what it is, how often it has been opened, and what you typed to get there.
+/// One learned entry: what it is, how strongly it ranks, and what you typed to get there.
 private struct LearnedRow: View {
     let name: String
     let kind: String
     let icon: NSImage
-    let count: Int
-    let peak: Int
+    let score: Double
+    let peak: Double
     let lastUsed: Date
     let queries: [String]
     let onForget: () -> Void
@@ -127,19 +126,15 @@ private struct LearnedRow: View {
                 .resizable()
                 .frame(width: Theme.Size.settingsRowIcon, height: Theme.Size.settingsRowIcon)
         } trailing: {
-            // The bar is the comparison the number alone doesn't make.
+            // A decayed score means nothing as a number, so only its share of the strongest is drawn.
             Capsule()
                 .fill(Theme.Colors.controlSurface)
                 .frame(width: 60, height: 4)
                 .overlay(alignment: .leading) {
                     Capsule()
                         .fill(.tint)
-                        .frame(width: max(4, 60 * CGFloat(count) / CGFloat(max(peak, 1))), height: 4)
+                        .frame(width: max(4, 60 * score / max(peak, 1)), height: 4)
                 }
-            Text("\(count)")
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .frame(minWidth: 28, alignment: .trailing)
             Button(action: onForget) {
                 Image(systemName: "xmark.circle")
             }

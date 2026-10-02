@@ -102,6 +102,27 @@ struct RankingTest {
         store.resetAll()
         check("reset all empties the table", store.isEmpty)
 
+        // Settings › Search lists what the ranking itself knows, and forgets a window of it.
+        store.visit(itemKey: "old", query: "ol")
+        clock += day
+        store.visit(itemKey: "new", query: "ne")
+        store.visit(itemKey: "new", query: "new")
+        let learned = store.learnedEntries()
+        check("learned entries are per item", learned.count == 2)
+        check("learned entries keep the latest open", learned["new"]?.lastUsed == clock)
+        check("learned entries list the newest term first", learned["new"]?.queries == ["new", "ne"])
+        check(
+            "learned entries score a second open higher",
+            (learned["new"]?.score ?? 0) > (learned["old"]?.score ?? .infinity))
+        store.reset(since: clock - 3_600)
+        check("a windowed reset forgets what was opened inside it", !store.hasRanking(for: "new"))
+        check("…and keeps what was not", store.hasRanking(for: "old"))
+        let windowed = store.revision
+        store.reset(since: clock)
+        check("a window with nothing in it leaves the revision", store.revision == windowed)
+        store.reset(since: nil)
+        check("an open-ended reset forgets everything", store.isEmpty)
+
         store.replace([
             "kept": LauncherVisit(anchor: clock + day, openedAt: clock, searchTerms: ["k"]),
             "stale": LauncherVisit(anchor: clock - day, openedAt: clock - 90 * day, searchTerms: []),
