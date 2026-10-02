@@ -147,7 +147,7 @@ being edited and can still be remembered. See [calculator.md](calculator.md).
 
 #### Dismissal and the typed query
 
-Dismissing mid-work — the toggle hotkeys, Escape, or clicking away — keeps what was there for
+Dismissing mid-work — the toggle hotkeys or clicking away — keeps what was there for
 `PaletteWindowController.workInProgressGrace` (30 s), whatever Pop to Root Search is set to, so glancing
 at the window behind and coming back does not lose it. The next summon consumes the preserved state
 exactly as a within-timeout reopen already did.
@@ -159,6 +159,12 @@ half-written query does; only an empty root search resets on the Pop to Root Sea
 default) resets as before, since the search already did its job — only `.dismissed` holds on. The
 dismissal sites name themselves; everything else inherits the safe default. The grace is Smallcast's
 own; see [upstream.md](../upstream.md).
+
+**Escape is not a dismissal mid-work.** It only closes once the field is empty and the screen is a
+root, so it is *leaving* that screen: closing a sub-screen summoned by its own hotkey resets to the
+launcher at once, the step Escape takes when the same screen was reached by typing its name. Without
+it, Escape on the emoji picker left the picker preserved, the main hotkey's `restoreAnyMode` brought it
+back, and Escape there closed it again — no way to the launcher for 30 s.
 
 The header draws a back chevron on **every** screen but the launcher: leaving is what the icon
 slot means once you are off the root, and a slot that changed shape with provenance would read
