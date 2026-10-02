@@ -32,6 +32,9 @@ final class CalculatorCoordinator {
         calcHistory.clearAll()
     }
 
+    /// History records the canonical answer; only what reaches the pasteboard is localized.
+    private var format: CalcNumberFormat { core.calcNumberFormat }
+
     /// Remember whatever the search currently evaluates to, without copying it — a calculation you
     /// only looked at is still one you did.
     /// Called at exactly the moments a query stops being edited: Escape clearing the field, and every
@@ -44,7 +47,7 @@ final class CalculatorCoordinator {
         // search bar belongs to the extension, and "1+2" typed into its filter is not a calculation.
         guard palette.mode == .launcher || palette.mode == .calculatorHistory,
             !palette.query.trimmingCharacters(in: .whitespaces).isEmpty,
-            let result = CalcMemo.evaluate(palette.query, rates: currencyRates.rates),
+            let result = CalcMemo.evaluate(palette.query, rates: currencyRates.rates, format: format),
             case .value(let display, _) = result.payload
         else { return }
         calcHistory.record(expression: result.expression, result: display)
@@ -62,7 +65,7 @@ final class CalculatorCoordinator {
         guard case .value(let display, let copyText) = result.payload else { return }
         calcHistory.record(expression: result.expression, result: display)
         paletteCoordinator.hidePalette(restoreFocus: false)
-        Paster.copyPlainText(copyText)
+        Paster.copyPlainText(format.localized(copyText))
     }
 
     /// `⇧⌘↵` on the card: the whole calculation, for pasting into a note or a message.
@@ -70,17 +73,19 @@ final class CalculatorCoordinator {
         guard case .value(let display, let copyText) = result.payload else { return }
         calcHistory.record(expression: result.expression, result: display)
         paletteCoordinator.hidePalette(restoreFocus: false)
-        Paster.copyPlainText("\(result.expression) = \(copyText)")
+        let format = format
+        Paster.copyPlainText(
+            "\(format.localizedExpression(result.expression)) = \(format.localized(copyText))")
     }
 
     /// Enter on a Calculator History row: re-copy the stored answer (no re-record).
     func copyHistoryEntry(_ entry: CalcHistoryEntry) {
         paletteCoordinator.hidePalette(restoreFocus: false)
-        Paster.copyPlainText(entry.result.replacingOccurrences(of: ",", with: ""))
+        Paster.copyPlainText(format.localized(entry.result.replacingOccurrences(of: ",", with: "")))
     }
 
     func copyHistoryExpression(_ entry: CalcHistoryEntry) {
         paletteCoordinator.hidePalette(restoreFocus: false)
-        Paster.copyPlainText(entry.expression)
+        Paster.copyPlainText(format.localizedExpression(entry.expression))
     }
 }

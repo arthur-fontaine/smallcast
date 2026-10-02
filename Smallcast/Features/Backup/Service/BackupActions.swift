@@ -257,6 +257,9 @@ enum BackupActions {
     private static let snippetsNeedEnablingText =
         "Turn on Snippets in Settings to use their keywords."
 
+    /// Not everything an import applies settles in the running app, so say to relaunch.
+    private static let restartAfterImportText = "Quit and reopen Smallcast to finish."
+
     /// One sentence per Raycast category that actually moved, shared by the pane and onboarding.
     static func raycastText(_ outcome: RaycastOutcome) -> String {
         var parts: [String] = []
@@ -283,6 +286,7 @@ enum BackupActions {
         if outcome.missingImages > 0 {
             message += " \(outcome.missingImages) images were unavailable and skipped."
         }
+        if !parts.isEmpty { message += " \(restartAfterImportText)" }
         return message
     }
 
@@ -294,11 +298,52 @@ enum BackupActions {
         if s.favorites > 0 { parts.append("\(s.favorites) favorites") }
         if s.hiddenItems > 0 { parts.append("\(s.hiddenItems) hidden items") }
         if s.aliases > 0 { parts.append("\(s.aliases) aliases") }
+        if s.pinnedEmoji > 0 { parts.append("\(s.pinnedEmoji) pinned emoji and symbols") }
         if s.customCommands > 0 { parts.append("\(s.customCommands) custom commands") }
         if s.quicklinks > 0 { parts.append("\(s.quicklinks) quicklinks") }
         if s.windowLayouts > 0 { parts.append("\(s.windowLayouts) window layouts") }
+        if s.windowRooms > 0 { parts.append("\(s.windowRooms) rooms") }
+        if s.customWindowSizes > 0 {
+            parts.append("\(s.customWindowSizes) custom window sizes")
+        }
         guard !parts.isEmpty else { return nil }
         return "Applied " + parts.joined(separator: ", ") + "."
+    }
+
+    // MARK: - Settings file
+
+    /// Where settings.json lives for this channel, as the pane and its dialog spell it.
+    static var settingsFilePath: String {
+        (AppPaths.settingsFile().path as NSString).abbreviatingWithTildeInPath
+    }
+
+    /// Turning the mirror on over a file that already exists asks which side wins.
+    static func setSettingsFileEnabled(_ enabled: Bool, core: AppCore) async {
+        guard enabled else { return core.stopSettingsFile() }
+        guard FileManager.default.fileExists(atPath: AppPaths.settingsFile().path) else {
+            return core.startSettingsFile(importing: false)
+        }
+        let choice = await core.choose(
+            title: "Import the existing settings file?",
+            message:
+                "\(settingsFilePath) already exists. Import applies its settings here; Replace "
+                + "overwrites it with the current ones.",
+            symbol: importSymbol,
+            options: [
+                DialogAction(title: "Import"),
+                DialogAction(title: "Replace", role: .destructive),
+                DialogAction(title: "Cancel", role: .cancel)
+            ],
+            defaultIndex: 0)
+        switch choice {
+        case 0: core.startSettingsFile(importing: true)
+        case 1: core.startSettingsFile(importing: false)
+        default: break
+        }
+    }
+
+    static func revealSettingsFile() {
+        NSWorkspace.shared.activateFileViewerSelecting([AppPaths.settingsFile()])
     }
 
     private static func confirmExecutableImport(

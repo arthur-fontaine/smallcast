@@ -30,7 +30,7 @@ enum HistoryFeed {
 
     static func build(
         launches: [String: LaunchRecord], apps: [AppEntry], calculations: [CalcHistoryEntry],
-        query: String
+        query: String, sensitivity: SearchSensitivity
     ) -> [HistoryItem] {
         let byKey = Dictionary(
             apps.map { ($0.preferenceKey, $0) }, uniquingKeysWith: { first, _ in first })
@@ -42,16 +42,25 @@ enum HistoryFeed {
         items += calculations.map(HistoryItem.calculation)
 
         let trimmed = query.trimmingCharacters(in: .whitespaces)
-        if !trimmed.isEmpty { items = items.filter { matches(trimmed, $0) } }
+        if !trimmed.isEmpty {
+            let folded = LauncherOrder.Query(trimmed)
+            items = items.filter { matches(trimmed, folded, sensitivity, $0) }
+        }
         return Array(items.sorted { $0.date > $1.date }.prefix(limit))
     }
 
-    /// The launcher's own matcher for entries (typos and categories included), so the two screens
-    /// agree on what a query means; a calculation matches on either side of the "=".
-    private static func matches(_ query: String, _ item: HistoryItem) -> Bool {
+    /// The launcher's own matcher for entries (typos included), so the two screens agree on what a
+    /// query means; a calculation matches on either side of the "=".
+    private static func matches(
+        _ query: String, _ folded: LauncherOrder.Query, _ sensitivity: SearchSensitivity,
+        _ item: HistoryItem
+    ) -> Bool {
         switch item {
         case .entry(let app, _):
-            return SearchRelevance.quality(query: query, fields: SearchFields(app.aliases)) != nil
+            return !LauncherOrder.ranked(
+                [app], query: folded, sensitivity: sensitivity, limit: 1, profile: \.search,
+                signals: { LauncherOrder.Signals(alias: nil, usage: .unused, priority: 0, title: $0.name) }
+            ).isEmpty
         case .calculation(let entry):
             return entry.expression.localizedCaseInsensitiveContains(query)
                 || entry.result.localizedCaseInsensitiveContains(query)

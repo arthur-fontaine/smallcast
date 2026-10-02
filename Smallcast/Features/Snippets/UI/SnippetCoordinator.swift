@@ -49,6 +49,20 @@ final class SnippetCoordinator {
         NSWorkspace.shared.open(store.snippetsDirectory)
     }
 
+    /// Points the library at a folder as it is; nothing is moved out of the old one.
+    func chooseSnippetsFolder() {
+        guard
+            let url = FolderPicker.choose(
+                message: "Choose the folder your snippets are kept in.",
+                startingAt: store.snippetsDirectory)
+        else { return }
+        settings.snippetsFolder = AppPaths.contentFolderSetting(for: url, named: "Snippets")
+    }
+
+    func resetSnippetsFolder() {
+        settings.snippetsFolder = nil
+    }
+
     /// The switch funnels here so enabling, which is also consent, confirms first.
     func setSnippetsEnabled(_ enabled: Bool) {
         guard enabled != settings.snippetsEnabled else { return }
@@ -79,7 +93,9 @@ final class SnippetCoordinator {
     /// Either switch off means the feature reaches the launcher not at all — rows and commands.
     func applySnippetsLauncherPresence() {
         let visible = settings.snippetsEnabled && settings.snippetsShowInLauncher
-        appIndex.setCommandsVisible([.searchSnippets, .createSnippet], visible)
+        let commands: Set<CommandID> = [.searchSnippets, .createSnippet]
+        appIndex.setCommandsVisible(commands, settings.snippetsEnabled)
+        appIndex.setCommandsListed(commands, settings.snippetsShowInLauncher)
         appIndex.updateSnippets(visible ? store.snippets : [])
     }
 
@@ -160,6 +176,18 @@ final class SnippetCoordinator {
         expandSnippet(id: id, target: target)
     }
 
+    /// A shortcut lands where the caret is; over the palette, that's what the palette covered.
+    func expandSnippetFromHotKey(id: StoredSnippet.ID) {
+        guard settings.snippetsEnabled, store.record(id: id)?.snippet.isEnabled == true else {
+            return
+        }
+        if windowController.isVisible {
+            expandSnippetFromPalette(id: id)
+        } else {
+            expandSnippet(id: id, target: InjectionTarget.current())
+        }
+    }
+
     func expandSnippet(
         id: StoredSnippet.ID,
         target: InjectionTarget?,
@@ -219,32 +247,39 @@ final class SnippetCoordinator {
         automaticGeneration: UInt?,
         confirmation: String?
     ) {
-        listener.isPromptingForArguments = true
-        defer { listener.isPromptingForArguments = false }
-        guard
-            let arguments = SnippetArgumentsPrompt.run(
-                snippetName: record.snippet.name,
-                arguments: missingArgs,
-                metrics: settings.interfaceSize.metrics)
-        else {
+        // The open dialog would refuse this prompt, and its end must not clear the flag under it.
+        guard !core.isShowingDialog else {
             injector.cancelArgumentPrompt(
                 automaticGeneration: automaticGeneration,
                 target: target)
             return
         }
+        listener.isPromptingForArguments = true
+        Task {
+            let arguments = await core.fillSnippetArguments(
+                snippetName: record.snippet.name,
+                arguments: missingArgs)
+            listener.isPromptingForArguments = false
+            guard let arguments else {
+                injector.cancelArgumentPrompt(
+                    automaticGeneration: automaticGeneration,
+                    target: target)
+                return
+            }
 
-        let result = SnippetTemplateEngine.expand(
-            record,
-            snippets: records,
-            context: context,
-            userArguments: arguments)
-        completeSnippetExpansion(
-            result,
-            target: target,
-            expectedKeyword: expectedKeyword,
-            keywordLength: keywordLength,
-            automaticGeneration: automaticGeneration,
-            confirmation: confirmation)
+            let result = SnippetTemplateEngine.expand(
+                record,
+                snippets: records,
+                context: context,
+                userArguments: arguments)
+            completeSnippetExpansion(
+                result,
+                target: target,
+                expectedKeyword: expectedKeyword,
+                keywordLength: keywordLength,
+                automaticGeneration: automaticGeneration,
+                confirmation: confirmation)
+        }
     }
 
     private func completeSnippetExpansion(

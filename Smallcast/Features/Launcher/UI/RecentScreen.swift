@@ -15,7 +15,8 @@ struct RecentScreen: PaletteScreen {
     var rows: [HistoryItem] {
         HistoryFeed.build(
             launches: launchHistory.records, apps: appIndex.apps,
-            calculations: calcHistory.entries, query: vm.query)
+            calculations: calcHistory.entries, query: vm.query,
+            sensitivity: core.settings.rootSearchSensitivity)
     }
 
     var primaryActionTitle: String {

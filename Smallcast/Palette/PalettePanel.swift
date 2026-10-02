@@ -58,6 +58,7 @@ final class PalettePanel: NSPanel {
         // A transport's button is a first responder like any other; the search field outranks it.
         if let view = responder as? NSView, view.refusesKeyboardFocus { return false }
         guard super.makeFirstResponder(responder) else { return false }
+        fieldEditor?.insertionPointColor = Self.caretColor
         trackComposition()
         if let context = fieldEditorContext { onFieldEditorFocused?(context) }
         return true
@@ -117,10 +118,12 @@ final class PalettePanel: NSPanel {
             keyCode: UInt16(arrow.code))
     }
 
+    private static let caretColor = NSColor(Theme.Colors.textPrimary)
+
     /// Caret hiding on SwiftUI's own field editor. docs/features/palette.md#menu-open-input-freeze
     private func setSearchCaretHidden(_ hidden: Bool) {
         guard let editor = fieldEditor else { return }
-        editor.insertionPointColor = hidden ? .clear : NSColor(Theme.Colors.textPrimary)
+        editor.insertionPointColor = hidden ? .clear : Self.caretColor
         // Force a redraw so the caret flips at once rather than waiting out the blink timer.
         editor.updateInsertionPointStateAndRestartTimer(!hidden)
     }
@@ -170,7 +173,7 @@ final class PalettePanel: NSPanel {
             sendEvent(arrow)
             return
         }
-        // A footer menu owns the keyboard. See docs/features/palette.md#menu-open-input-freeze.
+        // A palette menu owns the keyboard. See docs/features/palette.md#menu-open-input-freeze.
         if event.type == .keyDown,
             paletteState?.menuOpen == true,
             event.modifierFlags.isDisjoint(with: [.command, .control]),
@@ -233,7 +236,7 @@ final class PalettePanel: NSPanel {
 
         isFloatingPanel = true
         acceptsMouseMovedEvents = true
-        level = .floating
+        level = .palette
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isMovableByWindowBackground = false
         titleVisibility = .hidden
@@ -258,5 +261,6 @@ final class PalettePanel: NSPanel {
     }
 
     override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
+    // The parent stays main while a menu is key, so its Liquid Glass remains active.
+    override var canBecomeMain: Bool { true }
 }
