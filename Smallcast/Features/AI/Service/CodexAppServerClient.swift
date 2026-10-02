@@ -35,6 +35,9 @@ final class CodexAppServerClient {
     var launchSettings: () -> InstalledAILaunch = { InstalledAILaunch() }
 
     private let codexHome: URL?
+    /// Resolved once: the login shell costs a stall, and a launch runs on every relaunch.
+    private var userCodexHome: String?
+    private var didResolveUserCodexHome = false
     let workspace: URL
     /// The command the last launch ran, kept after it stops so Settings can still name it.
     private(set) var executable: URL?
@@ -116,6 +119,17 @@ final class CodexAppServerClient {
         try await start()
     }
 
+    /// Finder never hands the app the `CODEX_HOME` a shell rc exports; a value set in Settings wins.
+    private func addingUserCodexHome(to inherited: [String: String]) async -> [String: String] {
+        guard codexHome == nil, inherited["CODEX_HOME"] == nil else { return inherited }
+        if !didResolveUserCodexHome {
+            userCodexHome = await CodexHomeLocator.home(environment: inherited)
+            didResolveUserCodexHome = true
+        }
+        guard let userCodexHome else { return inherited }
+        return inherited.merging(["CODEX_HOME": userCodexHome]) { _, new in new }
+    }
+
     private func launch(_ toolServers: [AIToolServer]) async throws {
         let generation = self.generation
         let settings = launchSettings()
@@ -132,7 +146,7 @@ final class CodexAppServerClient {
             executable = found
         }
         self.executable = executable
-        let inherited = settings.inherited(for: .codex)
+        let inherited = await addingUserCodexHome(to: settings.inherited(for: .codex))
         try checkNotStopped(since: generation)
         // The list is only readable at launch, so the old process cannot be talked into it.
         if isRunning {
