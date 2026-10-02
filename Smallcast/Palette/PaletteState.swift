@@ -81,6 +81,9 @@ final class PaletteState {
     @ObservationIgnored var onMenuOpenChanged: ((Bool) -> Void)?
     /// A fresh presentation resets a long popover to the row it opens with.
     private(set) var menuPresentationToken = UUID()
+    /// Fired at the *start* of every screen change, while the query is still readable — the one
+    /// moment a calculation you only looked at can still be remembered.
+    @ObservationIgnored var onWillReset: (() -> Void)?
 
     func noteVisible(_ visible: Bool) {
         isVisible = visible
@@ -138,6 +141,7 @@ final class PaletteState {
     }
 
     private func openScreen(_ mode: PaletteMode) {
+        onWillReset?()
         self.mode = mode
         query = ""
         selection = 0

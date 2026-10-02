@@ -559,7 +559,7 @@ struct RootPaletteView: View {
                 case .leaveArgumentField:
                     returnFocusToSearchField()
                 case .clearQuery:
-                    vm.query = ""
+                    core.calculatorCoordinator.clearSearch()
                 case .exitExtensionScreen:
                     core.extensionCoordinator.exitExtensionScreen()
                 case .goBack:
