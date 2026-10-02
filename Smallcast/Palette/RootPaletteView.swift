@@ -8,6 +8,8 @@ struct RootPaletteView: View {
     @Environment(FavoritesStore.self) private var favorites
     @Environment(VisibilityStore.self) private var visibility
     @Environment(CalculatorHistoryStore.self) private var calcHistory
+    @Environment(LaunchHistoryStore.self) private var launchHistory
+    @Environment(RunningAppsMonitor.self) private var runningApps
     /// Observed so the card re-evaluates when a snapshot lands or consent changes.
     @Environment(CurrencyRateStore.self) private var currencyRates
     @Environment(EmojiIndex.self) private var emojiIndex
@@ -108,6 +110,11 @@ struct RootPaletteView: View {
         case .calculatorHistory:
             return CalculatorHistoryScreen(
                 history: calcHistory, currencyRates: currencyRates, core: core, vm: vm,
+                openActions: openActions)
+        case .recent:
+            return RecentScreen(
+                launchHistory: launchHistory, appIndex: appIndex, calcHistory: calcHistory,
+                favorites: favorites, runningApps: runningApps, core: core, vm: vm,
                 openActions: openActions)
         case .extensionCommand:
             return ExtensionCommandScreen(
@@ -487,11 +494,13 @@ struct RootPaletteView: View {
             .onKeyPress(keys: [.upArrow], phases: [.down, .repeat]) { press in
                 if let reorder = movePinnedOrFavorite(-1, modifiers: press.modifiers) { return reorder }
                 if vm.isControlListOpen { return .ignored }
-                if isCollapsed { return .ignored }
                 if menuOpen {
                     moveMenu(-1)
                     return .handled
                 }
+                // Before the compact guard: the bar has nothing above it either, so ↑ means the same.
+                if openRecentFromTop() { return .handled }
+                if isCollapsed { return .ignored }
                 return moveVertically(-1)
             }
             // Horizontal arrows step the grid; elsewhere they stay with the caret.
@@ -1320,6 +1329,15 @@ struct RootPaletteView: View {
         case .freshScreen(let mode): vm.push(mode: mode)
         case .ask: core.quickAICoordinator.ask(vm.query)
         }
+    }
+
+    /// ↑ with nothing typed and nothing above it opens what you just did, as a shell prompt would.
+    private func openRecentFromTop() -> Bool {
+        guard vm.mode == .launcher, vm.query.isEmpty, isCollapsed || vm.selection == 0 else {
+            return false
+        }
+        vm.push(mode: .recent)
+        return true
     }
 
     /// Tab walks a screen's own fields first, then the inline arguments, then rings the modes.
