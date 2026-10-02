@@ -568,9 +568,10 @@ struct RootPaletteView: View {
                 case .goBack:
                     goBack()
                 case .hidePalette:
+                    // A root screen closes where a pushed one pops, so no reopen may bring it back.
+                    let leavesScreen = vm.mode != .launcher
                     core.paletteCoordinator.hidePalette(reason: .dismissed)
-                    // This behavior promises a root search on reopen, whatever the delay says.
-                    if settings.escapeKeyBehavior == .closeAndPopToRoot {
+                    if leavesScreen || settings.escapeKeyBehavior == .closeAndPopToRoot {
                         core.paletteCoordinator.popToRootNow()
                     }
                 }
