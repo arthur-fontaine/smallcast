@@ -159,6 +159,21 @@ the Zed app: rule 3 only protects an exact title past three characters.
 `CFBundleAlternateNames`, so it is an exact alternate title and wins rule 3; the command is named
 `Smallcast Settings`, like About, Quit and Support Smallcast, so nothing ties it there.
 
+### Typo tolerance
+
+A query that matches no field at all gets one last try against the title:
+`LauncherMatch.typoDistance` is a bounded Damerau–Levenshtein distance to the best *prefix* of the
+title from each of its word starts, so trailing characters are free and `managment` reaches Window
+Management. Ahead of the comparator's first rule, every real match ranks above every typo; typos then order by
+distance and frecency, so a typo never reorders anything typed correctly. Subtitles, keywords, alternate
+titles and aliases never typo-match.
+
+The allowance (`LauncherMatch.allowedTypos(forQueryLength:)`) is deliberately tight: none under four
+characters, one up to seven, two up to eleven, then three. Two edits on a six-letter word made `finder`
+a hit for *Find My*, so `cat` is not a typo of *Chess* and `wick` does not reach *WhatsApp*. Search
+sensitivity does not gate it. `fuzz-test`'s typo block pins all of it. Menu, window and file search keep
+`FuzzyMatch`, which has no typo tier. This is Smallcast's own; see [upstream.md](../upstream.md).
+
 ## One fold, everywhere
 
 `FuzzyMatch.normalized` is the only text fold in the launcher: NFC precomposition, format scalars
@@ -726,6 +741,36 @@ the move `selectFavorite` already makes. The palette stays open on the same quer
 untouched. One function answers both the menu row and the chord, and it re-tests eligibility rather
 than trusting the caller, so ⇧⌘H falls through to whatever else wants the press on a row that offers
 no such menu item.
+
+## The Recent list
+
+↑ from the empty launcher opens `PaletteMode.recent`: what you just did, newest first, under the same
+day headers the clipboard and calculator histories use. `LaunchHistoryStore` (`Launcher/Model/`) is
+the log and `HistoryFeed` (`Launcher/Service/`) merges it with the calculator history into one
+`HistoryItem` stream, so a remembered launch and a remembered calculation sort together. The screen
+is pushed, so Escape and the back chevron return to the launcher.
+
+It is a separate log from `LauncherRankingStore` on purpose, and the two record on different rules.
+Ranking learns a visit and the term that led there, so `LauncherCoordinator.launch` keeps a category
+word out of the terms, or the row would rank under "s". The Recent list records **every** launch, query
+or not, because it is about what happened and not about what was typed. A query typed on the Recent
+screen filters through `LauncherOrder` at the user's search sensitivity, so it matches what root search
+would.
+
+Rows are the launcher's and the calculator history's own views (`AppRow` and `CalcHistoryRow`, which
+is why neither is `private`), so an entry looks exactly as it does where it came from. The ⌘K menu is
+the underlying item's own menu plus **Remove from History** and **Clear History**. Reordering
+favorites is absent there: those rows need the visible favorites order, which this screen does not
+have, so `RecentScreen` hands `AppActionsMenu` a `FavoriteActions` whose move rows are switched off
+rather than a store call that would act on the wrong index.
+
+Settings › Search shows and resets what the ranking learned (`SearchSettingsView`,
+`Launcher/Settings/`). Its rows come from `LauncherRankingStore.learnedEntries()` — each live visit's
+decayed score, its last open and its terms, newest first — and never from the Recent list's log, so a
+launch the ranking never saw is not listed as learned. A score is no count, so a row draws only its
+share of the strongest. Resetting there clears both stores by time window through each store's
+`reset(since:)`; the ranking forgets every entry last opened inside it. The list and the pane are Smallcast's own; see
+[upstream.md](../upstream.md).
 
 ## Reveal in Finder
 
