@@ -98,4 +98,6 @@ enum AppSettingsKey: String, CaseIterable {
     case quickActionLanguage = "quickActionLanguage"
     case supportReminders = "supportReminders"
     case settingsFileEnabled = "settingsFileEnabled"
+    case aiChord = "aiChord"
+    case tabOpensClipboard = "tabOpensClipboard"
 }

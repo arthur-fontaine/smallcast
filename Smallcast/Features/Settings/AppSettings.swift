@@ -567,6 +567,14 @@ final class AppSettings {
     var supportRemindersEnabled: Bool {
         didSet { defaults.set(supportRemindersEnabled, forKey: Key.supportReminders.rawValue) }
     }
+    /// The in-palette chord that hands the typed text to the AI, from root search only.
+    var aiChord: PaletteAIChord {
+        didSet { defaults.set(aiChord.rawValue, forKey: Key.aiChord.rawValue) }
+    }
+    /// Whether Tab on the launcher rings the other screens. Off leaves Tab to the argument fields.
+    var tabOpensClipboard: Bool {
+        didSet { defaults.set(tabOpensClipboard, forKey: Key.tabOpensClipboard.rawValue) }
+    }
 
     /// Whether settings.json mirrors these settings; `AppCore` starts and stops the mirror.
     var settingsFileEnabled: Bool {
@@ -757,5 +765,12 @@ final class AppSettings {
             defaults.object(forKey: Key.supportReminders.rawValue) == nil
             || defaults.bool(forKey: Key.supportReminders.rawValue)
         settingsFileEnabled = defaults.bool(forKey: Key.settingsFileEnabled.rawValue)
+        aiChord =
+            defaults.string(forKey: Key.aiChord.rawValue).flatMap(PaletteAIChord.init(rawValue:))
+            ?? .optionReturn
+        // Defaults on: this is what Tab already did before it could be turned off.
+        tabOpensClipboard =
+            defaults.object(forKey: Key.tabOpensClipboard.rawValue) == nil
+            || defaults.bool(forKey: Key.tabOpensClipboard.rawValue)
     }
 }

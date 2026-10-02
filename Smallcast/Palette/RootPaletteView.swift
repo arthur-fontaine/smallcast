@@ -518,6 +518,8 @@ struct RootPaletteView: View {
             .onKeyPress(keys: [.return, KeyEquivalent("\u{3}")], phases: .down) { press in
                 let command = press.modifiers.contains(.command)
                 let option = press.modifiers.contains(.option)
+                // Ahead of the rest: which modified ↵ this is, is the AI chord setting's to say.
+                if askAI(key: .returnKey, modifiers: press.modifiers) { return .handled }
                 if menuOpen, !command, !option {
                     activateMenuItem(menuSelection)
                     return .handled
@@ -576,6 +578,7 @@ struct RootPaletteView: View {
             .onKeyPress(keys: [.tab], phases: .down) { press in
                 // ⇥ inside an open list belongs to the list, not to the form's field order.
                 if vm.isControlListOpen { return .handled }
+                if askAI(key: .tab, modifiers: []) { return .handled }
                 if !menuOpen { advanceTabFocus(backwards: press.modifiers.contains(.shift)) }
                 return .handled
             }
@@ -781,7 +784,9 @@ struct RootPaletteView: View {
 
     /// Resolved through `PaletteTabAction`, so the hint cannot promise the wrong destination.
     private var tabOpensChat: Bool {
-        guard !isCollapsed, headerAccessory?.fieldNames.isEmpty ?? true else { return false }
+        // The same switch `cycleMode` honours: with the ring off, Tab goes nowhere to advertise.
+        guard settings.tabOpensClipboard, !isCollapsed, headerAccessory?.fieldNames.isEmpty ?? true
+        else { return false }
         return PaletteTabAction.resolve(
             mode: vm.mode, aiEnabled: settings.aiEnabled,
             clipboardEnabled: settings.clipboardEnabled) == .ask
@@ -1318,10 +1323,12 @@ struct RootPaletteView: View {
 
     /// A ring hop leaves a step back — except the hop closing the ring on the launcher, its root.
     private func cycleMode() {
-        switch PaletteTabAction.resolve(
+        let action = PaletteTabAction.resolve(
             mode: vm.mode, aiEnabled: settings.aiEnabled,
             clipboardEnabled: settings.clipboardEnabled)
-        {
+        // Stepping *into* the ring is the part that can be switched off; stepping back never is.
+        guard settings.tabOpensClipboard || action == .carryQuery(.launcher) else { return }
+        switch action {
         case .carryQuery(.launcher):
             vm.mode = .launcher
             vm.resetNavigation()
@@ -1338,6 +1345,28 @@ struct RootPaletteView: View {
         }
         vm.push(mode: .recent)
         return true
+    }
+
+    /// The configurable chord that hands the typed text to the AI. Root search only, and never
+    /// gated on the rows: a query that matched nothing is exactly when it is most wanted.
+    private func askAI(key: PaletteAIChord.Key, modifiers: EventModifiers) -> Bool {
+        let chord = settings.aiChord
+        guard chord.key == key, settings.aiEnabled, vm.mode == .launcher, !menuOpen,
+            holds(chord.modifier, in: modifiers),
+            !vm.query.trimmingCharacters(in: .whitespaces).isEmpty
+        else { return false }
+        core.quickAICoordinator.ask(vm.query)
+        return true
+    }
+
+    /// `PaletteAIChord` names its modifier in its own terms so it stays Foundation-only; this is
+    /// the one place that mapping lives.
+    private func holds(_ modifier: PaletteAIChord.Modifier?, in modifiers: EventModifiers) -> Bool {
+        switch modifier {
+        case .option: return modifiers.contains(.option)
+        case .control: return modifiers.contains(.control)
+        case nil: return true
+        }
     }
 
     /// Tab walks a screen's own fields first, then the inline arguments, then rings the modes.
