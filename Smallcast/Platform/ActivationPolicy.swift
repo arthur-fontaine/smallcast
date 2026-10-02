@@ -7,9 +7,13 @@ final class ActivationPolicy {
 
     var hasOpenWindows: Bool { !openWindows.isEmpty }
 
+    /// Before the window exists: made while still `.accessory`, its popups can miss the active Space.
+    func windowWillOpen() {
+        NSApp.setActivationPolicy(.regular)
+    }
+
     func windowDidOpen(_ window: NSWindow) {
         openWindows.insert(ObjectIdentifier(window))
-        NSApp.setActivationPolicy(.regular)
     }
 
     func windowDidClose(_ window: NSWindow) {

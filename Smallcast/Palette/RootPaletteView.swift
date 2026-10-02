@@ -70,7 +70,8 @@ struct RootPaletteView: View {
                 store: snippets, core: core, vm: vm, openActions: openActions)
         case .emoji:
             return EmojiScreen(
-                index: emojiIndex, frequent: frequentEmoji, pinned: core.pinnedEmoji, core: core, vm: vm,
+                index: emojiIndex, frequent: frequentEmoji, pinned: core.pinnedEmoji,
+                suggestions: core.emojiSuggestions, core: core, vm: vm,
                 tone: settings.emojiSkinTone, defaultColumns: settings.emojiGridColumns,
                 openActions: openActions)
         case .fileSearch:

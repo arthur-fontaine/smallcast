@@ -1,52 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
 
-private func snippetKeywordCallback(
-    proxy: CGEventTapProxy, type: CGEventType, event: CGEvent,
-    userInfo: UnsafeMutableRawPointer?
-) -> Unmanaged<CGEvent>? {
-    guard let userInfo else { return Unmanaged.passUnretained(event) }
-    let listener = Unmanaged<SnippetKeywordListener>.fromOpaque(userInfo).takeUnretainedValue()
-
-    if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-        MainActor.assumeIsolated { listener.tapWasDisabled() }
-        return Unmanaged.passUnretained(event)
-    }
-
-    // A click relocates the caret, so the buffered prefix no longer describes what precedes it.
-    if type == .leftMouseDown || type == .rightMouseDown || type == .otherMouseDown {
-        MainActor.assumeIsolated {
-            listener.userActivity()
-            listener.clearBuffer()
-        }
-        return Unmanaged.passUnretained(event)
-    }
-
-    let eventUserData = event.getIntegerValueField(.eventSourceUserData)
-    let secureEventInputEnabled = IsSecureEventInputEnabled()
-    let typeRaw = type.rawValue
-    let flagsRaw = event.flags.rawValue
-    let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
-    var length = 0
-    var characters = [UniChar](repeating: 0, count: 16)
-    event.keyboardGetUnicodeString(
-        maxStringLength: characters.count,
-        actualStringLength: &length,
-        unicodeString: &characters)
-    let text = length > 0 ? String(utf16CodeUnits: characters, count: length) : nil
-
-    MainActor.assumeIsolated {
-        listener.processEvent(
-            typeRaw: typeRaw,
-            keyCode: keyCode,
-            flagsRaw: flagsRaw,
-            text: text,
-            eventUserData: eventUserData,
-            secureEventInputEnabled: secureEventInputEnabled)
-    }
-    return Unmanaged.passUnretained(event)
-}
-
 @MainActor
 protocol SnippetKeywordTapControlling: AnyObject {
     var state: SnippetKeywordLifecyclePolicy.TapState { get }
@@ -57,65 +11,26 @@ protocol SnippetKeywordTapControlling: AnyObject {
 
 @MainActor
 private final class SystemSnippetKeywordTapController: SnippetKeywordTapControlling {
-    private var tapPort: CFMachPort?
-    private var runLoopSource: CFRunLoopSource?
+    private let tap = KeystrokeTap()
 
     var state: SnippetKeywordLifecyclePolicy.TapState {
-        guard let tapPort else { return .absent }
-        return CGEvent.tapIsEnabled(tap: tapPort) ? .active : .disabled
-    }
-
-    func install(listener: SnippetKeywordListener) -> Bool {
-        guard tapPort == nil else { return true }
-        let mask: CGEventMask =
-            (1 << CGEventType.keyDown.rawValue)
-            | (1 << CGEventType.flagsChanged.rawValue)
-            | (1 << CGEventType.leftMouseDown.rawValue)
-            | (1 << CGEventType.rightMouseDown.rawValue)
-            | (1 << CGEventType.otherMouseDown.rawValue)
-        guard
-            let port = CGEvent.tapCreate(
-                tap: .cgAnnotatedSessionEventTap,
-                place: .headInsertEventTap,
-                options: .listenOnly,
-                eventsOfInterest: mask,
-                callback: snippetKeywordCallback,
-                userInfo: Unmanaged.passUnretained(listener).toOpaque())
-        else { return false }
-        guard let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, port, 0) else {
-            CFMachPortInvalidate(port)
-            return false
-        }
-
-        tapPort = port
-        runLoopSource = source
-        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-        CGEvent.tapEnable(tap: port, enable: true)
-        return CGEvent.tapIsEnabled(tap: port)
-    }
-
-    func reenable() -> Bool {
-        guard let tapPort else { return false }
-        CGEvent.tapEnable(tap: tapPort, enable: true)
-        return CGEvent.tapIsEnabled(tap: tapPort)
-    }
-
-    func tearDown() {
-        if let runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
-            self.runLoopSource = nil
-        }
-        if let tapPort {
-            CGEvent.tapEnable(tap: tapPort, enable: false)
-            CFMachPortInvalidate(tapPort)
-            self.tapPort = nil
+        switch tap.state {
+        case .absent: return .absent
+        case .disabled: return .disabled
+        case .active: return .active
         }
     }
+
+    func install(listener: SnippetKeywordListener) -> Bool { tap.install(handler: listener) }
+
+    func reenable() -> Bool { tap.reenable() }
+
+    func tearDown() { tap.tearDown() }
 }
 
 @MainActor
 @Observable
-final class SnippetKeywordListener: HealthCheckable {
+final class SnippetKeywordListener: HealthCheckable, KeystrokeTapHandling {
     typealias Status = SnippetKeywordListenerStatus
 
     private(set) var status: Status = .off
@@ -299,7 +214,7 @@ final class SnippetKeywordListener: HealthCheckable {
         }
     }
 
-    fileprivate func tapWasDisabled() {
+    func tapWasDisabled() {
         policy.reset()
         syncTapPresence()
     }
@@ -316,25 +231,22 @@ final class SnippetKeywordListener: HealthCheckable {
         syncTapPresence()
     }
 
-    func processEvent(
-        typeRaw: UInt32,
-        keyCode: Int,
-        flagsRaw: UInt64,
-        text: String?,
-        eventUserData: Int64,
-        secureEventInputEnabled: Bool
-    ) {
+    func mouseDown() {
+        userActivity()
+        clearBuffer()
+    }
+
+    func handle(_ event: KeystrokeEvent) {
         guard isRequested, status == .active, !isPromptingForArguments else { return }
-        let flags = CGEventFlags(rawValue: flagsRaw)
         let input = SnippetKeywordPolicy.classifyInput(
-            text: text,
-            isSynthetic: eventUserData == syntheticEventTag,
-            secureEventInputEnabled: secureEventInputEnabled,
-            isFlagsChanged: typeRaw == CGEventType.flagsChanged.rawValue,
-            isKeyDown: typeRaw == CGEventType.keyDown.rawValue,
-            hasCommandOrControl: flags.contains(.maskCommand) || flags.contains(.maskControl),
-            isResetKey: Self.resetKeyCodes.contains(keyCode),
-            isDeleteBackward: keyCode == kVK_Delete)
+            text: event.text,
+            isSynthetic: event.eventUserData == syntheticEventTag,
+            secureEventInputEnabled: event.secureEventInputEnabled,
+            isFlagsChanged: event.isFlagsChanged,
+            isKeyDown: event.isKeyDown,
+            hasCommandOrControl: event.hasCommandOrControl,
+            isResetKey: event.isNavigationKey,
+            isDeleteBackward: event.isDeleteBackward)
         if input != .ignored { userActivity() }
         guard let match = policy.process(input, at: now()) else { return }
         // Sampled here, with the keystroke: by delivery the reader may have moved on.
@@ -346,20 +258,4 @@ final class SnippetKeywordListener: HealthCheckable {
             self.onMatch?(match.snippetID, match.keyword, match.deletionCount, target)
         }
     }
-
-    private static let resetKeyCodes: Set<Int> = [
-        kVK_Return,
-        kVK_ANSI_KeypadEnter,
-        kVK_Escape,
-        kVK_Tab,
-        kVK_LeftArrow,
-        kVK_RightArrow,
-        kVK_UpArrow,
-        kVK_DownArrow,
-        kVK_Home,
-        kVK_End,
-        kVK_PageUp,
-        kVK_PageDown,
-        kVK_ForwardDelete
-    ]
 }

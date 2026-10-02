@@ -5,6 +5,7 @@ struct EmojiScreen: PaletteScreen {
     let index: EmojiIndex
     let frequent: FrequentEmojiStore
     let pinned: PinnedEmojiStore
+    let suggestions: EmojiSuggestionManager
     let core: AppCore
     let vm: PaletteState
     let tone: EmojiSkinTone
@@ -32,7 +33,8 @@ struct EmojiScreen: PaletteScreen {
     private var sections: [EmojiGridSection] {
         EmojiGrid.sections(
             query: vm.query, index: index, frequent: frequent, pinned: pinned,
-            filter: vm.emojiCategoryFilter, columns: columns)
+            filter: vm.emojiCategoryFilter, columns: columns,
+            suggested: suggestions.suggestions.map(\.glyph))
     }
 
     /// Flat grid order across sections — what the selection indexes.

@@ -28,6 +28,7 @@ extension View {
             .environment(core.currencyRates)
             .environment(core.emojiIndex)
             .environment(core.frequentEmoji)
+            .environment(core.emojiSuggestions)
             .environment(core.fileSearch)
             .environment(core.dictionary)
             .environment(core.menuSearch)

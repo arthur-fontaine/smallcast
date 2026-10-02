@@ -418,6 +418,7 @@ extension View {
             .environment(core.fallbacks)
             .environment(core.customCommands)
             .environment(core.snippetsStore)
+            .environment(core.emojiSuggestions)
             .environment(core.quicklinks)
             .environment(core.windowLayouts)
             .environment(core.rooms)

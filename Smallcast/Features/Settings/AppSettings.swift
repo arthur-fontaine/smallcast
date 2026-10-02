@@ -191,6 +191,10 @@ final class AppSettings {
     var emojiGridColumns: EmojiGridColumns {
         didSet { defaults.set(emojiGridColumns.rawValue, forKey: Key.emojiGridColumns.rawValue) }
     }
+    /// Also consent to record typing and download a model, so it confirms first and never rides a backup.
+    var emojiSuggestionsEnabled: Bool {
+        didSet { defaults.set(emojiSuggestionsEnabled, forKey: Key.emojiSuggestionsEnabled.rawValue) }
+    }
 
     /// How long a closed palette keeps its state before popping back to the root launcher.
     var popToRootTimeout: PopToRootTimeout {
@@ -618,6 +622,7 @@ final class AppSettings {
         emojiGridColumns =
             EmojiGridColumns(rawValue: defaults.integer(forKey: Key.emojiGridColumns.rawValue))
             ?? .default
+        emojiSuggestionsEnabled = defaults.bool(forKey: Key.emojiSuggestionsEnabled.rawValue)
         popToRootTimeout =
             PopToRootTimeout(rawValue: defaults.integer(forKey: Key.popToRootTimeout.rawValue))
             ?? .immediately

@@ -51,6 +51,8 @@ final class AppCore {
     let emojiIndex = EmojiIndex()
     let frequentEmoji = FrequentEmojiStore()
     let pinnedEmoji = PinnedEmojiStore()
+    let emojiSuggestions = EmojiSuggestionManager(
+        recorder: TypedTextRecorder(syntheticEventTag: Paster.smallcastEventTag))
     let runningApps = RunningAppsMonitor()
     let palette = PaletteState()
     let fileSearch = FileSearchSession()
@@ -100,7 +102,7 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var paletteCoordinator = PaletteCoordinator(
         palette: palette, settings: settings, appIndex: appIndex,
         fileSearch: fileSearch, menuSearch: menuSearch, windowSwitch: windowSwitch,
-        windowController: windowController)
+        windowController: windowController, emojiSuggestions: emojiSuggestions)
     /// Its own window and lifecycle: neither coordinator shows or closes the other's surface.
     @ObservationIgnored private(set) lazy var settingsCoordinator = SettingsCoordinator(core: self)
     @ObservationIgnored private(set) lazy var onboardingCoordinator = OnboardingCoordinator(
@@ -178,8 +180,8 @@ final class AppCore {
         appIndex: appIndex, palette: palette, windowController: windowController,
         paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var emojiCoordinator = EmojiCoordinator(
-        frequentEmoji: frequentEmoji, settings: settings, windowController: windowController,
-        paletteCoordinator: paletteCoordinator)
+        frequentEmoji: frequentEmoji, suggestions: emojiSuggestions, settings: settings,
+        windowController: windowController, paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var calculatorCoordinator = CalculatorCoordinator(
         calcHistory: calcHistory, palette: palette, currencyRates: currencyRates,
         paletteCoordinator: paletteCoordinator, core: self)
@@ -326,6 +328,8 @@ final class AppCore {
             calendarCoordinator.applyEnabled()
             Task { await appIndex.refresh() }
             Task { await emojiIndex.load(languages: Locale.preferredLanguages) }
+            emojiSuggestions.recorder.healthTicker = healthTicker
+            emojiSuggestions.applyEnabled(settings.emojiSuggestionsEnabled)
             currencyRates.start()
             // A reset is where a calculation stops being edited, so that's where it is remembered.
             palette.onWillReset = { [weak self] in self?.calculatorCoordinator.commitCalculation() }
@@ -532,6 +536,7 @@ final class AppCore {
         textInjector.prepareForTermination()
         snippetListener.stop()
         snippetsStore.stop()
+        emojiSuggestions.recorder.stop()
         aiChats.reset()
         chatGPTSubscription.stop()
         mcpOAuth.stop()
@@ -669,6 +674,9 @@ final class AppCore {
                 _ = $0.fileSearchIgnorePatterns
             }, reproject: { $0.fileSearchCoordinator.applyPolicy() })
         track({ _ = $0.snippetsEnabled }, reproject: { $0.snippetCoordinator.applySnippetsEnabled() })
+        track(
+            { _ = $0.emojiSuggestionsEnabled },
+            reproject: { $0.emojiCoordinator.applySuggestionsEnabled() })
         // Not a feature switch, but the same re-projection: a combo has the chord's ⇧ bit baked in.
         track({ _ = $0.hyperKeyIncludesShift }, reproject: { $0.applyHyperChord() })
         track(

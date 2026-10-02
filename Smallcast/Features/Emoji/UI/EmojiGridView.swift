@@ -10,11 +10,12 @@ struct EmojiGridSection: Identifiable {
 }
 
 enum EmojiGrid {
-    /// Ranked results while searching, otherwise pinned, frequent and catalog sections in order.
+    /// Ranked results while searching, otherwise pinned, suggested, frequent and catalog sections.
     @MainActor
     static func sections(
         query: String, index: EmojiIndex, frequent: FrequentEmojiStore,
-        pinned: PinnedEmojiStore, filter: EmojiCategoryFilter, columns: EmojiGridColumns
+        pinned: PinnedEmojiStore, filter: EmojiCategoryFilter, columns: EmojiGridColumns,
+        suggested: [String] = []
     ) -> [EmojiGridSection] {
         var sections: [EmojiGridSection] = []
         var start = 0
@@ -29,6 +30,8 @@ enum EmojiGrid {
             switch filter {
             case .all:
                 append("Pinned", pinned.glyphs.compactMap(index.entry(for:)))
+                // After Pinned: a pin's position doubles as its flat selection index.
+                append("Suggested", suggested.compactMap(index.entry(for:)))
                 append("Frequently Used", frequentlyUsed(frequent, in: index, columns: columns))
                 for section in index.categorySections {
                     append(section.category.title, section.entries)
