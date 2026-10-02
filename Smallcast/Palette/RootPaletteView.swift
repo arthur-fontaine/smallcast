@@ -565,7 +565,7 @@ struct RootPaletteView: View {
                 case .goBack:
                     goBack()
                 case .hidePalette:
-                    core.paletteCoordinator.hidePalette()
+                    core.paletteCoordinator.hidePalette(reason: .dismissed)
                     // This behavior promises a root search on reopen, whatever the delay says.
                     if settings.escapeKeyBehavior == .closeAndPopToRoot {
                         core.paletteCoordinator.popToRootNow()
