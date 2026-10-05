@@ -67,6 +67,8 @@
 	<string>Smallcast uses automation to perform system actions you explicitly run.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Smallcast shows a camera preview so you can check yourself, and take a photo to the clipboard.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Smallcast records audio only while you use Dictation, to transcribe it on your Mac.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Smallcast reads today's and tomorrow's events so you can join a meeting from the palette.</string>
 	<key>NSRemindersFullAccessUsageDescription</key>
