@@ -77,8 +77,8 @@ When a trailing operator keeps a conversion visible, its input is reconstructed 
 display rounding never feeds back into evaluation.
 
 `UnitDef` is an immutable, Sendable reference shared by its aliases and parsed values. The catalog
-stores 150 base definitions as compact text records rather than repeated construction code, then adds
-SI and transfer-rate prefixes once on first use, for 679 aliases. `CalcUnitCatalog` owns this data;
+stores 152 base definitions as compact text records rather than repeated construction code, then adds
+SI and transfer-rate prefixes once on first use, for 685 aliases. `CalcUnitCatalog` owns this data;
 `CalcUnits` owns conversion policy.
 
 Typed arithmetic precedes simple conversion so `1 / 20ms to hz` divides by a duration,
@@ -379,12 +379,23 @@ Order settles the collisions. Time zones run **last** among the named paths, aft
 currency, so `10 cordoba to usd` stays money and `1 cup to ml` stays volume. `cordoba` is the one
 word the zone and currency tables both claim.
 
+## Months and years
+
+Duration conversions use the average Gregorian year of 365.2425 days and a month of one twelfth of
+that (30.436875 days). `mo` / `month` / `months` and `yr` / `year` / `years` support fractional amounts,
+explicit conversions and quantity arithmetic: `3 months to days` is `91.310625 day`,
+`3.5 years to days` is `1,278.34875 day`, and `12 months to years` is `1 yr`.
+Bare month and year quantities auto-convert to days.
+
+Date arithmetic still uses whole calendar months and years through the injected Calendar, so
+`31.1.26 + 1 month` clamps to 28 February rather than adding an average duration.
+
 ## Timespans
 
 `145 mins to timespan` breaks a duration into the units that fit it (`2 hr 25 min`), with zero
-parts dropped. Weeks are the largest step on purpose: a month is not a fixed number of seconds, so
-carrying one would make the answer depend on which month you meant. Only a time unit converts, so
-`10 km to timespan` stays silent.
+parts dropped. Weeks remain the largest output step because actual calendar months and years vary.
+Month and year inputs use the averages above; `1 month to timespan` is `4 wk 2 day 10 hr 29 min 6 s`.
+Only a time unit converts, so `10 km to timespan` stays silent.
 
 ## Workdays
 
@@ -595,13 +606,6 @@ refuses. Turning it off cancels the loop, drops the in-memory table, and deletes
 The sheet that turns it on names the provider, how often it is contacted, and what leaves the Mac —
 nothing you type, no account, no identifiers. Upstream fetches unconditionally; the gate is
 Smallcast's, see [upstream.md](../upstream.md).
-
-### Month and year units
-
-`month` (`mo`) and `year` (`yr`) are time units, so a rate over either converts like any other:
-`$100/month * 12month` is `1,200.00 USD`. Calendar months and years vary, so a *rate* over one can only
-mean the average — a Gregorian year is 365.2425 days and a month exactly a twelfth of it. Date math
-(`today + 3 months`) stays with `CalcDateTime`, which walks the real calendar.
 
 ## Result and rendering
 

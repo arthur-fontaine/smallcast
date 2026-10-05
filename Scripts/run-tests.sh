@@ -283,9 +283,28 @@ run fallback-test          Smallcast/Features/Launcher/Model/Fallback.swift \
                            Smallcast/Features/Snippets/Model/Snippet.swift
 run dictionary-test        Smallcast/Features/Dictionary/Model/DictionaryEntry.swift \
                            Smallcast/Features/Dictionary/Model/DictionaryMarkup.swift
+run dictation-test         Smallcast/Features/Dictation/Model/DictationModel.swift Smallcast/Features/Dictation/Model/DictationIdleRelease.swift Smallcast/Features/Dictation/Model/DictationTextFormatter.swift
+run dictation-volume-test  Smallcast/Features/Dictation/Model/DictationVolumeSnapshot.swift \
+                           Smallcast/Features/Dictation/Service/DictationAudioDucker.swift \
+                           Smallcast/Platform/AppPaths.swift
+run index -O dictation-performance Smallcast/Platform/ProcessExit.swift \
+                           Smallcast/Features/Dictation/Model/DictationModel.swift \
+                           Smallcast/Features/Dictation/Service/DictationWire.swift
+run dictation-inference-test Smallcast/Features/Dictation/Model/DictationAudioChunks.swift \
+    Smallcast/Features/Dictation/Service/DictationSpectrum.swift \
+    Smallcast/Features/Dictation/Helper/DictationTensor.swift Smallcast/Features/Dictation/Helper/DictationTokenizer.swift \
+    Smallcast/Features/Dictation/Helper/DictationMel.swift
+run dictation-worker-test  Smallcast/Features/Dictation/Model/DictationModel.swift \
+                           Smallcast/Features/Dictation/Model/DictationIdleRelease.swift \
+                           Smallcast/Features/Dictation/Service/DictationWire.swift \
+                           Smallcast/Features/Dictation/Service/DictationWorker.swift \
+                           Smallcast/Features/Dictation/Service/DictationModelStore.swift \
+                           Smallcast/Features/Dictation/Service/DictationModelDownloader.swift \
+                           Smallcast/Platform/ProcessExit.swift Smallcast/Platform/AppPaths.swift
 run hotkey-test            Smallcast/Features/HotKeys/Model/DoubleTapModifier.swift \
+                           Smallcast/Features/HotKeys/Model/ModifierKey.swift \
+                           Smallcast/Features/HotKeys/Model/ModifierKeyDetector.swift \
                            Smallcast/Features/HotKeys/Model/DoubleTapDetector.swift \
-                           Smallcast/Features/HotKeys/Model/GlobeTapDetector.swift \
                            Smallcast/Features/HotKeys/Model/HotKeyBinding.swift \
                            Smallcast/Features/HotKeys/Model/HotKeySpelling.swift \
                            Smallcast/Features/HotKeys/Model/HyperKey.swift \
@@ -343,6 +362,7 @@ run window-command-test    Smallcast/Features/WindowManagement/Model/WindowComma
 run window-preset-test     Smallcast/Features/WindowManagement/Model/WindowCommand.swift \
                            Smallcast/Features/WindowManagement/Model/WindowShortcutPreset.swift \
                            Smallcast/Features/HotKeys/Model/DoubleTapModifier.swift \
+                           Smallcast/Features/HotKeys/Model/ModifierKey.swift \
                            Smallcast/Features/HotKeys/Model/HotKeyBinding.swift \
                            Smallcast/Features/HotKeys/Model/HyperKey.swift \
                            Smallcast/Platform/ASCIIKeyboardLayout.swift \
@@ -476,7 +496,14 @@ run -O index notes-editor-performance \
 run slow -O raycast-test   Smallcast/Features/Backup/Model/RaycastImportError.swift \
                            Smallcast/Features/Backup/Service/RaycastDecoder.swift \
                            Smallcast/Features/Backup/Service/Scrypt.swift \
-                           Smallcast/Platform/Compression/Zlib.swift
+                           Smallcast/Platform/Compression/Zlib.swift \
+                           Smallcast/Features/Clipboard/Model/RaycastClipboardImport.swift \
+                           Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
+                           Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
+                           Smallcast/Features/Clipboard/Model/ClipboardFileKind.swift \
+                           Smallcast/Features/Clipboard/Model/ColorValue.swift \
+                           Smallcast/Features/Clipboard/Model/ColorFormat.swift \
+                           Smallcast/Features/Clipboard/Model/ColorSpaces.swift
 run settings-backup-test   Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/Backup/Model/SettingsBackupCoverage.swift
 run settings-file-test     Smallcast/Features/Settings/Model/*.swift \
@@ -576,6 +603,9 @@ run settings-history-test  Smallcast/Features/Settings/SettingsTab.swift \
                            $L/SearchRelevance.swift
 run updates-test           Smallcast/Features/Updates/Model/*.swift \
                            Smallcast/Features/Updates/Service/BundleSignature.swift
+run update-check-test      Smallcast/Features/Updates/Model/*.swift \
+                           Smallcast/Features/Updates/Service/UpdateCheckStore.swift \
+                           Smallcast/Platform/AppPaths.swift
 run support-test           Smallcast/Features/Support/Model/*.swift
 run ai-provider-test       Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/AI/Model/*.swift \
@@ -718,7 +748,7 @@ if [ "$ran" -eq 0 ]; then
 fi
 
 # `sort -s` is stable, so the slow harnesses lead and everything else keeps its declaration order.
-JOBS="${SMALLCAST_TEST_JOBS:-$(sysctl -n hw.ncpu)}"
+JOBS="${SMALLCAST_TEST_JOBS:-4}"
 export SMALLCAST_TEST_TIMEOUT="${SMALLCAST_TEST_TIMEOUT:-300}"
 started=$SECONDS
 
