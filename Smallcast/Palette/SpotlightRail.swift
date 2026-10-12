@@ -102,17 +102,18 @@ struct SpotlightRailGlyphs: View {
                     $0.opacity(revealed ? 1 : 0)
                         .blur(radius: revealed ? 0 : Theme.LiquidGlass.railGlyphBlur)
                 }
-                // Riding its glass, or a glyph would float outside a bubble still on its way.
+                // Shrinks with its circle but never travels: four glyphs sent home pile into one blot.
                 .animation(reduceMotion ? nil : rail.travel(index: index)) {
                     $0.scaleEffect(revealed ? 1 : Theme.LiquidGlass.railParkedScale)
-                        .position(revealed ? geometry.center(of: index) : geometry.parked)
                 }
+                .position(geometry.center(of: index))
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
         }
     }
 
     private func fade(index: Int) -> Animation {
+        // Gone before its circle leaves, since it stays behind where the circle rested.
         guard rail.isRevealed else { return .easeIn(duration: Theme.LiquidGlass.railGlyphFade / 2) }
         let delay =
             Theme.LiquidGlass.railRevealDelay + Theme.LiquidGlass.railGlyphDelay

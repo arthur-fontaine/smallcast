@@ -337,6 +337,8 @@ struct RootPaletteView: View {
                     }
                 }
                 .modifier(LiquidGlassListClip(theme: theme))
+                // Below the divider, on the list rather than the header, so the header never grows.
+                .safeAreaPadding(.top, dividesHeader ? metrics.size.headerPadding : 0)
                 .safeAreaInset(edge: .top, spacing: 0) { header }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     if !isCollapsed {
@@ -802,14 +804,14 @@ struct RootPaletteView: View {
         // Identical metrics in both states, so typing can't move the search bar.
         .frame(height: metrics.size.headerHeight)
         .padding(.top, metrics.size.headerPadding)
-        // Where the compact capsule ended, so expanding draws the divider along its old edge.
-        .padding(.bottom, dividesHeader ? metrics.size.headerPadding : 0)
         .overlay(alignment: .bottom) {
             if dividesHeader {
+                // Where the compact capsule ended, so the divider runs along its old edge.
                 Rectangle()
                     .fill(Theme.Colors.separator)
                     .frame(height: Theme.Size.hairline)
                     .padding(.horizontal, metrics.spacing.md * 2)
+                    .offset(y: metrics.size.headerPadding)
             }
         }
         .frame(maxWidth: .infinity)
@@ -850,8 +852,10 @@ struct RootPaletteView: View {
 
     /// Out on every summon, once the surface has arrived, and back in as soon as anything is typed.
     private var railRevealed: Bool {
-        !spotlightButtons.isEmpty && isCollapsed && vm.isVisible && vm.presentation == .shown
-            && mergingButton == nil
+        guard !spotlightButtons.isEmpty, isCollapsed, mergingButton == nil else { return false }
+        // Leaving, the bar fades whole, as Spotlight's does, rather than pulling its buttons in.
+        if vm.presentation == .exiting { return true }
+        return vm.isVisible && vm.presentation == .shown
     }
 
     /// Spotlight fuses the chosen button back into the capsule, then grows its screen below.
