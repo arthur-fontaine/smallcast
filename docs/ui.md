@@ -410,7 +410,10 @@ it swaps that screen rather than stacking on it.
   reveals them on hover instead. The rail does not use hover at all, so a palette summoned under a
   still pointer has nothing to arm.
 - **One `GlassEffectContainer` holds the capsule and the circles,** with `railBlend` (8pt) below the
-  10pt gap. Buttons at rest stand apart, and only moving ones fuse. The content is framed to the
+  10pt gap. Buttons at rest stand apart, and only moving ones fuse. The container is clipped to the
+  panel's own shape. Glass casts a soft shadow of its own, and left unclipped the window's square
+  corners showed it as a tint, black in Dark. The buttons fit inside that shape, since in compact it
+  is a capsule as wide as the window. The content is framed to the
   capsule's width and clipped to it, so the field never runs under a button.
 - **The motion is Spotlight's, from a recording of it.** The capsule shortens on a spring that
   undershoots (0.44s, damping 0.62). Each circle starts parked at 36% just inside the capsule's

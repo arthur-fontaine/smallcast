@@ -38,6 +38,8 @@ struct PaletteSurface: ViewModifier {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
+            // Glass casts a soft shadow; unclipped, the window's square corners show it as a tint.
+            .clipShape(shape)
             .overlay(alignment: .topLeading) { SpotlightRailGlyphs(rail: rail, geometry: geometry) }
             .scaleEffect(x: presentationScale, y: 1)
         }

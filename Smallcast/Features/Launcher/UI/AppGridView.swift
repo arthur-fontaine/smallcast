@@ -183,6 +183,8 @@ private struct AppGridRowView: View {
                     AppTile(
                         app: row[column], selected: row.start + column == selection,
                         hovered: column == hoveredColumn, width: tileWidth)
+                    // A slot shows another app as the results change; its icon must not carry over.
+                    .id(row[column].id)
                 } else {
                     // A partial last row keeps its tiles on the full rows' columns.
                     Color.clear.frame(width: tileWidth, height: metrics.size.appGridCellHeight)
