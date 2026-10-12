@@ -53,6 +53,13 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
 Everything resolved "once per summon" is resolved there deliberately, not per render. `AppCore` holds
 only the closure wiring; the behaviour is `PaletteCoordinator`'s.
 
+Under the Liquid Glass theme, `show()` and `hide()` also animate: the window alpha and
+`PaletteState.presentation` together. A fading-out panel is already closed: `isVisible` reports
+false, it ignores the mouse, `PalettePanel` drops its keystrokes, and the pop-to-root reset waits out
+the fade. A summon during that fade turns it back around; the generation counter keeps the old fade's
+completion from ordering out the new panel. The compact↔expanded swap animates the frame, with the
+top edge still the anchor. See [ui.md](../ui.md#themes).
+
 ## Screens
 
 `PaletteState` (mode / query / selection / `focusToken`) is the bridge between the panel and the app.

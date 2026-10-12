@@ -26,6 +26,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Live only between mouse-down and mouse-up on a drag handle; nil means a move was ours.
     private var drag: DragSession?
     private let dropGuides = PaletteDropGuideController()
+    /// Bumped by every show and hide, so a fade finishing late cannot order out a fresh summon.
+    private var presentationGeneration = 0
+    /// True while a Liquid Glass panel fades out: still on screen, but already closed.
+    private var isDismissing = false
     /// ⌘V: `Edit ▸ Paste` claims it before `sendEvent` whenever the board also carries text.
     private var pasteMonitor: Any?
     /// ⌘⎋: the window server claims it, so no keystroke is left for the responder chain to see.
@@ -52,13 +56,13 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         self.core = core
     }
 
-    var isVisible: Bool { panel?.isVisible ?? false }
+    var isVisible: Bool { (panel?.isVisible ?? false) && !isDismissing }
 
     /// Where the panel sits in screen coordinates, so an overlay drawn under it can avoid it.
-    var visibleFrame: CGRect? { panel.flatMap { $0.isVisible ? $0.frame : nil } }
+    var visibleFrame: CGRect? { panel.flatMap { isVisible ? $0.frame : nil } }
 
     /// The palette's own view, for AppKit UI that must be anchored to it rather than drawn.
-    var anchorView: NSView? { panel?.isVisible == true ? panel?.contentView : nil }
+    var anchorView: NSView? { isVisible ? panel?.contentView : nil }
 
     /// What the palette covered when it was summoned, for anything it expands into on dismissal.
     var previousTarget: InjectionTarget? {
@@ -79,6 +83,18 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             // Once per summon, and from `previousApp`, so the label names the paste target.
             core.palette.pasteTarget = PasteTarget(app: previousApp)
             let panel = ensurePanel()
+            // Read before the fade is cancelled: a panel still fading out arrives again from there.
+            let arrives = !panel.isVisible || isDismissing
+            let animates = arrives && animatesPresentation
+            presentationGeneration += 1
+            setDismissing(false, panel: panel)
+            if animates, !panel.isVisible {
+                panel.alphaValue = 0
+                core.palette.presentation = .entering
+            } else if !animates {
+                panel.alphaValue = 1
+                core.palette.presentation = .shown
+            }
             // Undo a sink a modal left behind, unless one is still up.
             if NSApp.modalWindow == nil { panel.level = .palette }
             // Open disarmed: a pointer already over a row must not highlight it.
@@ -105,7 +121,68 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 guard let panel, panel.isVisible, !panel.isKeyWindow else { return }
                 panel.makeKeyAndOrderFront(nil)
             }
+            if animates { animateArrival(of: panel) }
         }
+    }
+
+    /// Liquid Glass moves like Spotlight; Smallcast, and anyone asking for less motion, never does.
+    private var animatesPresentation: Bool {
+        core.settings.paletteTheme == .liquidGlass
+            && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+    }
+
+    /// The alpha carries the window's shadow with it; the surface's settle is SwiftUI's spring.
+    private func animateArrival(of panel: PalettePanel) {
+        let generation = presentationGeneration
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Theme.LiquidGlass.enterFade
+            context.timingFunction = Theme.LiquidGlass.fadeTiming
+            panel.animator().alphaValue = 1
+        }
+        // A turn later, so the entering frame reaches the screen before the spring leaves it.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, presentationGeneration == generation else { return }
+            withAnimation(.spring(duration: Theme.LiquidGlass.settle, bounce: 0)) {
+                core.palette.presentation = .shown
+            }
+        }
+        // The shadow was cut from the first, narrower frame.
+        DispatchQueue.main.asyncAfter(deadline: .now() + Theme.LiquidGlass.settle) { [weak panel] in
+            panel?.invalidateShadow()
+        }
+    }
+
+    /// Everything but the order-out has already happened, so the panel only has to go.
+    private func animateDeparture(of panel: PalettePanel) {
+        let generation = presentationGeneration
+        setDismissing(true, panel: panel)
+        withAnimation(.easeIn(duration: Theme.LiquidGlass.exitFade)) {
+            core.palette.presentation = .exiting
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Theme.LiquidGlass.exitFade
+            context.timingFunction = Theme.LiquidGlass.fadeTiming
+            panel.animator().alphaValue = 0
+        } completionHandler: { [weak self, weak panel] in
+            MainActor.assumeIsolated {
+                guard let self, let panel, self.presentationGeneration == generation else { return }
+                self.finishDeparture(of: panel)
+            }
+        }
+    }
+
+    private func finishDeparture(of panel: PalettePanel) {
+        panel.orderOut(nil)
+        setDismissing(false, panel: panel)
+        panel.alphaValue = 1
+        core.palette.presentation = .shown
+    }
+
+    /// A fading panel takes no input: a click lands on what is behind it, a keystroke nowhere.
+    private func setDismissing(_ dismissing: Bool, panel: PalettePanel) {
+        isDismissing = dismissing
+        panel.isDismissing = dismissing
+        panel.ignoresMouseEvents = dismissing
     }
 
     // Isolated so teardown may touch the main-actor monitor; the block is already weak.
@@ -157,7 +234,14 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     }
 
     func hide(restoreFocus: Bool, reason: PaletteHideReason) {
-        panel?.orderOut(nil)
+        presentationGeneration += 1
+        if let panel {
+            if panel.isVisible, !isDismissing, animatesPresentation {
+                animateDeparture(of: panel)
+            } else {
+                finishDeparture(of: panel)
+            }
+        }
         commandEscapeTap.disable()
         core.inputSourceSwitcher.endSession()
         core.calendarCoordinator.paletteDidHide()
@@ -202,11 +286,13 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             workInProgress
             ? max(core.settings.popToRootTimeout.interval, Self.workInProgressGrace)
             : core.settings.popToRootTimeout.interval
-        guard interval > 0 else {
+        // A fading surface must not repaint as the root search on its way out.
+        let delay = isDismissing ? max(interval, Theme.LiquidGlass.exitFade) : interval
+        guard delay > 0 else {
             popToRoot()
             return
         }
-        popToRootTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) {
+        popToRootTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) {
             [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, !self.core.extensions.isAuthorizing else { return }
@@ -465,7 +551,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Resize to the given state, top edge anchored; applied even while hidden.
     func applyCollapsed(_ collapsed: Bool) {
         guard let panel else { return }
-        positionPanel(panel, collapsed: collapsed)
+        positionPanel(panel, collapsed: collapsed, animated: true)
     }
 
     /// A new width invalidates the placement the cached anchor encoded, so re-resolve it.
@@ -476,13 +562,24 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     }
 
     /// Size to height and place against the session anchor, so the list grows downward.
-    private func positionPanel(_ panel: NSPanel, collapsed: Bool) {
+    private func positionPanel(_ panel: NSPanel, collapsed: Bool, animated: Bool = false) {
         guard let anchor = resolveAnchor() else { return }
         let size = metrics.size
         let height = collapsed ? size.compactHeight : size.panelHeight
         let frame = NSRect(
             x: anchor.x, y: anchor.y - height, width: size.panelWidth, height: height)
-        panel.setFrame(frame, display: true)
+        // Liquid Glass grows its capsule into the card; the top edge is still the one held.
+        guard animated, isVisible, animatesPresentation, panel.frame.size != frame.size else {
+            panel.setFrame(frame, display: true)
+            return
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Theme.LiquidGlass.resize
+            context.timingFunction = Theme.LiquidGlass.resizeTiming
+            panel.animator().setFrame(frame, display: true)
+        } completionHandler: { [weak panel] in
+            MainActor.assumeIsolated { panel?.invalidateShadow() }
+        }
     }
 
     /// The display to anchor to; never `NSScreen.main`, which follows the focused window.

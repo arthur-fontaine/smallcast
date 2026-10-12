@@ -202,6 +202,8 @@ enum Theme {
         /// The narrowest the pane column may get before a grouped row's control starts colliding.
         static let settingsDetailMinimum: CGFloat = 420
         static let settingsRowIcon: CGFloat = 20
+        /// One option tile in a Settings row that picks a look by showing it: window mode, theme.
+        static let settingsModePreview = CGSize(width: 135, height: 80)
         /// A sidebar glyph inside its tinted tile; the tile's inset brings it to the row icon's size.
         static let settingsSidebarGlyph: CGFloat = 14
         /// AI Chat's opening size; the user owns it from there, autosaved.
@@ -333,6 +335,25 @@ enum Theme {
         static let roomSettle: TimeInterval = 0.25
     }
 
+    /// The Liquid Glass theme's own values; the Smallcast theme never reads them.
+    @MainActor
+    enum LiquidGlass {
+        /// Spotlight's field, set larger than `searchFieldSize` against the same bar height.
+        static let searchFieldSize: CGFloat = 24
+        /// The card starts this much narrower than it lands, and settles from the centre.
+        static let enterScale: CGFloat = 0.96
+        /// Under 1: a window as large as its surface would clip a frame that grew past it.
+        static let exitScale: CGFloat = 0.98
+        /// Opacity rides the window's alpha, so the shadow fades with the surface it belongs to.
+        static let enterFade: TimeInterval = 0.14
+        static let settle: TimeInterval = 0.3
+        static let exitFade: TimeInterval = 0.12
+        /// The capsule growing into the results card, and the card folding back.
+        static let resize: TimeInterval = 0.28
+        static let resizeTiming = CAMediaTimingFunction(controlPoints: 0.2, 0.8, 0.2, 1)
+        static let fadeTiming = CAMediaTimingFunction(controlPoints: 0.42, 0, 0.58, 1)
+    }
+
     enum RoomMotion {
         /// Quick to leave, long to settle, so a card reads as the window it is about to become.
         static let glide = Animation.timingCurve(0.2, 0, 0, 1, duration: Theme.Duration.roomGlide)
@@ -412,6 +433,8 @@ enum Theme {
 
         /// The ramp's inverse: the scrim darkens the dark surface and lightens the light one.
         static let panelScrim = adaptive(dark: .srgbInk(0, alpha: 0.40), light: .srgbInk(1, alpha: 0.55))
+        /// Liquid Glass's faint wash: the glass tints itself, so this only steadies the ink.
+        static let glassScrim = adaptive(dark: .srgbInk(0, alpha: 0.12), light: .srgbInk(1, alpha: 0.10))
         /// Modal separation inside Smallcast: the launcher recedes while its dialog is in front.
         static let dialogDimming = adaptive(
             dark: .srgbInk(0, alpha: 0.34), light: .srgbInk(0, alpha: 0.34))
@@ -485,6 +508,11 @@ enum Theme {
         /// The two squares of a checkerboard, behind a colour with alpha to show.
         static let checkerLight = Color(nsColor: .srgbInk(1, alpha: 0.22))
         static let checkerDark = Color(nsColor: .srgbInk(0, alpha: 0.22))
+        /// The bright desk behind the Theme previews: glass shows only what it has behind it.
+        static let themePreviewDesk = [
+            Color(red: 0.36, green: 0.62, blue: 0.98), Color(red: 0.98, green: 0.72, blue: 0.48)
+        ]
+        static let themePreviewDeskShade = Color(red: 0.12, green: 0.36, blue: 0.86)
         /// The violet of the app mark, used only to tint the About support callout.
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
         /// The palette's drop guides while dragging, and once a release would snap it home.

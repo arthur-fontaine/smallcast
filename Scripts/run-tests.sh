@@ -205,7 +205,8 @@ run palette-selection-test Smallcast/Features/PaletteRowIndex.swift \
 run appearance-test        Smallcast/Platform/Appearance.swift \
                            Smallcast/DesignSystem/Theme.swift \
                            Smallcast/DesignSystem/InterfaceMetrics.swift \
-                           Smallcast/Features/Settings/AppAppearance.swift
+                           Smallcast/Features/Settings/AppAppearance.swift \
+                           Smallcast/Features/Settings/PaletteTheme.swift
 run interface-size-test    Smallcast/Platform/Appearance.swift \
                            Smallcast/DesignSystem/Theme.swift \
                            Smallcast/DesignSystem/InterfaceMetrics.swift \

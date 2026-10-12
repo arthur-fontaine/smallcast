@@ -27,6 +27,7 @@ struct RootPaletteView: View {
     @Environment(ExtensionManager.self) private var extensions
     @Environment(AppSettings.self) private var settings
     @Environment(\.metrics) private var metrics
+    @Environment(\.paletteTheme) private var theme
     @Environment(\.openURL) private var openURL
     @FocusState private var searchFocused: Bool
     /// Kept apart from the search field's own focus. See docs/features/palette.md.
@@ -297,6 +298,7 @@ struct RootPaletteView: View {
                         screen.body(selection: sel, scroll: scroll)
                     }
                 }
+                .modifier(LiquidGlassListClip(theme: theme))
                 .safeAreaInset(edge: .top, spacing: 0) { header }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     if !isCollapsed {
@@ -326,20 +328,9 @@ struct RootPaletteView: View {
                 )
                 // The window's frame is the size source, so the glass and clip stay matched.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .background(Theme.Colors.panelScrim)
-                .background(GlassEffectView())
-                .overlay {
-                    Theme.Colors.dialogDimming
-                        .opacity(core.isDimmingPaletteForDialog ? 1 : 0)
-                        .allowsHitTesting(false)
-                }
-                .animation(
-                    .easeOut(
-                        duration: core.isDimmingPaletteForDialog
-                            ? Theme.Duration.dialogEnter : Theme.Duration.dialogExit),
-                    value: core.isDimmingPaletteForDialog
-                )
-                .clipShape(RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous))),
+                .modifier(
+                    PaletteSurface(
+                        isDimmed: core.isDimmingPaletteForDialog, presentation: vm.presentation))),
             selection: sel)
     }
 
@@ -750,6 +741,16 @@ struct RootPaletteView: View {
         // Identical metrics in both states, so typing can't move the search bar.
         .frame(height: metrics.size.headerHeight)
         .padding(.top, metrics.size.headerPadding)
+        // Where the compact capsule ended, so expanding draws the divider along its old edge.
+        .padding(.bottom, dividesHeader ? metrics.size.headerPadding : 0)
+        .overlay(alignment: .bottom) {
+            if dividesHeader {
+                Rectangle()
+                    .fill(Theme.Colors.separator)
+                    .frame(height: Theme.Size.hairline)
+                    .padding(.horizontal, metrics.spacing.md * 2)
+            }
+        }
         .frame(maxWidth: .infinity)
         // Set after the show, so the field it names is focused rather than the search field.
         .onChange(of: vm.pendingArgumentEntryID) { focusPendingArgument() }
@@ -761,6 +762,21 @@ struct RootPaletteView: View {
     private var extensionCommandScreen: ExtensionCommandScreen? {
         guard vm.mode == .extensionCommand else { return nil }
         return screen as? ExtensionCommandScreen
+    }
+
+    /// Spotlight rules its field off from the results; Smallcast lets them dissolve beneath it.
+    private var dividesHeader: Bool { theme == .liquidGlass && !isCollapsed }
+
+    private var searchFieldFont: Font {
+        theme == .liquidGlass
+            ? .system(size: metrics.scaled(Theme.LiquidGlass.searchFieldSize), weight: .regular)
+            : metrics.typography.searchField
+    }
+
+    private var searchFieldNSFont: NSFont {
+        theme == .liquidGlass
+            ? .systemFont(ofSize: metrics.scaled(Theme.LiquidGlass.searchFieldSize), weight: .regular)
+            : metrics.typography.searchFieldNSFont
     }
 
     /// Whichever screen offers one; the compact bar has no room for it.
@@ -823,7 +839,7 @@ struct RootPaletteView: View {
     /// The field's own text, floored for the caret and capped so the strip stays on screen.
     /// Empty, that is the prompt where one is drawn — which is what seats the strip right after it.
     private func searchFieldWidth(for accessory: PaletteHeaderAccessory) -> CGFloat {
-        let font = metrics.typography.searchFieldNSFont
+        let font = searchFieldNSFont
         let text = vm.query.isEmpty ? searchPrompt : vm.query
         let typed = (text as NSString).size(withAttributes: [.font: font]).width
         let chrome = metrics.size.headerIconSlot + metrics.spacing.md * 3 + metrics.spacing.xl
@@ -849,7 +865,7 @@ struct RootPaletteView: View {
         @Bindable var vm = vm
         return TextField("", text: $vm.query)
             .textFieldStyle(.plain)
-            .font(metrics.typography.searchField)
+            .font(searchFieldFont)
             .tint(Theme.Colors.textPrimary)
             .focused($searchFocused)
             // Fills the row's height, so there's no gap above it for topDragStrip to meet.
@@ -858,7 +874,7 @@ struct RootPaletteView: View {
                 // An IME's marked text leaves `query` empty, so the placeholder would overlap it.
                 if vm.query.isEmpty, !vm.isComposing {
                     Text(searchPrompt)
-                        .font(metrics.typography.searchField)
+                        .font(searchFieldFont)
                         .foregroundStyle(Theme.Colors.textTertiary)
                         .lineLimit(1)
                         // Never a click target: tapping the placeholder must still land the caret.
@@ -952,7 +968,7 @@ struct RootPaletteView: View {
             }
         }
         .padding(metrics.spacing.xs)
-        .frosted(in: Capsule())
+        .paletteControlSurface(in: Capsule())
     }
 
     /// The one path opening the Actions menu, sampling the state its rows depend on.
@@ -1503,6 +1519,20 @@ private struct SearchFieldHiding: ViewModifier {
     }
 }
 
+/// Clips rows at the divider; keyed on theme alone, as a compact-bar branch would rebuild the list.
+private struct LiquidGlassListClip: ViewModifier {
+    let theme: PaletteTheme
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        switch theme {
+        case .smallcast: content
+        // The footer still floats over the rows, so only the top edge is held to the safe area.
+        case .liquidGlass: content.mask { Rectangle().ignoresSafeArea(edges: .bottom) }
+        }
+    }
+}
+
 /// The footer's menu circle; hover lives here, so a sweep never re-renders the body.
 private struct MenuCircleButton: View {
     let action: () -> Void
@@ -1522,7 +1552,7 @@ private struct MenuCircleButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .frosted(in: Circle())
+        .paletteControlSurface(in: Circle())
     }
 }
 

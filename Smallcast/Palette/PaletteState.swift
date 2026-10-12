@@ -7,6 +7,13 @@ struct PaletteFrame: Equatable {
     let selection: Int
 }
 
+/// Where the panel is in its arrival or departure; only the Liquid Glass theme animates between.
+enum PalettePresentation: Equatable {
+    case entering
+    case shown
+    case exiting
+}
+
 /// Palette state shared between the panel's SwiftUI tree and the coordinator.
 @MainActor
 @Observable
@@ -30,6 +37,8 @@ final class PaletteState {
     var fileSearchQuickLook = false
     /// Ordering out leaves the SwiftUI tree mounted, so a media preview needs this to stop playing.
     private(set) var isVisible = false
+    /// Driven by `PaletteWindowController`, which also owns the window alpha that rides with it.
+    var presentation: PalettePresentation = .shown
     /// Changes every time the palette is shown so the search field can re-focus.
     var focusToken = UUID()
     /// Bumped when a screen opens fresh, so its list lands again even when nothing else changed.

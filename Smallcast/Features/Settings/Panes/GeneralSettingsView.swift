@@ -87,8 +87,9 @@ struct GeneralSettingsView: View {
                         Text(appearance.title).tag(appearance)
                     }
                 } label: {
-                    SettingsRowTitle(.generalAppearance, "Theme")
+                    SettingsRowTitle(.generalAppearance, "Appearance")
                 }
+                PaletteThemeRow()
                 InterfaceSizeRow()
                 WindowModeRow()
                 Toggle(isOn: $settings.showFavoritesInCompactMode) {
@@ -222,8 +223,6 @@ struct GeneralSettingsView: View {
 private struct WindowModeRow: View {
     @Environment(AppSettings.self) private var settings
 
-    private static let preview = CGSize(width: 135, height: 80)
-
     var body: some View {
         SettingsRow(
             title: "Window mode", subtitle: "Choose how the launcher opens.",
@@ -245,7 +244,9 @@ private struct WindowModeRow: View {
                 Image(image)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: Self.preview.width, height: Self.preview.height)
+                    .frame(
+                        width: Theme.Size.settingsModePreview.width,
+                        height: Theme.Size.settingsModePreview.height)
                     .clipShape(
                         RoundedRectangle(cornerRadius: Theme.Radius.barControl, style: .continuous)
                     )
@@ -259,6 +260,42 @@ private struct WindowModeRow: View {
         }
         .buttonStyle(WindowModeButtonStyle())
         .accessibilityLabel(title)
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
+    }
+}
+
+/// Drawn live rather than shipped as artwork, so the glass in each tile is the glass it promises.
+private struct PaletteThemeRow: View {
+    @Environment(AppSettings.self) private var settings
+
+    var body: some View {
+        SettingsRow(
+            title: "Theme", subtitle: "How the launcher and its panels are drawn.",
+            subtitleLineLimit: 2, alignment: .top, anchor: .generalAppearance
+        ) {
+            HStack(spacing: Theme.Spacing.md) {
+                ForEach(PaletteTheme.allCases) { option($0) }
+            }
+        }
+    }
+
+    private func option(_ theme: PaletteTheme) -> some View {
+        let selected = settings.paletteTheme == theme
+        return Button {
+            settings.paletteTheme = theme
+        } label: {
+            VStack(spacing: Theme.Spacing.xs) {
+                PaletteThemePreview(theme: theme)
+                    .saturation(selected ? 1 : 0)
+                Text(theme.title)
+                    .font(.caption)
+                    .fontWeight(selected ? .semibold : .regular)
+                    .foregroundStyle(selected ? Color.primary : Color.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(WindowModeButtonStyle())
+        .accessibilityLabel(theme.title)
         .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 }

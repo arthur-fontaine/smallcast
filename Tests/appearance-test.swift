@@ -92,6 +92,15 @@ struct AppearanceTests {
         check("dark is darkAqua", AppAppearance.dark.nsAppearance?.isDark == true)
         check("an unknown stored value is rejected", AppAppearance(rawValue: "sepia") == nil)
 
+        print("# Liquid Glass's wash inverts like the panel scrim, only fainter")
+        check("light glass wash is white", components(c.glassScrim, .aqua)[0] == 255)
+        check("dark glass wash is black", components(c.glassScrim, .darkAqua)[0] == 0)
+
+        print("# the palette theme is persisted by raw value")
+        check("smallcast keeps its stored name", PaletteTheme(rawValue: "smallcast") == .smallcast)
+        check("liquid glass keeps its stored name", PaletteTheme(rawValue: "liquidGlass") == .liquidGlass)
+        check("an unknown stored theme is rejected", PaletteTheme(rawValue: "aqua") == nil)
+
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }

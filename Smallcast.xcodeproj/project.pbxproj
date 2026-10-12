@@ -37,6 +37,7 @@
 		0A2E6FB2D4DDD7B1360D98EF /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 037ECC9674C1A2AE8E6C15FB /* AboutView.swift */; };
 		0ACA0AF4815A0E0B744EE7CE /* ExtensionGitHubPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2780FC7CB8C2116AB917FDE8 /* ExtensionGitHubPanel.swift */; };
 		0AE791A6B995D3A3755FC6A4 /* InstalledAIProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6445EA0842D200A9EFD41D02 /* InstalledAIProbe.swift */; };
+		0B88E22C0BCCFADC58334B6B /* PaletteThemePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = A632A80E6826499B4F753F5A /* PaletteThemePreview.swift */; };
 		0C2590BF00FB6088CFD2BCC1 /* UninstallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0E8C70A2F5064ABCA27584C /* UninstallView.swift */; };
 		0C61BF488040C644A5DBB21E /* NoteHeadingMenuWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F74B15D57722374B3688F3FE /* NoteHeadingMenuWindowController.swift */; };
 		0CBF7590E5EAEC417D958E37 /* DialogController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B08CC2FCE2C654F55844E448 /* DialogController.swift */; };
@@ -198,6 +199,7 @@
 		3CE58D8BA65F4E1C2637AB2C /* AXScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDA2A0E035BE6A7ACDE8F55 /* AXScreens.swift */; };
 		3D25D5B10EB538934B9F77FA /* HotKeyCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB4A4E426FBB855CDBEFE96A /* HotKeyCenter.swift */; };
 		3D5E0B0C42A1113603A00799 /* MenuSearchTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAE8327792465D8737BCDD86 /* MenuSearchTarget.swift */; };
+		3DB457B259FE0F77EFB73AD5 /* PaletteTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3403B57CA3EE5C2057A4D87 /* PaletteTheme.swift */; };
 		3E0AEBB5FD949A01E40469DD /* ExtensionStorePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825266A03AD2DCA4AECB9AB4 /* ExtensionStorePanel.swift */; };
 		3E679D8C574363D1AAAD0D8B /* ExtensionMenuBarSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB71F92E76F2167373441E1A /* ExtensionMenuBarSnapshot.swift */; };
 		3E7B4BD06791E4C40AF88111 /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF091DDD7F3C66C9FC6AAE6 /* HotKeyManager.swift */; };
@@ -314,6 +316,7 @@
 		5E4AB6E6F15D31B19BC03DC8 /* KeyCapChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 072FA4283FA6E8593080B903 /* KeyCapChip.swift */; };
 		5E5BBDF13AFA085BAC644ACC /* AIChatSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E56561BB4E5F7413F5C38A3 /* AIChatSplitViewController.swift */; };
 		5F66F3DC671CAEE6C6ACF1B8 /* UninstallRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51E50441F5C51125D11F498 /* UninstallRules.swift */; };
+		5F6C0FBE44434156B609C3DF /* PaletteSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57967BA9F955B2AB16DE0047 /* PaletteSurface.swift */; };
 		5F8EE81271CB70940912B443 /* SettingsNavigationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E022AA39AB55140327CFA208 /* SettingsNavigationState.swift */; };
 		606FE37A909F990CB5A5D5CE /* ExtensionCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11B632CF45C34C26E532262F /* ExtensionCleanup.swift */; };
 		607982FD2127E7FD8DE122C1 /* ReleaseFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4F848B953FBC8FF462E8070 /* ReleaseFeed.swift */; };
@@ -1077,6 +1080,7 @@
 		570F612E3C97DE9F0AE2E2DA /* ChatMarkdownRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMarkdownRenderer.swift; sourceTree = "<group>"; };
 		576A17F4C9B70C93FFBBFA7C /* UninstallTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallTarget.swift; sourceTree = "<group>"; };
 		57706AA478669894216F09C6 /* CommandEscapeTap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandEscapeTap.swift; sourceTree = "<group>"; };
+		57967BA9F955B2AB16DE0047 /* PaletteSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteSurface.swift; sourceTree = "<group>"; };
 		583D0AF084011ECDA2394F40 /* WindowLayoutDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowLayoutDisplay.swift; sourceTree = "<group>"; };
 		58486FB34B589C5AECD8A11F /* UpdateCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCoordinator.swift; sourceTree = "<group>"; };
 		585299E034F2662FAFB175B3 /* AIScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIScreen.swift; sourceTree = "<group>"; };
@@ -1314,11 +1318,13 @@
 		A24FF3E56A8064BDA386BA4F /* CustomQuickActionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomQuickActionStore.swift; sourceTree = "<group>"; };
 		A26490818F5FC3C809EE13CC /* ChatGPTSubscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatGPTSubscription.swift; sourceTree = "<group>"; };
 		A308E5F2A3CEA17A54F83AF5 /* ChatTranscriptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTranscriptView.swift; sourceTree = "<group>"; };
+		A3403B57CA3EE5C2057A4D87 /* PaletteTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteTheme.swift; sourceTree = "<group>"; };
 		A447C76341BF43F69FF76DF9 /* ChatComposerTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatComposerTextView.swift; sourceTree = "<group>"; };
 		A48121B3D2509E49E6D1E0C8 /* WindowCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowCommand.swift; sourceTree = "<group>"; };
 		A4E1FABA48A2E26507A7AE5F /* NoteSwitcherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteSwitcherView.swift; sourceTree = "<group>"; };
 		A50770DD1E902B26CA6F58ED /* MenuSearchQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuSearchQuery.swift; sourceTree = "<group>"; };
 		A583E34467A888D6D499D301 /* FavoritesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStore.swift; sourceTree = "<group>"; };
+		A632A80E6826499B4F753F5A /* PaletteThemePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteThemePreview.swift; sourceTree = "<group>"; };
 		A72CDDBB57CE9BF1D9C939D8 /* SymbolImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymbolImage.swift; sourceTree = "<group>"; };
 		A774A785F681B6CFF67C2F85 /* AIRetention.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIRetention.swift; sourceTree = "<group>"; };
 		A79254E1CBC1E613D67499E7 /* ClipboardTextHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardTextHelper.swift; sourceTree = "<group>"; };
@@ -2525,6 +2531,7 @@
 				0A6C375A2B94700DF31292D7 /* AppSettingsKey.swift */,
 				14A69777D5D91903ACDA6372 /* EscapeKeyBehavior.swift */,
 				E00A176967790ED61B34D691 /* InterfaceSize.swift */,
+				A3403B57CA3EE5C2057A4D87 /* PaletteTheme.swift */,
 				F9ACECFFDF6C841175733BDF /* SettingsAnchor.swift */,
 				4E612507FD550B404FB204D9 /* SettingsCoordinator.swift */,
 				AF2EB73F35F951DBEE079F75 /* SettingsDetailView.swift */,
@@ -2911,6 +2918,7 @@
 				5FD93C89551D84B4163CA18A /* PaletteScreen.swift */,
 				669E5EF839AFB11C0C1C34FE /* PaletteShortcut.swift */,
 				A98B898B5F55A6DFDCE6B2A0 /* PaletteState.swift */,
+				57967BA9F955B2AB16DE0047 /* PaletteSurface.swift */,
 				49DA8C8C22352714884A2D47 /* PaletteTabAction.swift */,
 				801213455F72B5CFB3CFB780 /* PaletteWindowController.swift */,
 				CBE879165C9F37272CBE9421 /* RootPaletteView.swift */,
@@ -3159,6 +3167,7 @@
 			children = (
 				B64C76634B4B067540978793 /* GeneralSettingsView.swift */,
 				C4357931BCFD35335C322183 /* NavigationSettingsView.swift */,
+				A632A80E6826499B4F753F5A /* PaletteThemePreview.swift */,
 				8E776E308B21106B946E69F4 /* PermissionsSettingsView.swift */,
 			);
 			path = Panes;
@@ -4157,7 +4166,10 @@
 				2CF086AD6F6E004C4492C991 /* PaletteScreen.swift in Sources */,
 				F630451FBC4AF0D2F4826EA8 /* PaletteShortcut.swift in Sources */,
 				30DD3BFCD5DBB93E11C744B9 /* PaletteState.swift in Sources */,
+				5F6C0FBE44434156B609C3DF /* PaletteSurface.swift in Sources */,
 				080371B005769B1933421FCC /* PaletteTabAction.swift in Sources */,
+				3DB457B259FE0F77EFB73AD5 /* PaletteTheme.swift in Sources */,
+				0B88E22C0BCCFADC58334B6B /* PaletteThemePreview.swift in Sources */,
 				3A370C2555AA47AFA3C96F9F /* PaletteWindowController.swift in Sources */,
 				763F1784714ED105163F9C43 /* PanelTransition.swift in Sources */,
 				62EF7E6C6D8C4D11A5D301B1 /* PasteSequence.swift in Sources */,
