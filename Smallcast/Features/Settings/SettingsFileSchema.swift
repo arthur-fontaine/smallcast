@@ -37,6 +37,10 @@ enum SettingsFileSchema {
         case .autoSwitchInputSource: return bind(settings, \.autoSwitchInputSourceID)
         case .supportReminders: return bind(settings, \.supportRemindersEnabled)
         case .appearance: return bind(settings, \.appearance)
+        case .paletteTheme: return bind(settings, \.paletteTheme)
+        case .spotlightButtons:
+            return bind(settings, \.spotlightButtons) { SpotlightButton.normalize($0) }
+        case .spotlightButtonsEnabled: return bind(settings, \.spotlightButtonsEnabled)
         case .interfaceSize: return bind(settings, \.interfaceSize)
         case .compactMode: return bind(settings, \.compactMode)
         case .showFavoritesInCompactMode: return bind(settings, \.showFavoritesInCompactMode)
@@ -160,6 +164,8 @@ enum SettingsFileSchema {
 extension PopToRootTimeout: SettingsFileRawValue {}
 extension EscapeKeyBehavior: SettingsFileRawValue {}
 extension AppAppearance: SettingsFileRawValue {}
+extension PaletteTheme: SettingsFileRawValue {}
+extension SpotlightButton: SettingsFileRawValue {}
 extension InterfaceSize: SettingsFileRawValue {}
 extension HyperKeyPhysicalKey: SettingsFileRawValue {}
 extension HyperKeyQuickPress: SettingsFileRawValue {}

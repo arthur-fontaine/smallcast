@@ -7,6 +7,13 @@ struct PaletteFrame: Equatable {
     let selection: Int
 }
 
+/// Where the panel is in its arrival or departure; only the Liquid Glass theme animates between.
+enum PalettePresentation: Equatable {
+    case entering
+    case shown
+    case exiting
+}
+
 /// Palette state shared between the panel's SwiftUI tree and the coordinator.
 @MainActor
 @Observable
@@ -25,12 +32,16 @@ final class PaletteState {
     var fileSearchFilter: FileSearchFilter = .all
     /// The emoji picker's visible category, reset with the rest of a freshly opened screen.
     var emojiCategoryFilter: EmojiCategoryFilter = .all
+    /// The Applications grid's chip; nil lists every app.
+    var appCategoryFilter: AppCategory?
     /// Nil means the configured default; zoom only overrides it for this picker session.
     var emojiGridColumnsOverride: EmojiGridColumns?
     /// Whether file search draws its Quick Look overlay; it follows whatever row is selected.
     var fileSearchQuickLook = false
     /// Ordering out leaves the SwiftUI tree mounted, so a media preview needs this to stop playing.
     private(set) var isVisible = false
+    /// Driven by `PaletteWindowController`, which also owns the window alpha that rides with it.
+    var presentation: PalettePresentation = .shown
     /// Changes every time the palette is shown so the search field can re-focus.
     var focusToken = UUID()
     /// Bumped when a screen opens fresh, so its list lands again even when nothing else changed.
@@ -160,6 +171,7 @@ final class PaletteState {
         clipboardFilter = .all
         fileSearchFilter = .all
         emojiCategoryFilter = .all
+        appCategoryFilter = nil
         emojiGridColumnsOverride = nil
         fileSearchQuickLook = false
         forceExpanded = false

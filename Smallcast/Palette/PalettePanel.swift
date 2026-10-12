@@ -21,6 +21,8 @@ final class PalettePanel: NSPanel {
     var onFieldEditorFocused: ((NSTextInputContext) -> Void)?
     /// Inline argument fields use arrows at their text boundaries to continue their focus ring.
     var onHeaderFieldBoundaryArrow: ((HeaderFieldBoundary) -> Bool)?
+    /// Set while the panel fades out after it has already closed, so a keystroke reaches nothing.
+    var isDismissing = false
     var onDismissMenu: (() -> Void)?
     private var dismissingMouseButton: Int?
     /// Arms hover from `sendEvent`, the one place both event streams pass through.
@@ -180,6 +182,7 @@ final class PalettePanel: NSPanel {
     }
 
     override func sendEvent(_ event: NSEvent) {
+        if isDismissing, event.type == .keyDown || event.type == .keyUp { return }
         if consumeMenuDismissal(event) { return }
         if event.type == .scrollWheel, paletteState?.mode.isNativeEditor == true {
             onDismissMenu?()

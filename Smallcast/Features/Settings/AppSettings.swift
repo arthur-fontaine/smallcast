@@ -226,6 +226,24 @@ final class AppSettings {
         didSet { defaults.set(appearance.rawValue, forKey: Key.appearance.rawValue) }
     }
 
+    /// The palette's look, independent of Light or Dark. Reaches views as `\.paletteTheme`.
+    var paletteTheme: PaletteTheme {
+        didSet { defaults.set(paletteTheme.rawValue, forKey: Key.paletteTheme.rawValue) }
+    }
+
+    /// The Bar Buttons pane's switch; the list outlives it, so turning it back on restores it.
+    var spotlightButtonsEnabled: Bool {
+        didSet { defaults.set(spotlightButtonsEnabled, forKey: Key.spotlightButtonsEnabled.rawValue) }
+    }
+
+    /// Liquid Glass's compact-bar buttons, in order; at most four, each once.
+    var spotlightButtons: [SpotlightButton] {
+        didSet {
+            spotlightButtons = SpotlightButton.normalize(spotlightButtons)
+            defaults.set(spotlightButtons.map(\.rawValue), forKey: Key.spotlightButtons.rawValue)
+        }
+    }
+
     /// Which separators the calculator reads and writes; `.system` follows Language & Region.
     var calcNumberStyle: CalcNumberStyle {
         didSet { defaults.set(calcNumberStyle.rawValue, forKey: Key.calcNumberStyle.rawValue) }
@@ -691,6 +709,18 @@ final class AppSettings {
             ?? .navigateBackOrClose
         appearance =
             defaults.string(forKey: Key.appearance.rawValue).flatMap(AppAppearance.init) ?? .system
+        paletteTheme =
+            defaults.string(forKey: Key.paletteTheme.rawValue).flatMap(PaletteTheme.init)
+            ?? .smallcast
+        // Defaults to true, so absence must be distinguished from a stored `false`.
+        spotlightButtonsEnabled =
+            defaults.object(forKey: Key.spotlightButtonsEnabled.rawValue) == nil
+            || defaults.bool(forKey: Key.spotlightButtonsEnabled.rawValue)
+        // Unset seeds Spotlight's four; a stored empty list is a deliberately cleared rail.
+        spotlightButtons =
+            defaults.stringArray(forKey: Key.spotlightButtons.rawValue)
+            .map { SpotlightButton.normalize($0.compactMap(SpotlightButton.init)) }
+            ?? SpotlightButton.defaults
         calcNumberStyle =
             defaults.string(forKey: Key.calcNumberStyle.rawValue).flatMap(CalcNumberStyle.init)
             ?? .system
@@ -858,5 +888,23 @@ final class AppSettings {
         tabOpensClipboard =
             defaults.object(forKey: Key.tabOpensClipboard.rawValue) == nil
             || defaults.bool(forKey: Key.tabOpensClipboard.rawValue)
+    }
+}
+
+extension AppSettings {
+    /// The bar's buttons whose feature is on; a switched-off one must not open an empty screen.
+    var availableSpotlightButtons: [SpotlightButton] {
+        guard spotlightButtonsEnabled else { return [] }
+        return spotlightButtons.filter { button in
+            switch button {
+            case .files: fileSearchEnabled
+            case .quickAI: aiEnabled
+            case .clipboard: clipboardEnabled
+            case .quicklinks: quicklinksEnabled
+            case .snippets: snippetsEnabled
+            case .switchWindows: navigationEnabled
+            case .applications, .emoji, .calculatorHistory: true
+            }
+        }
     }
 }

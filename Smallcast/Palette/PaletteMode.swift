@@ -2,6 +2,8 @@ import AppKit
 
 enum PaletteMode: String, CaseIterable, Identifiable {
     case launcher
+    /// Every installed app as a grid of icons, as Spotlight's own Applications view.
+    case applications
     case clipboard
     case ai
     case aiHistory
@@ -40,6 +42,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .launcher: return "magnifyingglass"
+        case .applications: return "square.grid.2x2"
         case .clipboard: return "doc.on.doc"
         case .ai: return "sparkles"
         case .aiHistory: return "clock.arrow.circlepath"
@@ -65,6 +68,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     var placeholder: String {
         switch self {
         case .launcher: return "Search for apps and commands…"
+        case .applications: return "Applications"
         case .clipboard: return "Type to filter entries…"
         case .ai: return "Ask anything…"
         case .aiHistory: return "Search chats…"

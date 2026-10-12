@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsSidebarView: View {
     @Environment(SettingsNavigationState.self) private var navigation
+    @Environment(AppSettings.self) private var settings
     @Environment(\.appearsActive) private var appearsActive
     @State private var query = ""
     @State private var highlighted: SettingsSearchEntry.ID?
@@ -27,16 +28,20 @@ struct SettingsSidebarView: View {
             ForEach(SettingsSection.allCases) { section in
                 Section(section.title) {
                     ForEach(section.tabs) { tab in
+                        let reason = unavailableReason(tab)
                         Label {
                             Text(tab.title)
                         } icon: {
                             SettingsTabIcon(
                                 systemImage: tab.systemImage,
-                                tint: appearsActive
+                                tint: appearsActive && reason == nil
                                     ? (navigation.tab == tab ? Color.primary : Color.accentColor)
                                     : Color.secondary)
                         }
                         .tag(tab)
+                        // Dimmed but still opens: the pane itself explains what would turn it on.
+                        .opacity(reason == nil || navigation.tab == tab ? 1 : 0.45)
+                        .help(reason ?? "")
                     }
                 }
             }
@@ -77,6 +82,12 @@ struct SettingsSidebarView: View {
             .frame(width: 0, height: 0)
             .opacity(0)
             .accessibilityHidden(true)
+    }
+
+    /// Why a pane can't be opened from the sidebar right now; nil when it can.
+    private func unavailableReason(_ tab: SettingsTab) -> String? {
+        guard tab == .barButtons, settings.paletteTheme != .liquidGlass else { return nil }
+        return "Bar buttons belong to the Liquid Glass theme. Choose it in General → Appearance."
     }
 
     /// `List` hands back an optional selection; routing it through `select` records history.
