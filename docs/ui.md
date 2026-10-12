@@ -464,10 +464,10 @@ it swaps that screen rather than stacking on it.
 it, and None closes the gap. That one control sets which buttons appear, their order and their
 number; `SpotlightButton.assigning` is the rule, pinned by `spotlight-button-test`.
 
-Under the Smallcast theme the pane is closed in two ways. The sidebar lists it dimmed and
-`selectionDisabled`, with a `.help` label saying why. A search result can still land on it, and then
-it opens on a section explaining that the buttons belong to Liquid Glass, with **Use Liquid Glass**
-beside it, and everything below dimmed. Outside the Compact window mode, the pane says the buttons
+Under the Smallcast theme the pane is dimmed but never closed. The sidebar row is dimmed, with a
+`.help` label saying why, yet stays selectable, so the reader never depends on search to reach it.
+Selected, it opens on a section explaining that the buttons belong to Liquid Glass, with **Use
+Liquid Glass** beside it, and everything below dimmed. Outside the Compact window mode, the pane says the buttons
 only appear there and offers **Use Compact**.
 
 **Settings → General → Theme** shows each option as a live `PaletteThemePreview` tile — a miniature

@@ -39,9 +39,8 @@ struct SettingsSidebarView: View {
                                     : Color.secondary)
                         }
                         .tag(tab)
-                        // Listed but closed, so the reader can still learn what would open it.
-                        .selectionDisabled(reason != nil)
-                        .opacity(reason == nil ? 1 : 0.45)
+                        // Dimmed but still opens: the pane itself explains what would turn it on.
+                        .opacity(reason == nil || navigation.tab == tab ? 1 : 0.45)
                         .help(reason ?? "")
                     }
                 }
