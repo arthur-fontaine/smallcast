@@ -26,7 +26,7 @@ final class FileSearchSession {
     @ObservationIgnored private let searchOperation: SearchOperation
     @ObservationIgnored private var digUpRun: Task<[FileSearchResult], Error>?
 
-    /// DigUp's helper in place of Spotlight while set: what the Show More row hands the screen.
+    /// DigUp's matches ahead of Spotlight's while set: the Name and content engine.
     @ObservationIgnored var digUp: DigUpSearchRunner? {
         didSet { if digUp != oldValue { cancel() } }
     }
@@ -120,9 +120,12 @@ final class FileSearchSession {
                 let candidates: [FileSearchResult]
                 if let digUp {
                     let home = homeDirectory
-                    let run = Task {
-                        try await digUp.results(
+                    let run = Task { [searchOperation, policy] in
+                        async let names = searchOperation(request.query, request.filter, policy)
+                        // DigUp failing still leaves the name search it adds to.
+                        let content = try? await digUp.results(
                             for: request.query, filter: request.filter, homeDirectory: home)
+                        return DigUpSearchPolicy.merged(content: content ?? [], names: try await names)
                     }
                     digUpRun = run
                     candidates = try await run.value

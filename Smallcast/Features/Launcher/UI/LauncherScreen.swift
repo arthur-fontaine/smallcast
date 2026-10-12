@@ -277,7 +277,7 @@ struct LauncherScreen: PaletteScreen {
         case .fallback(let fallback, _):
             core.fallbackCoordinator.run(fallback, query: vm.query)
         case .file(let result): core.fileSearchCoordinator.open(result)
-        case .moreFiles: core.fileSearchCoordinator.showDigUpResults(query: vm.query)
+        case .moreFiles: core.fileSearchCoordinator.show(query: vm.query)
         case nil: break
         }
     }

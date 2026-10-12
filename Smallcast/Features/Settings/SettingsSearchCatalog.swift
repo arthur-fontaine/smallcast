@@ -370,14 +370,14 @@ enum SettingsSearchCatalog {
             group: .fileSearchCommands, "File search commands",
             keywords: ["shortcut", "launcher"]),
         .init(
-            group: .fileSearchDigUp, "DigUp",
-            keywords: ["content", "semantic", "meaning", "photos", "pdf", "fallback"]),
+            group: .fileSearchEngine, "Engine",
+            keywords: ["digup", "spotlight", "content", "semantic", "meaning"]),
         .init(
-            .fileSearchDigUp, "Show DigUp results in root search",
-            keywords: ["content", "semantic", "fallback", "search files"]),
+            .fileSearchEngine, "Find files by",
+            keywords: ["name", "content", "digup", "spotlight", "photos", "pdf"]),
         .init(
-            .fileSearchDigUp, "Helper path",
-            keywords: ["digup", "cli", "executable", "command line"]),
+            .fileSearchEngine, "DigUp helper",
+            keywords: ["digup", "cli", "executable", "command line", "path"]),
         .init(
             group: .fileSearchSearchScopes, "Search Scopes",
             keywords: ["folders", "locations", "home", "add folder"]),

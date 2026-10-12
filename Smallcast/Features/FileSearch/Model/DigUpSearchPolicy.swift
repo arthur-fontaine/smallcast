@@ -6,7 +6,7 @@ struct DigUpHit: Decodable, Equatable, Sendable {
     let kind: String
 }
 
-/// How File Search asks DigUp's helper and reads its answer. See file-search.md#digup.
+/// How File Search asks DigUp's helper and reads its answer. See file-search.md#engine.
 enum DigUpSearchPolicy {
     /// Root search shows this many, and asks for one more to learn whether "Show More" earns a row.
     static let rootRowLimit = 5
@@ -44,6 +44,12 @@ enum DigUpSearchPolicy {
 
     static func hits(fromJSON data: Data) throws -> [DigUpHit] {
         try JSONDecoder().decode([DigUpHit].self, from: data)
+    }
+
+    /// What DigUp found first, then the name matches it did not, so a name search never gets worse.
+    static func merged(content: [FileSearchResult], names: [FileSearchResult]) -> [FileSearchResult] {
+        let seen = Set(content.map(\.id))
+        return content + names.filter { !seen.contains($0.id) }
     }
 
     /// Kept in DigUp's order, minus files deleted since DigUp indexed them.

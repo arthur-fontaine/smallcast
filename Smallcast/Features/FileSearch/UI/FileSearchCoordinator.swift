@@ -35,22 +35,19 @@ final class FileSearchCoordinator {
     func applyPolicy() {
         session.apply(
             scopes: settings.fileSearchScopes, ignorePatterns: settings.fileSearchIgnorePatterns)
+        core.digUpPreview.apply(
+            scopes: settings.fileSearchScopes, ignorePatterns: settings.fileSearchIgnorePatterns)
     }
 
     /// `query` is the fallback row's: the screen opens already narrowed to what was typed.
     func show(query: String = "") {
         guard settings.fileSearchEnabled else { return }
-        session.digUp = nil
-        paletteCoordinator.togglePalette(mode: .fileSearch, seeding: query.isEmpty ? nil : query)
-    }
-
-    /// The same screen, answered by DigUp: root search's Show More row.
-    func showDigUpResults(query: String) {
-        guard settings.fileSearchEnabled else { return }
+        // Read at every entry: the engine changes in Settings while no screen is open.
         core.digUpState.refresh(customPath: settings.fileSearchDigUpPath)
         session.digUp = core.digUpState.runner(
-            limit: DigUpSearchPolicy.panelLimit, enabled: settings.fileSearchDigUpEnabled)
-        paletteCoordinator.togglePalette(mode: .fileSearch, seeding: query)
+            limit: DigUpSearchPolicy.panelLimit,
+            enabled: settings.fileSearchEngine == .nameAndContent)
+        paletteCoordinator.togglePalette(mode: .fileSearch, seeding: query.isEmpty ? nil : query)
     }
 
     func open(_ result: FileSearchResult) {

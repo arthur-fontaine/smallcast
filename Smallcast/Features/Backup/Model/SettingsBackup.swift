@@ -49,7 +49,7 @@ struct SettingsBackup: Codable {
         var fileSearchEnabled: Bool?
         var fileSearchScopes: [String]?
         var fileSearchIgnorePatterns: [String]?
-        var fileSearchDigUpEnabled: Bool?
+        var fileSearchEngine: String?
         var notesEnabled: Bool?
         var notesRendersMarkdown: Bool?
         var notesShowsFormattingBar: Bool?
@@ -164,7 +164,7 @@ extension SettingsBackup {
             fileSearchEnabled: s.fileSearchEnabled,
             fileSearchScopes: s.fileSearchScopes,
             fileSearchIgnorePatterns: s.fileSearchIgnorePatterns,
-            fileSearchDigUpEnabled: s.fileSearchDigUpEnabled,
+            fileSearchEngine: s.fileSearchEngine.rawValue,
             notesEnabled: s.notesEnabled,
             notesRendersMarkdown: s.notesRendersMarkdown,
             notesShowsFormattingBar: s.notesShowsFormattingBar,
@@ -422,8 +422,8 @@ extension SettingsBackup {
             settings.fileSearchIgnorePatterns = patterns
             count += 1
         }
-        if let flag = s.fileSearchDigUpEnabled {
-            settings.fileSearchDigUpEnabled = flag
+        if let raw = s.fileSearchEngine, let engine = FileSearchEngine(rawValue: raw) {
+            settings.fileSearchEngine = engine
             count += 1
         }
         if let flag = s.notesEnabled {

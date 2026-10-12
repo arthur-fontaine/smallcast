@@ -54,13 +54,14 @@ struct DigUpTests {
     static func main() async {
         arguments()
         decoding()
+        merging()
         do {
             let stub = try StubHelper()
             defer { try? FileManager.default.removeItem(at: stub.directory) }
             try await runnerAnswers(stub)
             await runnerFailure(stub)
             await cancellationEndsTheHelper(stub)
-            try await sessionAsksDigUpInsteadOfSpotlight(stub)
+            try await sessionAddsDigUpToSpotlight(stub)
         } catch {
             expect(false, "the stub helper could be set up: \(error)")
         }
@@ -184,16 +185,20 @@ struct DigUpTests {
         if case .success = outcome { expect(false, "a cancelled search publishes nothing") }
     }
 
-    static func sessionAsksDigUpInsteadOfSpotlight(_ stub: StubHelper) async throws {
-        let file = try stub.makeFile("clause.pdf")
-        try #"[{"path": "\#(file.path)", "kind": "pdf"}]"#
+    static func sessionAddsDigUpToSpotlight(_ stub: StubHelper) async throws {
+        let clause = try stub.makeFile("clause.pdf")
+        let notes = try stub.makeFile("lease notes.txt")
+        try #"[{"path": "\#(clause.path)", "kind": "pdf"}]"#
             .write(to: stub.answer, atomically: true, encoding: .utf8)
+        let home = stub.directory
         let policy = FileSearchPolicy(
-            scopes: FileSearchScope.defaultScopes, ignorePatterns: [], homeDirectory: stub.directory)
+            scopes: FileSearchScope.defaultScopes, ignorePatterns: [], homeDirectory: home)
         nonisolated(unsafe) var spotlightCalls = 0
         let session = FileSearchSession(policy: policy, debounce: .milliseconds(10)) { _, _, _ in
             spotlightCalls += 1
-            return []
+            return [notes, clause].map {
+                FileSearchResult(url: $0, isDirectory: false, homeDirectory: home)
+            }
         }
         session.digUp = DigUpSearchRunner(
             helper: stub.executable, indexDirectory: nil, modelsDirectory: nil, limit: 6)
@@ -203,17 +208,40 @@ struct DigUpTests {
         try? await Task.sleep(for: .milliseconds(150))
         session.search("pet clause")
         await waitUntil(seconds: 5) { session.state == .ready }
-        expect(session.results.map(\.name) == ["clause.pdf"], "the session publishes DigUp's files")
+        expect(
+            session.results.map(\.name) == ["clause.pdf", "lease notes.txt"],
+            "DigUp's files lead, then the name matches it did not return")
         expect(
             ContinuousClock.now - started < .seconds(5),
             "a newer query cancels the slow one instead of waiting it out")
-        expect(spotlightCalls == 0, "Spotlight is never asked while DigUp answers")
+
+        session.search("boom")
+        await waitUntil(seconds: 5) { session.state == .ready }
+        expect(
+            session.results.map(\.name) == ["lease notes.txt", "clause.pdf"],
+            "a failing DigUp still leaves the name search")
 
         session.digUp = nil
-        expect(session.results.isEmpty && session.state == .idle, "switching source drops DigUp's rows")
+        expect(session.results.isEmpty && session.state == .idle, "switching engine drops the rows")
+        let callsBefore = spotlightCalls
         session.search("pet clause")
         await waitUntil(seconds: 1) { session.state == .ready }
-        expect(spotlightCalls == 1, "without DigUp the same session searches Spotlight again")
+        expect(
+            spotlightCalls == callsBefore + 1 && session.results.count == 2,
+            "with the Name engine the same session searches Spotlight alone")
+    }
+
+    static func merging() {
+        let home = URL(fileURLWithPath: "/Users/test")
+        func result(_ name: String) -> FileSearchResult {
+            FileSearchResult(url: home.appending(path: name), isDirectory: false, homeDirectory: home)
+        }
+        let merged = DigUpSearchPolicy.merged(
+            content: [result("b.pdf"), result("a.png")], names: [result("a.png"), result("c.txt")])
+        expect(merged.map(\.name) == ["b.pdf", "a.png", "c.txt"], "a file found both ways shows once")
+        expect(
+            DigUpSearchPolicy.merged(content: [], names: [result("c.txt")]).map(\.name) == ["c.txt"],
+            "no content match leaves the name search as it was")
     }
 
     static func waitUntil(seconds: Int, _ condition: @escaping @MainActor () -> Bool) async {

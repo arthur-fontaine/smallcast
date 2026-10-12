@@ -35,7 +35,7 @@ final class FallbackCoordinator {
 
     /// DigUp's rows stand in for this row, wherever the reader ordered or switched it.
     var digUpReplacesSearchFiles: Bool {
-        settings.fileSearchDigUpEnabled && core.digUpState.helper != nil
+        settings.fileSearchEngine == .nameAndContent && core.digUpState.helper != nil
             && available.contains(.builtin(.searchFiles)) && store.isEnabled(.builtin(.searchFiles))
     }
 

@@ -328,7 +328,7 @@ order name a live row across a rename or a reinstall.
 | Fallback | Where the query goes | Offered when |
 | --- | --- | --- |
 | Quick AI | a fresh Quick AI chat, question already sent (`QuickAICoordinator.ask`) | `aiEnabled` |
-| Search Files | the file-search screen, already narrowed — or, with DigUp on, DigUp's files below every fallback (see [file-search.md](file-search.md#digup)) | `fileSearchEnabled` |
+| Search Files | the file-search screen, already narrowed — or, with the Name and content engine, its files below every fallback (see [file-search.md](file-search.md#engine)) | `fileSearchEnabled` |
 | Run Shell Command | `/bin/zsh`, streamed into the Command Output window | always |
 | Define Word | the dictionary screen, already showing the entry (see [dictionary.md](dictionary.md)) | the Define Word command is visible in Settings › Commands |
 | a quicklink | its first `{argument}` | `quicklinksEnabled`, and the link has a placeholder |

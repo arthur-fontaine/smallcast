@@ -15,9 +15,9 @@ feature is enabled in Settings.
   and the `UniformTypeIdentifiers` of `FileSearchFilter` and `FileSearchPreviewKind` included — value
   types with no environment of their own. `file-search-test` compiles the shipped files together with
   the existing pure fuzzy scorer.
-- **Search is filename-only, and every list comes from Spotlight — unless DigUp answers.** With
-  [DigUp](#digup) switched on, root search's file rows and the screen behind Show More come from
-  DigUp's own index instead, which DigUp builds and owns. Smallcast still creates no content index,
+- **Search is filename-only, and every list comes from Spotlight — unless DigUp adds to it.** With the
+  [Name and content engine](#engine), DigUp's matches lead every list, from an index DigUp builds and
+  owns; Spotlight's still follow them. Smallcast still creates no content index,
   history, query cache, watcher or search data — the blank screen's Recently Used rows are one more
   Spotlight query over the configured scopes, read from the system's own `kMDItemLastUsedDate` and
   `kMDItemFSContentChangeDate`, never from anything Smallcast recorded. The type filter narrows *which*
@@ -255,45 +255,57 @@ warm by the time a pointer can reach it; a landed drop hides the palette through
 `PaletteCoordinator.dragLanded()`. There is no stat first: a result is seconds old, and its session is
 cleared whenever the palette hides.
 
-## DigUp
+## Engine
 
-[DigUp](https://github.com/ARahim3/DigUp) finds files by what is in them — a photo by what it shows, a
-PDF by a clause, a recording by what is said — with an on-device embedding model. Smallcast does not
-embed any of it: it runs the command-line helper DigUp.app ships (`Contents/Helpers/digup`), so the
-model, the folders indexed and the index itself stay DigUp's.
+Settings ▸ File Search ▸ Engine picks how File Search finds files, everywhere it answers — the Search
+Files command and its hotkey, root search and its Show More row alike:
 
-- **Off by default, and locked until the helper is found.** `fileSearchDigUpEnabled` lives in Settings
-  ▸ File Search ▸ DigUp. `DigUpState` resolves the helper through `DigUpLocator`: the typed
-  `fileSearchDigUpPath` when there is one (a build from source), else DigUp.app found by bundle id,
-  then in `/Applications` and `~/Applications`. While nothing is found the toggle reads off and is
-  disabled, the section says why, and Check Again re-reads it. The path is machine state: it has no
-  `SettingsFileKey` and is excluded from backups; the toggle is carried by both.
-- **It takes the Search Files fallback's place, not a new one.** When it is on, found, and the Search
-  Files fallback is offered and checked, `FallbackCoordinator.digUpReplacesSearchFiles` drops that
-  static row and `DigUpRootSection` adds up to `DigUpSearchPolicy.rootRowLimit` (5) files **after every
-  fallback**, then Show More Results when DigUp found more. Unchecking Search Files in Settings ▸
-  Fallbacks hides both.
+| Find files by | Answers with |
+| --- | --- |
+| Name (default) | Spotlight, as described above |
+| Name and content | [DigUp](https://github.com/ARahim3/DigUp)'s matches first, then Spotlight's name matches it did not return |
+
+DigUp finds a file by what is in it — a photo by what it shows, a PDF by a clause, a recording by what
+is said — with an on-device embedding model. Smallcast embeds none of it: it runs the command-line
+helper DigUp.app ships (`Contents/Helpers/digup`), so the model, the folders indexed and the index
+stay DigUp's.
+
+- **DigUp adds to Spotlight, never replaces it.** DigUp reads only the folders and the kinds it
+  indexes — no folders, archives or apps — so `FileSearchSession` runs both and
+  `DigUpSearchPolicy.merged` keeps DigUp's order, then appends every name match DigUp did not return. A
+  failing helper still leaves the name search, the blank query still lists Recently Used, and the
+  Folders and Archives filters still answer.
+- **Choosing it is not having it.** Like Dictation's models, Name and content can be picked before
+  DigUp is installed; the section then says DigUp is not installed, offers Get DigUp… and Check Again,
+  and File Search keeps finding by name until `DigUpState` finds the helper. `DigUpLocator` takes the
+  typed `fileSearchDigUpPath` (a build from source) first, else DigUp.app by bundle id, then in
+  `/Applications` and `~/Applications`. The engine is carried by backups and `settings.json`
+  (`fileSearch.engine`); the path is machine state and is carried by neither.
+- **In root search it takes the Search Files fallback's place.** With Name and content in effect and
+  the Search Files fallback offered and checked, `FallbackCoordinator.digUpReplacesSearchFiles` drops
+  that static row and `DigUpRootSection` adds up to `DigUpSearchPolicy.rootRowLimit` (5) files **after
+  every fallback**, then Show More Results, which runs `FileSearchCoordinator.show(query:)` like the
+  row it replaced. Unchecking Search Files in Settings ▸ Fallbacks hides both.
 - **Its rows are the tail of `LauncherScreen.rows`**, the only rows that arrive after the query does.
   Appended last, a late answer never moves a row the selection is already on; `fallbackRow(at:)`
   subtracts `DigUpRootSection.rowCount`, since the fallbacks are no longer the last rows.
-- **Show More is this screen, not another.** `FileSearchCoordinator.showDigUpResults(query:)` sets
-  `FileSearchSession.digUp` before pushing `.fileSearch`, so the list, preview, Quick Look and actions
-  are the ones above; `show(query:)` clears it, so every other way in searches Spotlight again.
+- **The engine is read at every entry.** `show(query:)` sets `FileSearchSession.digUp` from it each
+  time, so a change in Settings applies to the next search without reaching into an open screen.
+  Root search keeps its own session, `AppCore.digUpPreview`, driven by `DigUpRootSearch`; the scopes
+  and ignore patterns apply to both.
 - **One helper run per query, and a newer query kills the older one.** `DigUpSearchRunner` runs
   `digup search <words> -n N --json` through `InstalledAIProbe.run`, whose cancellation terminates the
-  process, and the session cancels the running search as soon as a newer request lands. Root search
-  keeps a second session, `AppCore.digUpPreview`, driven by `DigUpRootSearch` as the query changes.
+  process; the session cancels the running search as soon as a newer request lands.
 - **No paging.** DigUp returns only the files whose match stands out, so the screen asks once for up to
-  `DigUpSearchPolicy.panelLimit` (500) rather than re-running the model per page. The type filter maps
-  to `--kind`; Folders and Archives ask nothing, since DigUp reads only what is inside files.
+  `DigUpSearchPolicy.panelLimit` (500). The type filter maps to `--kind`.
 - **A moved index still answers.** DigUp keeps a moved index or model folder in its own defaults
   (`indexDir`, `modelsDir` in `com.abdurrahim.DigUp`), which its helper does not read; `DigUpLocator`
   passes them on as `--index` and `DIGUP_MODELS`.
 - **A result opens the file.** DigUp also knows the page or the moment that matched; opening there
   (Preview's search, QuickTime's position) is not done yet.
 
-`digup-test` covers the arguments, the decoding and the runner against a stub helper, including a
-stale run killed by a newer query.
+`digup-test` covers the arguments, the decoding, the merge and the runner against a stub helper,
+including a stale run killed by a newer query and a failing helper that leaves the name matches.
 
 ## Invocation
 
