@@ -156,6 +156,12 @@ enum Theme {
         /// Symmetric clearance between the emoji grid and both panel edges.
         static let emojiGridInset: CGFloat = 16
         static let emojiCell: CGFloat = 56
+        /// Spotlight's Applications grid: seven across, an app-icon tile above a one-line name.
+        static let appGridColumns = 7
+        static let appGridIcon: CGFloat = 48
+        static let appGridCellHeight: CGFloat = 84
+        /// The chip row above the grid, as Spotlight sets its categories under the field.
+        static let appGridChipHeight: CGFloat = 24
         static let menuWidth: CGFloat = 276
         static let actionMenuWidth: CGFloat = 320
         /// The clipboard type filter's menu; `menuWidth` is far too wide for six short rows.
@@ -352,6 +358,30 @@ enum Theme {
         static let resize: TimeInterval = 0.28
         static let resizeTiming = CAMediaTimingFunction(controlPoints: 0.2, 0.8, 0.2, 1)
         static let fadeTiming = CAMediaTimingFunction(controlPoints: 0.42, 0, 0.58, 1)
+        /// Between the capsule and its first button, and between buttons: Spotlight's 10pt.
+        static let railGap: CGFloat = 10
+        /// Each button sits a point inside the bar's height, as Spotlight's 54pt beside its 56pt.
+        static let railInset: CGFloat = 1
+        /// Under `railGap`, so resting buttons stand apart and only moving ones fuse.
+        static let railBlend: CGFloat = 8
+        /// Parked inside the capsule's end this small, so each button pinches out of it.
+        static let railParkedScale: CGFloat = 0.36
+        static let railGlyphSize: CGFloat = 22
+        /// One button after another, as Spotlight beads them off the capsule.
+        static let railStagger: TimeInterval = 0.055
+        /// A summon lands first; the buttons extrude once the surface has arrived.
+        static let railRevealDelay: TimeInterval = 0.12
+        /// The glyph surfaces once its glass has formed, and blurs in rather than popping.
+        static let railGlyphDelay: TimeInterval = 0.24
+        static let railGlyphFade: TimeInterval = 0.16
+        static let railGlyphBlur: CGFloat = 4
+        /// A chosen button fuses back into the capsule before its screen grows below it.
+        static let railMerge: TimeInterval = 0.2
+        /// Measured off Spotlight: the capsule undershoots as it shortens, then settles.
+        static let railReveal = Animation.spring(response: 0.44, dampingFraction: 0.62)
+        static let railHide = Animation.spring(response: 0.38, dampingFraction: 0.76)
+        /// The buttons barely overshoot: the last rests on the window's edge, which would clip it.
+        static let railButton = Animation.spring(response: 0.44, dampingFraction: 0.86)
     }
 
     enum RoomMotion {

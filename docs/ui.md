@@ -389,6 +389,56 @@ Liquid Glass differs in five places, each measured against Spotlight:
 
 The selection fill is unchanged on purpose: Spotlight's highlight is the same neutral wash.
 
+### The compact bar's buttons
+
+Source: `Palette/SpotlightRail.swift`, `Palette/SpotlightButton.swift`.
+
+Liquid Glass, in the Compact window mode, sets up to four glass circles beside the capsule, as
+Spotlight sets Applications, Files, Actions and Clipboard beside its own. They are Applications,
+Files, Quick AI and Clipboard by default; Quick AI stands where Spotlight puts Actions. **Every
+glyph is outline line art**, as Spotlight's are, so a button doesn't always borrow its screen's
+symbol. Quick AI's `sparkles` is solid and sat heavier than its neighbours, so the button uses
+`text.bubble`. `apple.intelligence` would match too, but SF Symbols reserves it for Apple's own
+features.
+`AppSettings.spotlightButtons` holds them in order (`appearance.spotlightButtons`). A button whose
+feature is switched off is dropped by `availableSpotlightButtons`. A button runs its launcher
+command through `LauncherCoordinator.openSpotlightButton`, and opened from another button's screen
+it swaps that screen rather than stacking on it.
+
+- **They come out on every summon,** once the arrival has landed. They go back in the moment the bar
+  stops being the bare root search: a typed letter, a screen, a hide. Spotlight's own idle bar
+  reveals them on hover instead. The rail does not use hover at all, so a palette summoned under a
+  still pointer has nothing to arm.
+- **One `GlassEffectContainer` holds the capsule and the circles,** with `railBlend` (8pt) below the
+  10pt gap. Buttons at rest stand apart, and only moving ones fuse. The content is framed to the
+  capsule's width and clipped to it, so the field never runs under a button.
+- **The motion is Spotlight's, from a recording of it.** The capsule shortens on a spring that
+  undershoots (0.44s, damping 0.62). Each circle starts parked at 36% just inside the capsule's
+  resting end and travels out, 55ms after the one before it. The capsule pulling back uncovers the
+  circles as beads that fuse and then separate. The circles' own spring is barely underdamped
+  (0.86), since the last one rests on the window's edge and any overshoot would be clipped there.
+- **Glyphs are drawn above the glass, not inside it,** where a morph smears them. Each one rides its
+  circle's position and scale, and blurs in 0.24s after its circle starts. The container renders the
+  morph slightly behind the views' geometry, so an earlier glyph floats outside a bubble that has
+  not yet arrived.
+- **Choosing a button fuses it back first.** `RootPaletteView.mergingButton` hides the rail for
+  `railMerge` (0.2s), which plays the hide motion, and only then opens the screen, whose card grows
+  below. Reduce Motion opens at once, and removes the motion but never the buttons.
+- **No tooltips:** the compact window is exactly as tall as the bar, so a label above or below a
+  button would hang off the window. Each button carries an accessibility label instead.
+
+**Settings → Bar Buttons** is a pane of its own, beside General. It holds a master switch,
+`spotlightButtonsEnabled`, which keeps the list when switched off, and one picker per slot with
+**None**. The slot after the last adds a button. A button picked from another slot trades places with
+it, and None closes the gap. That one control sets which buttons appear, their order and their
+number; `SpotlightButton.assigning` is the rule, pinned by `spotlight-button-test`.
+
+Under the Smallcast theme the pane is closed in two ways. The sidebar lists it dimmed and
+`selectionDisabled`, with a `.help` label saying why. A search result can still land on it, and then
+it opens on a section explaining that the buttons belong to Liquid Glass, with **Use Liquid Glass**
+beside it, and everything below dimmed. Outside the Compact window mode, the pane says the buttons
+only appear there and offers **Use Compact**.
+
 **Settings → General → Theme** shows each option as a live `PaletteThemePreview` tile — a miniature
 drawn with the real tokens over a bright gradient, since glass shows only what it has behind it — and
 the light/dark picker beside it is titled **Appearance**.

@@ -140,6 +140,12 @@ enum SettingsSearchCatalog {
             .generalAppearance, "Theme",
             keywords: ["liquid glass", "spotlight", "glass", "style", "look", "design"]),
         .init(
+            .barButtonsGeneral, "Show bar buttons",
+            keywords: ["spotlight", "liquid glass", "compact", "rail"]),
+        .init(
+            group: .barButtonsSlots, "Buttons",
+            keywords: ["applications", "files", "clipboard", "quick ai", "order", "⌘2"]),
+        .init(
             .generalAppearance, "Interface size",
             keywords: ["text size", "font size", "scale", "zoom", "bigger", "larger", "legible"]),
         .init(

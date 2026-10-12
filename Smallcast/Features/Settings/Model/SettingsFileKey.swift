@@ -10,6 +10,8 @@ enum SettingsFileKey: String, CaseIterable, Sendable {
     case supportReminders = "general.supportReminders"
     case appearance = "appearance.theme"
     case paletteTheme = "appearance.paletteTheme"
+    case spotlightButtons = "appearance.spotlightButtons"
+    case spotlightButtonsEnabled = "appearance.spotlightButtonsEnabled"
     case interfaceSize = "appearance.interfaceSize"
     case compactMode = "appearance.compactMode"
     case showFavoritesInCompactMode = "appearance.showFavoritesInCompactMode"

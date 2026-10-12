@@ -45,6 +45,9 @@ struct RootPaletteView: View {
     @State private var hostWindow: NSWindow?
     /// The pending scroll request; modes are exclusive, so one piece of state serves all.
     @State private var scroll = ScrollIntent(kind: .top)
+    /// The bar button just chosen, fusing back into the capsule before its screen opens.
+    @State private var mergingButton: SpotlightButton?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Compact vs. full; the source of truth is on `AppCore`, so the two can't disagree.
     private var isCollapsed: Bool { core.paletteCoordinator.paletteIsCollapsed }
@@ -59,6 +62,11 @@ struct RootPaletteView: View {
                 meeting: core.calendarCoordinator.cardedMeeting, now: meetingClock.now,
                 openActions: openActions, openArgumentOptions: openArgumentOptions,
                 scrollToFollow: { scroll = ScrollIntent(kind: .follow) })
+        case .applications:
+            return AppGridScreen(
+                appIndex: appIndex, launchHistory: launchHistory, favorites: favorites,
+                visibility: visibility, runningApps: runningApps, core: core, vm: vm,
+                openActions: openActions)
         case .uninstall:
             return UninstallScreen(
                 session: uninstall, core: core, vm: vm, openActions: openActions)
@@ -330,7 +338,10 @@ struct RootPaletteView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .modifier(
                     PaletteSurface(
-                        isDimmed: core.isDimmingPaletteForDialog, presentation: vm.presentation))),
+                        isDimmed: core.isDimmingPaletteForDialog, presentation: vm.presentation,
+                        rail: SpotlightRail(
+                            buttons: spotlightButtons, isRevealed: railRevealed,
+                            activate: activateSpotlightButton)))),
             selection: sel)
     }
 
@@ -339,6 +350,7 @@ struct RootPaletteView: View {
     private func emojiObservers(_ content: some View) -> some View {
         content
             .onChange(of: vm.emojiCategoryFilter) { land() }
+            .onChange(of: vm.appCategoryFilter) { land() }
             .onChange(of: core.pinnedEmoji.revision) { emojiGridChanged() }
             .onChange(of: (screen as? EmojiScreen)?.frequentlyUsed) { old, new in
                 guard let old, let new else { return }
@@ -436,7 +448,18 @@ struct RootPaletteView: View {
             .onChange(of: vm.pinChordToken) { performShortcut(.pin) }
             // ⌘1…⌘0 arrives as a slot index from AppKit keyCode matching.
             .onChange(of: vm.favoriteSlotToken) {
-                if let index = vm.favoriteSlotIndex { performShortcut(.favoriteSlot(index)) }
+                guard let index = vm.favoriteSlotIndex else { return }
+                if let chord = core.paletteCoordinator.spotlightChord(at: index) {
+                    performSpotlightChord(chord)
+                } else {
+                    performShortcut(.favoriteSlot(index))
+                }
+            }
+            // The window's shadow is cut from what it draws, so it is recut once the buttons settle.
+            .onChange(of: railRevealed) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + Theme.LiquidGlass.settle * 2) {
+                    hostWindow?.invalidateShadow()
+                }
             }
             // One optional makes "exactly one menu" structural; this only presents it.
             .onChange(of: openMenu) {
@@ -714,7 +737,8 @@ struct RootPaletteView: View {
                 }
             }
             // Compact pins favorites beside the field; expanded shows them as rows.
-            if isCollapsed, settings.showFavoritesInCompactMode,
+            // The bar's buttons take ⌘1…⌘5 and the room beside the field, so favorites step aside.
+            if isCollapsed, settings.showFavoritesInCompactMode, spotlightButtons.isEmpty,
                 let launcher = screen as? LauncherScreen
             {
                 let favorites = launcher.compactFavorites
@@ -777,6 +801,40 @@ struct RootPaletteView: View {
         theme == .liquidGlass
             ? .systemFont(ofSize: metrics.scaled(Theme.LiquidGlass.searchFieldSize), weight: .regular)
             : metrics.typography.searchFieldNSFont
+    }
+
+    /// Only Liquid Glass's compact bar has buttons; elsewhere there is nowhere to put them.
+    private var spotlightButtons: [SpotlightButton] {
+        guard theme == .liquidGlass, settings.compactMode else { return [] }
+        return settings.availableSpotlightButtons
+    }
+
+    /// Out on every summon, once the surface has arrived, and back in as soon as anything is typed.
+    private var railRevealed: Bool {
+        !spotlightButtons.isEmpty && isCollapsed && vm.isVisible && vm.presentation == .shown
+            && mergingButton == nil
+    }
+
+    /// Spotlight fuses the chosen button back into the capsule, then grows its screen below.
+    private func activateSpotlightButton(_ button: SpotlightButton) {
+        guard railRevealed, !reduceMotion else {
+            core.launcherCoordinator.openSpotlightButton(button)
+            return
+        }
+        mergingButton = button
+        DispatchQueue.main.asyncAfter(deadline: .now() + Theme.LiquidGlass.railMerge) {
+            core.launcherCoordinator.openSpotlightButton(button)
+            mergingButton = nil
+        }
+    }
+
+    private func performSpotlightChord(_ chord: SpotlightButtonChord) {
+        switch chord {
+        case .search:
+            if vm.mode == .launcher { searchFocused = true } else { vm.prepare(mode: .launcher) }
+        case .open(let button): activateSpotlightButton(button)
+        case .consumed: break
+        }
     }
 
     /// Whichever screen offers one; the compact bar has no room for it.

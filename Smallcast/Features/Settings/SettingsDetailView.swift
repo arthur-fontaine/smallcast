@@ -9,6 +9,7 @@ struct SettingsDetailView: View {
         Group {
             switch navigation.tab {
             case .general: GeneralSettingsView()
+            case .barButtons: BarButtonsSettingsView()
             case .applications: ApplicationsSettingsView()
             case .search: SearchSettingsView()
             case .systemSettings: SystemSettingsSettingsView()

@@ -135,6 +135,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     var ownerName: String?
     /// When it landed on disk, so a fresh install can be suggested before its first open.
     var installedAt: Date?
+    /// The Applications grid's chip, from the bundle's declared App Store category. Apps only.
+    var appCategory: AppCategory?
     /// The searchable form of every field above, built at publish by `buildSearchProfile`.
     var search = SearchProfile.unnamed
 
@@ -627,7 +629,9 @@ final class AppIndex {
                     kind: .application, alternateTitles: Array(names.dropFirst()) + alternates,
                     keywords: declared, iconStamp: FileIconStamp.value(for: url),
                     installedAt: try? url.resourceValues(forKeys: [.addedToDirectoryDateKey])
-                        .addedToDirectoryDate)
+                        .addedToDirectoryDate,
+                    appCategory: AppCategory(
+                        declared: bundle?.infoDictionary?["LSApplicationCategoryType"] as? String))
                 entry.addAlternateTitle(fileName)
                 if let bundleID { indexByBundleID[bundleID] = result.count }
                 result.append(entry)

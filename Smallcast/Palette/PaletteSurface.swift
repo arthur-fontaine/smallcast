@@ -4,8 +4,10 @@ import SwiftUI
 struct PaletteSurface: ViewModifier {
     let isDimmed: Bool
     let presentation: PalettePresentation
+    var rail: SpotlightRail = .none
     @Environment(\.paletteTheme) private var theme
     @Environment(\.metrics) private var metrics
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -19,14 +21,34 @@ struct PaletteSurface: ViewModifier {
             .clipShape(RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous))
         case .liquidGlass:
             let shape = PaletteSurface.liquidGlassShape(metrics)
-            dimmable(
-                content
-                    .background(Theme.Colors.glassScrim)
+            let geometry = SpotlightRailGeometry(metrics: metrics, count: rail.buttons.count)
+            // One container, or the buttons could never bead off the capsule they come out of.
+            GlassEffectContainer(spacing: metrics.scaled(Theme.LiquidGlass.railBlend)) {
+                ZStack(alignment: .topLeading) {
+                    dimmable(
+                        content
+                            // Narrowed with the capsule, so the field never runs under a button.
+                            .frame(width: geometry.capsuleWidth(revealed: rail.isRevealed))
+                            .background(Theme.Colors.glassScrim)
+                    )
+                    .clipShape(shape)
                     .glassEffect(.regular, in: shape)
-            )
-            .clipShape(shape)
+                    .animation(capsuleMotion, value: rail.isRevealed)
+                    SpotlightRailGlass(rail: rail, geometry: geometry)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+            .overlay(alignment: .topLeading) { SpotlightRailGlyphs(rail: rail, geometry: geometry) }
             .scaleEffect(x: presentationScale, y: 1)
         }
+    }
+
+    /// Shortening waits out the buttons' reveal delay, so they extrude as the capsule pulls back.
+    private var capsuleMotion: Animation? {
+        guard !reduceMotion else { return nil }
+        return rail.isRevealed
+            ? Theme.LiquidGlass.railReveal.delay(Theme.LiquidGlass.railRevealDelay)
+            : Theme.LiquidGlass.railHide
     }
 
     /// The compact bar's own capsule radius, kept as the card grows so its ends become its corners.

@@ -31,6 +31,8 @@ final class PaletteState {
     var fileSearchFilter: FileSearchFilter = .all
     /// The emoji picker's visible category, reset with the rest of a freshly opened screen.
     var emojiCategoryFilter: EmojiCategoryFilter = .all
+    /// The Applications grid's chip; nil lists every app.
+    var appCategoryFilter: AppCategory?
     /// Nil means the configured default; zoom only overrides it for this picker session.
     var emojiGridColumnsOverride: EmojiGridColumns?
     /// Whether file search draws its Quick Look overlay; it follows whatever row is selected.
@@ -163,6 +165,7 @@ final class PaletteState {
         clipboardFilter = .all
         fileSearchFilter = .all
         emojiCategoryFilter = .all
+        appCategoryFilter = nil
         emojiGridColumnsOverride = nil
         fileSearchQuickLook = false
         forceExpanded = false

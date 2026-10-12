@@ -224,6 +224,8 @@ run ai-instructions-test   Smallcast/Features/AI/Model/AIInstructions.swift \
                            Smallcast/Features/AI/Model/AIPreamble.swift
 run hover-arming-test      Smallcast/Palette/HoverArming.swift \
                            Smallcast/Palette/PaletteState.swift \
+                           Smallcast/Features/Launcher/Model/AppCategory.swift \
+                           Smallcast/Palette/SpotlightButton.swift \
                            Smallcast/Palette/PaletteMode.swift \
                            Smallcast/Features/Emoji/Model/EmojiCatalog.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
@@ -244,6 +246,8 @@ run palette-escape-test    Smallcast/Palette/PaletteMode.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Smallcast/Features/CustomCommands/Model/CustomCommand.swift
 run palette-navigation-test Smallcast/Palette/PaletteState.swift \
+                           Smallcast/Features/Launcher/Model/AppCategory.swift \
+                           Smallcast/Palette/SpotlightButton.swift \
                            Smallcast/Palette/PaletteMode.swift \
                            Smallcast/Palette/HoverArming.swift \
                            Smallcast/Features/Emoji/Model/EmojiCatalog.swift \
@@ -266,6 +270,12 @@ run action-menu-search-test Smallcast/Palette/ActionMenuSearchQuery.swift \
                             Smallcast/Features/Launcher/Model/SearchRelevance.swift
 run palette-shortcut-test  Smallcast/Palette/PaletteShortcut.swift
 run ascii-layout-test      Smallcast/Platform/ASCIIKeyboardLayout.swift
+run app-category-test      Smallcast/Features/Launcher/Model/AppCategory.swift
+run spotlight-button-test  Smallcast/Palette/PaletteMode.swift \
+                           Smallcast/Palette/SpotlightButton.swift \
+                           Smallcast/Features/Quicklinks/Model/Quicklink.swift \
+                           Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
+                           Smallcast/Features/CustomCommands/Model/CustomCommand.swift
 run palette-tab-test       Smallcast/Palette/PaletteMode.swift \
                            Smallcast/Palette/PaletteTabAction.swift \
                            Smallcast/Features/Quicklinks/Model/Quicklink.swift \

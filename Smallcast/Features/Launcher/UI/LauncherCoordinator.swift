@@ -165,6 +165,19 @@ final class LauncherCoordinator {
         }
     }
 
+    /// A Liquid Glass bar button: the command behind it, or the Applications grid, which has none.
+    func openSpotlightButton(_ button: SpotlightButton) {
+        // Its command toggles, so pressing the button for the screen already up would close it.
+        guard !paletteCoordinator.isShowing(button.mode) else { return }
+        paletteCoordinator.openFromSpotlightButton {
+            if let command = button.command {
+                runCommand(command)
+            } else {
+                paletteCoordinator.showPalette(mode: button.mode)
+            }
+        }
+    }
+
     /// The one funnel a built-in command runs through, from a palette row or its global shortcut.
     func runCommand(_ id: CommandID) {
         switch id {
@@ -304,5 +317,22 @@ final class LauncherCoordinator {
         let quittingPreviousApp = windowController.previousApp?.bundleIdentifier == bundleID
         guard AppLauncher.quit(bundleID: bundleID, force: force) else { return }
         paletteCoordinator.hidePalette(restoreFocus: !quittingPreviousApp)
+    }
+}
+
+extension SpotlightButton {
+    /// The launcher command a button stands for; nil only for the grid no command opens.
+    var command: CommandID? {
+        switch self {
+        case .applications: nil
+        case .files: .searchFiles
+        case .quickAI: .quickAI
+        case .clipboard: .clipboardHistory
+        case .emoji: .searchEmoji
+        case .calculatorHistory: .calculatorHistory
+        case .quicklinks: .searchQuicklinks
+        case .snippets: .searchSnippets
+        case .switchWindows: .switchWindows
+        }
     }
 }

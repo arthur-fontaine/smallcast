@@ -24,6 +24,11 @@ struct GeneralSettingsView: View {
             })
     }
 
+    /// The buttons take the bar's spare width and its digits, so favorites have neither.
+    private var barButtonsReplaceFavorites: Bool {
+        settings.paletteTheme == .liquidGlass && !settings.availableSpotlightButtons.isEmpty
+    }
+
     /// The missing-permission half is its own row, so it can carry the button that fixes it.
     private var hyperSubtitle: String {
         guard settings.hyperKey != .none else { return "Remap one key to \(hyperGlyphs) held together." }
@@ -94,9 +99,12 @@ struct GeneralSettingsView: View {
                 WindowModeRow()
                 Toggle(isOn: $settings.showFavoritesInCompactMode) {
                     SettingsRowTitle(.generalAppearance, "Show favorites in compact mode")
-                    Text("Launch them with ⌘1–⌘5.")
+                    Text(
+                        barButtonsReplaceFavorites
+                            ? "Liquid Glass shows its buttons there instead."
+                            : "Launch them with ⌘1–⌘5.")
                 }
-                .settingsEnabled(settings.compactMode)
+                .settingsEnabled(settings.compactMode && !barButtonsReplaceFavorites)
                 Toggle(isOn: $settings.openOnCursorScreen) {
                     SettingsRowTitle(.generalAppearance, "Follow the cursor across displays")
                 }

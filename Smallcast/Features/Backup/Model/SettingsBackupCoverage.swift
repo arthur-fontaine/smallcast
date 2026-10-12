@@ -18,6 +18,8 @@ enum SettingsBackupCoverage {
         "escapeKeyBehavior": .escapeKeyBehavior,
         "appearance": .appearance,
         "paletteTheme": .paletteTheme,
+        "spotlightButtons": .spotlightButtons,
+        "spotlightButtonsEnabled": .spotlightButtonsEnabled,
         "calcNumberStyle": .calcNumberStyle,
         "interfaceSize": .interfaceSize,
         "compactMode": .compactMode,

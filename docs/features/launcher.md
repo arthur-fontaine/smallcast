@@ -706,6 +706,15 @@ rather than the compact bar re-deriving an empty-query order of its own. In comp
 the first five; ⌘6–⌘0 still launch favorites it has no room for, and the "…" is a button after them
 rather than a slot, so no favorite loses its digit to the overflow.
 
+**The Liquid Glass compact bar's buttons outrank favorites for the digits.** In Spotlight, ⌘1 is
+the search field and ⌘2…⌘5 are the buttons, so `SpotlightButtonChord.resolve` (`Palette/`, pure,
+pinned by `spotlight-button-test`) claims them in two places. The first is the compact bar itself.
+There, a digit past the last button is swallowed rather than handed on to a favorite the bar no
+longer draws, and the favorites strip steps aside. The second is a screen one of the buttons opened,
+where ⌘1 goes home and ⌘2…⌘5 swap screens. A screen with digit slots of its own keeps them, which is
+why the Clipboard still pastes its pins. Outside Liquid Glass, outside compact mode or with no
+buttons, nothing changes.
+
 Holding ⌘ swaps each numbered row's kind label for its chord. `PalettePanel` publishes the modifier
 into `PaletteState.commandHeld` from `.flagsChanged` and clears it in `resignKey` — not in `prepare`,
 which a re-show that preserves state skips entirely. The flag flips **400 ms after** the press, not
@@ -834,3 +843,26 @@ The ⌘K menu samples `isRunning` **once, when it opens** (`RootPaletteView.open
 launching or quitting elsewhere can't add or drop those rows while the menu is up — the same freeze
 the rest of the menu already has ([palette.md](palette.md)). Only `LauncherList` observes
 `RunningAppsMonitor` live, for the running dot.
+
+## The Applications grid
+
+Source: `Launcher/UI/AppGridScreen.swift`, `AppGridView.swift`, `Launcher/Model/AppCategory.swift`.
+
+`PaletteMode.applications` lists every visible application as a seven-column grid of tiles, as
+Spotlight's own Applications view does. Its only way in is the Liquid Glass compact bar's
+Applications button, which no launcher command stands for.
+
+- **Sections:** with nothing typed and no chip lit, a row of the most launched apps comes first,
+  ranked by `LaunchHistoryStore`'s count and then its recency. Every app follows, A to Z. A query
+  ranks names with `FuzzyMatch.score` instead; a chip limits either view to its category.
+- **Chips are Spotlight's families, not App Store categories.** `AppIndex.scan` reads each bundle's
+  `LSApplicationCategoryType` into `AppEntry.appCategory`, and `AppCategory(declared:)` folds it into
+  one of nine families. Every `games.*` genre counts as Entertainment, and an app declaring nothing
+  is Other. A chip shows only if some app falls in it. ⇥ walks the chips, and choosing the lit one
+  clears it.
+- **Keys:** arrows move by visual row with `EmojiGridGeometry`, the same geometry the emoji grid
+  uses. ↵ and a single click open the app, ⌘↵ reveals it, and ⌘K and right-click open
+  `AppActionsMenu`. Reordering favorites is not offered, because a grid has no favorites order.
+- The chips sit between the field and the grid, so the grid uses `overflowFade(includingTop:)`.
+  `edgeDissolve`'s bands are measured against a bar that does not overlap it here.
+

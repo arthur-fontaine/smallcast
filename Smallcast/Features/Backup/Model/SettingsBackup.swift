@@ -35,6 +35,8 @@ struct SettingsBackup: Codable {
         var escapeKeyBehavior: String?
         var appearance: String?
         var paletteTheme: String?
+        var spotlightButtons: [String]?
+        var spotlightButtonsEnabled: Bool?
         var calcNumberStyle: String?
         var interfaceSize: String?
         var compactMode: Bool?
@@ -148,6 +150,8 @@ extension SettingsBackup {
             escapeKeyBehavior: s.escapeKeyBehavior.rawValue,
             appearance: s.appearance.rawValue,
             paletteTheme: s.paletteTheme.rawValue,
+            spotlightButtons: s.spotlightButtons.map(\.rawValue),
+            spotlightButtonsEnabled: s.spotlightButtonsEnabled,
             calcNumberStyle: s.calcNumberStyle.rawValue,
             interfaceSize: s.interfaceSize.rawValue,
             compactMode: s.compactMode,
@@ -365,6 +369,14 @@ extension SettingsBackup {
         }
         if let raw = s.paletteTheme, let theme = PaletteTheme(rawValue: raw) {
             settings.paletteTheme = theme
+            count += 1
+        }
+        if let raw = s.spotlightButtons {
+            settings.spotlightButtons = raw.compactMap(SpotlightButton.init)
+            count += 1
+        }
+        if let value = s.spotlightButtonsEnabled {
+            settings.spotlightButtonsEnabled = value
             count += 1
         }
         if let raw = s.calcNumberStyle, let style = CalcNumberStyle(rawValue: raw) {

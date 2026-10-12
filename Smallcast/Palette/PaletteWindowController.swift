@@ -522,8 +522,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 return true
             }
             guard Self.commandCharacter(from: event) != nil else { return false }
-            if self.core.palette.mode == .launcher || self.core.palette.mode == .clipboard,
-                let index = FavoriteSlots.index(forKeyCode: event.keyCode)
+            // The bar's buttons outrank favorites wherever they claim the digits at all.
+            if let index = FavoriteSlots.index(forKeyCode: event.keyCode),
+                self.core.paletteCoordinator.spotlightChord(at: index) != nil
+                    || self.core.palette.mode == .launcher || self.core.palette.mode == .clipboard
             {
                 self.core.palette.noteFavoriteSlot(index)
                 return true
