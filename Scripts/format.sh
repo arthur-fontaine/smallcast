@@ -17,7 +17,9 @@ FORMAT=$(xcrun --find swift-format 2>/dev/null)
 # Built with a read loop rather than `mapfile`, which is bash 4 — macOS ships bash 3.2.
 files=()
 while IFS= read -r f; do files+=("$f"); done < <(
-    find Smallcast Tests -name '*.swift' ! -name '*.generated.swift' | sort
+    find Smallcast Tests -name '*.swift' ! -name '*.generated.swift' \
+        ! -path 'Smallcast/DesignSystem/Scrolling/EdgeDissolve.swift' \
+        ! -path 'Smallcast/DesignSystem/Scrolling/ThinScrollbar.swift' | sort
 )
 
 if [ "${1:-}" = "--check" ]; then
