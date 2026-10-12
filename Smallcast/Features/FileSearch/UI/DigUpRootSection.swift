@@ -98,6 +98,9 @@ struct DigUpShowMoreRow: View {
     @Environment(\.metrics) private var metrics
     let selected: Bool
     @State private var hovered = false
+    /// The tile the command rows draw, so this row's icon sits among theirs as one of them.
+    @State private var icon = IconCache.cachedSymbol(named: Self.symbol)
+    private static let symbol = "ellipsis"
 
     private var fill: Color {
         if selected { return Theme.Colors.selection }
@@ -107,11 +110,15 @@ struct DigUpShowMoreRow: View {
 
     var body: some View {
         HStack(spacing: metrics.spacing.lg) {
-            Image(systemName: "ellipsis.circle")
-                .resizable()
-                .scaledToFit()
-                .foregroundStyle(.secondary)
-                .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
+            Group {
+                if let icon {
+                    Image(nsImage: icon).resizable()
+                } else {
+                    RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
+                        .fill(Theme.Colors.iconPlaceholder)
+                }
+            }
+            .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
             Text("Show More Results")
                 .font(metrics.typography.rowTitle)
                 .lineLimit(1)
@@ -128,5 +135,8 @@ struct DigUpShowMoreRow: View {
         )
         .armedHover($hovered)
         .accessibilityAddTraits(selected ? .isSelected : [])
+        .task {
+            if icon == nil { icon = await IconCache.loadSymbolAsync(named: Self.symbol) }
+        }
     }
 }
