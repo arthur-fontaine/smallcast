@@ -38,6 +38,20 @@ enum DigUpLocator {
         return (defaults?.string(forKey: "indexDir"), defaults?.string(forKey: "modelsDir"))
     }
 
+    /// DigUp's onboarding records its folders here; until then its index holds nothing to find.
+    static func isSetUp() -> Bool {
+        let defaults = UserDefaults(suiteName: bundleIdentifier)
+        return defaults?.bool(forKey: "onboarded") == true
+            || defaults?.stringArray(forKey: "roots")?.isEmpty == false
+    }
+
+    /// The app around a helper it ships; nil for a helper built from source.
+    static func app(containing helper: URL) -> URL? {
+        let app = helper.deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent()
+        return app.pathExtension == "app" ? app : nil
+    }
+
     private static func isExecutable(_ path: String) -> Bool {
         var isDirectory: ObjCBool = false
         return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)

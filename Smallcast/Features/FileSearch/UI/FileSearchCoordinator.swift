@@ -50,6 +50,29 @@ final class FileSearchCoordinator {
         paletteCoordinator.togglePalette(mode: .fileSearch, seeding: query.isEmpty ? nil : query)
     }
 
+    /// DigUp's own onboarding picks the folders and keeps them indexed; Smallcast only points there.
+    func offerDigUpSetup() async {
+        core.digUpState.refresh(customPath: settings.fileSearchDigUpPath)
+        guard core.digUpState.helper != nil, !core.digUpState.isSetUp else { return }
+        let open = await core.confirm(
+            title: "Set Up DigUp?",
+            message: """
+                DigUp searches only the folders you choose in it. Until then, File Search finds \
+                files by name.
+                """,
+            symbol: "sparkle.magnifyingglass", confirmTitle: "Open DigUp", tone: .neutral,
+            confirmRole: .standard, dismissTitle: "Not Now")
+        if open { openDigUp() }
+    }
+
+    func openDigUp() {
+        let app =
+            core.digUpState.helper.flatMap(DigUpLocator.app(containing:))
+            ?? NSWorkspace.shared.urlForApplication(withBundleIdentifier: DigUpLocator.bundleIdentifier)
+        guard let app else { return }
+        NSWorkspace.shared.openApplication(at: app, configuration: NSWorkspace.OpenConfiguration())
+    }
+
     func open(_ result: FileSearchResult) {
         paletteCoordinator.hidePalette(restoreFocus: false)
         Task {
