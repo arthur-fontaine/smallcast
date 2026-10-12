@@ -31,6 +31,11 @@ compilation of its 2-bit weights; Ultra's encoder and both variants' decoder/joi
   Escape cancels. Opening a shortcut recorder cancels a held recording before pausing its shortcuts.
   A session token
   prevents a cancelled or superseded transcription from inserting text later.
+- AI Chat's composer mic is always click-to-toggle into that field: `toggle(into:)` targets its
+  `ComposerTextView` in process whatever has focus, `field` tells only that button it is running, and
+  its transcript is inserted whatever the destination setting, never copied.
+  Switching chats or closing the composer cancels only the session targeting that editor, including
+  one started by a shortcut. The session token is checked again when queued insertion runs.
 - The nonactivating panel preserves the target app. Text insertion reuses `TextInjector`, including
   its temporary clipboard ownership, focus, secure-input and protected-target checks. Copy-only
   writes the plain transcript without reading the caret; paste-and-copy writes the persistent copy
@@ -65,7 +70,10 @@ compilation of its 2-bit weights; Ultra's encoder and both variants' decoder/joi
 - Model files download through a feature-private ephemeral session without a disk URL cache.
   Repositories and revisions are explicit in `DictationModel`; each download is staged and
   published only when all required files arrive, their sizes agree with the manifest and large-file
-  SHA-256 checksums match. Settings shows combined byte progress for the selected model; switching
+  SHA-256 checksums match. Settings shows combined byte counts and a percentage in a full-width
+  progress row for the selected model. Download delegate callbacks report actual transferred bytes,
+  with intermediate updates limited to one per 100 ms per file; each verified file reports its final
+  count immediately. Progress observation stays in the download row. Switching
   selection leaves its download running in the background. Cancellation and
   normal quit remove staging files without publishing a partial model. A new download removes stale
   staging directories left by a crash or forced quit, without touching installed models or other files.
@@ -82,12 +90,14 @@ compilation of its 2-bit weights; Ultra's encoder and both variants' decoder/joi
 
 ## Validation
 
+`dictation-field-test` checks composer switching and teardown, scoped cancellation and delayed insertion
+with synthetic capture and real AppKit editors, without recording audio or touching the shared clipboard.
 `dictation-test` checks formatting and model options; `dictation-inference-test` checks score selection,
 byte BPE, Fourier/mel features, listening bands and audio partitioning without downloading a model. `dictation-worker-test`
 exercises framed IPC, worker reuse/switching, removal, cancellation and broken pipes with a fixture.
-An in-process URLProtocol fixture checks combined byte progress and atomic installation for both
-families, including cancellation, stale staging cleanup and competing downloads on shared or
-independent cache roots, without sockets or timed waits.
+An in-process URLProtocol fixture checks byte progress before the first file completes, combined
+progress and atomic installation for both families, including cancellation, stale staging cleanup
+and competing downloads on shared or independent cache roots, without sockets or timed waits.
 `dictation-volume-test` uses private files and injected audio controls to verify crash recovery
 before and after fade steps, user volume changes, output switching, failed writes and rapid cancellation,
 without changing the system volume or downloading a model.

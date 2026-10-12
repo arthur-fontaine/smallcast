@@ -140,10 +140,36 @@ run app-name-test          Smallcast/Platform/AppDisplayName.swift \
                            Smallcast/Platform/BundleLocalization.swift \
                            $L/SearchRelevance.swift
 run favorites-test         $L/FavoriteSlots.swift
+run launcher-file-test     $L/LauncherFileFormat.swift \
+                           Smallcast/Features/Settings/Model/SettingsFileJSON.swift
+run launcher-settings-file-test \
+                           $L/LauncherFileFormat.swift $L/CommandID.swift $L/CommandCatalog.swift \
+                           Smallcast/Features/Launcher/Service/LauncherSettingsFile.swift \
+                           Smallcast/Features/Launcher/Service/AliasStore.swift \
+                           Smallcast/Features/Launcher/Service/VisibilityStore.swift \
+                           Smallcast/Features/Settings/SettingsTab.swift \
+                           Smallcast/Features/Settings/Model/*.swift \
+                           Smallcast/Features/HotKeys/Service/HotKeySettingsFile.swift \
+                           Smallcast/Features/HotKeys/Service/KeyShortcut.swift \
+                           Smallcast/Features/HotKeys/Model/HotKeyAction.swift \
+                           Smallcast/Features/HotKeys/Model/HotKeyBinding.swift \
+                           Smallcast/Features/HotKeys/Model/HotKeySpelling.swift \
+                           Smallcast/Features/HotKeys/Model/DoubleTapModifier.swift \
+                           Smallcast/Features/HotKeys/Model/ModifierKey.swift \
+                           Smallcast/Features/HotKeys/Model/HyperKey.swift \
+                           Smallcast/Features/HotKeys/Model/HIDKeyMapping.swift \
+                           Smallcast/Platform/ASCIIKeyboardLayout.swift \
+                           Smallcast/Features/QuickActions/Model/BuiltInQuickAction.swift \
+                           Smallcast/Features/Quicklinks/Model/Quicklink.swift \
+                           Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
+                           Smallcast/Features/SystemActions/Model/SystemAction.swift \
+                           Smallcast/Features/WindowManagement/Model/WindowCommand.swift \
+                           Smallcast/Features/Snippets/Model/Snippet.swift
 run apple-shortcut-test    Smallcast/Features/AppleShortcuts/Model/*.swift
 run calc-test              Smallcast/Features/Calculator/Model/*.swift
 run index calc-performance Smallcast/Features/Calculator/Model/*.swift
-run calendar-test          Smallcast/Features/Calendar/Model/*.swift
+run calendar-test          Smallcast/Features/Calendar/Model/*.swift \
+                           Smallcast/Features/Calendar/UI/EventEditorSession.swift
 run clipboard-test         Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFileKind.swift \
@@ -216,25 +242,20 @@ run palette-placement-test Smallcast/Platform/Appearance.swift \
                            Smallcast/DesignSystem/InterfaceMetrics.swift \
                            Smallcast/Features/Settings/InterfaceSize.swift \
                            Smallcast/Palette/PalettePlacement.swift
+run palette-menu-click-test Smallcast/Platform/Appearance.swift \
+                           Smallcast/DesignSystem/Theme.swift \
+                           Smallcast/Platform/WindowLevel.swift \
+                           Smallcast/Platform/NotificationToken.swift \
+                           Smallcast/DesignSystem/Interaction/KeyboardFocus.swift \
+                           Smallcast/Palette/PalettePanel.swift
+run form-input-test        Smallcast/Platform/Appearance.swift \
+                           Smallcast/DesignSystem/Theme.swift \
+                           Smallcast/DesignSystem/InterfaceMetrics.swift \
+                           Smallcast/DesignSystem/FormTextInput.swift \
+                           Smallcast/DesignSystem/FormTextArea.swift
 run scroll-reveal-test     Smallcast/DesignSystem/Scrolling/SelectionReveal.swift
 run redaction-test         Smallcast/DesignSystem/RedactedPlaceholder.swift
 run keyboard-focus-test    Smallcast/DesignSystem/Interaction/KeyboardFocus.swift
-run ai-instructions-test   Smallcast/Features/AI/Model/AIInstructions.swift \
-                           Smallcast/Features/AI/Model/AIPreamble.swift
-run hover-arming-test      Smallcast/Palette/HoverArming.swift \
-                           Smallcast/Palette/PaletteState.swift \
-                           Smallcast/Palette/PaletteMode.swift \
-                           Smallcast/Features/Emoji/Model/EmojiCatalog.swift \
-                           Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
-                           Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
-                           Smallcast/Features/Clipboard/Model/ClipboardFileKind.swift \
-                           Smallcast/Features/FileSearch/Model/FileSearchFilter.swift \
-                           Smallcast/Features/Clipboard/Model/ColorValue.swift \
-                           Smallcast/Features/Clipboard/Model/ColorFormat.swift \
-                           Smallcast/Features/Clipboard/Model/ColorSpaces.swift \
-                           Smallcast/Features/Quicklinks/Model/Quicklink.swift \
-                           Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
-                           Smallcast/Features/CustomCommands/Model/CustomCommand.swift
 run palette-escape-test    Smallcast/Palette/PaletteMode.swift \
                            Smallcast/Palette/PaletteEscapeAction.swift \
                            Smallcast/Palette/CommandEscapeTap.swift \
@@ -284,6 +305,18 @@ run fallback-test          Smallcast/Features/Launcher/Model/Fallback.swift \
 run dictionary-test        Smallcast/Features/Dictionary/Model/DictionaryEntry.swift \
                            Smallcast/Features/Dictionary/Model/DictionaryMarkup.swift
 run dictation-test         Smallcast/Features/Dictation/Model/DictationModel.swift Smallcast/Features/Dictation/Model/DictationIdleRelease.swift Smallcast/Features/Dictation/Model/DictationTextFormatter.swift
+run dictation-field-test   Smallcast/Features/Dictation/Model/DictationModel.swift \
+                           Smallcast/Features/Dictation/Model/DictationMode.swift \
+                           Smallcast/Features/Dictation/Model/DictationDestination.swift \
+                           Smallcast/Features/Dictation/Model/DictationTextFormatter.swift \
+                           Smallcast/Features/Dictation/Service/DictationCoordinator.swift \
+                           Smallcast/Features/Dictation/Service/DictationInsertionContext.swift \
+                           Smallcast/Features/AI/UI/ChatComposerTextView.swift \
+                           Smallcast/Features/TextInjection/Service/*.swift \
+                           Smallcast/Features/Snippets/Model/*.swift \
+                           Smallcast/Platform/AccessibilityText.swift \
+                           Smallcast/Platform/PasteboardFiles.swift \
+                           Smallcast/Platform/Appearance.swift Smallcast/DesignSystem/Theme.swift
 run dictation-volume-test  Smallcast/Features/Dictation/Model/DictationVolumeSnapshot.swift \
                            Smallcast/Features/Dictation/Service/DictationAudioDucker.swift \
                            Smallcast/Platform/AppPaths.swift
@@ -308,6 +341,7 @@ run hotkey-test            Smallcast/Features/HotKeys/Model/DoubleTapModifier.sw
                            Smallcast/Features/HotKeys/Model/HotKeyBinding.swift \
                            Smallcast/Features/HotKeys/Model/HotKeySpelling.swift \
                            Smallcast/Features/HotKeys/Model/HyperKey.swift \
+                           Smallcast/Features/HotKeys/Model/HIDKeyMapping.swift \
                            Smallcast/Platform/ASCIIKeyboardLayout.swift \
                            Smallcast/Features/HotKeys/Service/KeyShortcut.swift \
                            Smallcast/Features/HotKeys/Model/HotKeyAction.swift \
@@ -345,8 +379,6 @@ run ext-icon-test          Smallcast/Platform/Appearance.swift \
                            Smallcast/Features/Extensions/Service/ExtensionFetcher.swift \
                            Smallcast/Platform/ProcessExit.swift \
                            Smallcast/Features/Extensions/Service/ExtensionNodeShims.swift \
-                           Smallcast/Features/Extensions/Service/ExtensionOAuthKeychain.swift \
-                           Smallcast/Features/Extensions/Service/ExtensionOAuthSession.swift \
                            Smallcast/Features/Extensions/Service/ExtensionRuntime.swift \
                            Smallcast/Features/Extensions/Service/ExtensionIconCache.swift \
                            Smallcast/Features/Extensions/UI/ExtensionAnimatedImage.swift \
@@ -354,6 +386,8 @@ run ext-icon-test          Smallcast/Platform/Appearance.swift \
                            Smallcast/Features/Clipboard/Model/ColorValue.swift \
                            Smallcast/Features/Clipboard/Model/ColorSpaces.swift
 run system-action-test     Smallcast/Features/SystemActions/Model/SystemAction.swift
+run microphone-mute-test   Smallcast/Features/SystemActions/Service/SystemActionFailure.swift \
+                           Smallcast/Features/SystemActions/Service/SystemActionRunner+Microphone.swift
 run volume-test            Smallcast/Features/SystemActions/Model/VolumeLevel.swift
 run window-command-test    Smallcast/Features/WindowManagement/Model/WindowCommand.swift \
                            Smallcast/Features/WindowManagement/Model/WindowCycle.swift \
@@ -365,6 +399,7 @@ run window-preset-test     Smallcast/Features/WindowManagement/Model/WindowComma
                            Smallcast/Features/HotKeys/Model/ModifierKey.swift \
                            Smallcast/Features/HotKeys/Model/HotKeyBinding.swift \
                            Smallcast/Features/HotKeys/Model/HyperKey.swift \
+                           Smallcast/Features/HotKeys/Model/HIDKeyMapping.swift \
                            Smallcast/Platform/ASCIIKeyboardLayout.swift \
                            Smallcast/Features/HotKeys/Service/KeyShortcut.swift
 run space-gesture-test     Smallcast/Features/WindowManagement/Model/WindowCommand.swift \
@@ -420,7 +455,10 @@ run custom-command-test    Smallcast/Platform/PseudoTerminal.swift \
                            Smallcast/Platform/ProcessExit.swift \
                            Smallcast/Features/CustomCommands/Model/CustomCommand.swift \
                            Smallcast/Features/CustomCommands/Model/RaycastScriptImport.swift \
+                           Smallcast/Features/CustomCommands/UI/CustomCommandEditorSession.swift \
                            Smallcast/Features/CustomCommands/Service/ShellCommandRunner.swift
+run custom-command-list-test Smallcast/Features/CustomCommands/Model/CustomCommand.swift \
+                             Smallcast/Features/CustomCommands/UI/CustomCommandListScreen.swift
 run uninstall-test         Smallcast/Features/Uninstall/Model/UninstallTarget.swift \
                            Smallcast/Features/Uninstall/Model/UninstallSearchRoot.swift \
                            Smallcast/Features/Uninstall/Model/UninstallRules.swift \
@@ -430,13 +468,24 @@ run quicklink-test         Smallcast/Features/Quicklinks/Model/Quicklink.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkStore.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkArchive.swift \
-                           Smallcast/Features/Quicklinks/Model/RaycastQuicklinkImport.swift
+                           Smallcast/Features/Quicklinks/Model/RaycastQuicklinkImport.swift \
+                           Smallcast/Features/Quicklinks/UI/QuicklinkEditorSession.swift
+run quicklink-coordinator-test Smallcast/Features/Quicklinks/Model/Quicklink.swift \
+                           Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
+                           Smallcast/Features/Quicklinks/Model/QuicklinkStore.swift \
+                           Smallcast/Features/Quicklinks/Model/QuicklinkArchive.swift \
+                           Smallcast/Features/Quicklinks/UI/QuicklinkCoordinator.swift \
+                           Smallcast/Features/Quicklinks/UI/QuicklinkEditorSession.swift \
+                           Smallcast/Features/Quicklinks/UI/QuicklinkArgumentsAccessory.swift \
+                           Smallcast/Features/Snippets/Model/Snippet.swift \
+                           Smallcast/Features/Snippets/Model/SnippetTemplateEngine.swift
 run slow snippets-test     Smallcast/Platform/NotificationToken.swift \
                            Smallcast/Platform/HealthTicker.swift \
                            Smallcast/Platform/KeystrokeTap.swift \
                            Smallcast/Platform/AccessibilityText.swift \
                            Smallcast/Features/Snippets/Model/*.swift \
                            Smallcast/Features/Snippets/Service/*.swift \
+                           Smallcast/Features/Snippets/UI/SnippetEditorSession.swift \
                            Smallcast/Features/TextInjection/Service/*.swift
 run notes-test             Smallcast/Platform/Signposts.swift \
                            $L/SearchRelevance.swift \
@@ -506,6 +555,20 @@ run slow -O raycast-test   Smallcast/Features/Backup/Model/RaycastImportError.sw
                            Smallcast/Features/Clipboard/Model/ColorSpaces.swift
 run settings-backup-test   Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/Backup/Model/SettingsBackupCoverage.swift
+run hyper-key-test         Smallcast/Features/HotKeys/Model/HIDKeyMapping.swift \
+                           Smallcast/Features/HotKeys/Model/HyperKeyConflictPolicy.swift \
+                           Smallcast/Features/HotKeys/Service/KeyboardRemapper.swift \
+                           Tests/hyper-key-fixtures.swift
+run hotkey-dispatch-test   Smallcast/Features/HotKeys/Model/DoubleTapModifier.swift \
+                           Smallcast/Features/HotKeys/Model/ModifierKey.swift \
+                           Smallcast/Features/HotKeys/Model/HotKeyBinding.swift \
+                           Smallcast/Features/HotKeys/Model/HyperKey.swift \
+                           Smallcast/Features/HotKeys/Model/HIDKeyMapping.swift \
+                           Smallcast/Features/HotKeys/Model/HotKeyAction.swift \
+                           Smallcast/Features/HotKeys/Service/KeyShortcut.swift \
+                           Smallcast/Features/HotKeys/Service/HotKeyManager.swift \
+                           Smallcast/Platform/ASCIIKeyboardLayout.swift \
+                           Tests/hotkey-dispatch-fixtures.swift
 run settings-file-test     Smallcast/Features/Settings/Model/*.swift \
                            Smallcast/Features/Settings/Service/SettingsFileMonitor.swift \
                            Smallcast/Features/Settings/Service/SettingsFileRepository.swift \
@@ -572,6 +635,7 @@ run slow ext-test          -parse-as-library \
                            $E/Model/ExtensionLaunchType.swift \
                            $E/Model/ExtensionFormField.swift \
                            $E/Model/ExtensionGridLayout.swift \
+                           $E/Model/ExtensionSearchState.swift \
                            $E/Model/ExtensionManifest.swift \
                            $E/Model/ExtensionRefreshPolicy.swift \
                            $E/Model/ExtensionRefreshState.swift \
@@ -583,8 +647,6 @@ run slow ext-test          -parse-as-library \
                            Smallcast/Platform/ProcessExit.swift \
                            $E/Service/ExtensionIconCache.swift \
                            $E/Service/ExtensionNodeShims.swift \
-                           $E/Service/ExtensionOAuthKeychain.swift \
-                           $E/Service/ExtensionOAuthSession.swift \
                            $E/Service/ExtensionRuntime.swift \
                            $E/Service/ExtensionNameResolver.swift \
                            $E/Service/ExtensionWebSocketBridge.swift \
@@ -674,7 +736,13 @@ run quick-action-test      Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/AI/Model/AppleIntelligence.swift \
                            Smallcast/Features/AI/Model/ChatGPTSubscription.swift \
                            Smallcast/Features/AI/Model/InstalledAI.swift \
-                           Smallcast/Features/QuickActions/Model/*.swift \
+                           Smallcast/Features/QuickActions/Model/BuiltInQuickAction.swift \
+                           Smallcast/Features/QuickActions/Model/CustomQuickAction.swift \
+                           Smallcast/Features/QuickActions/Model/CustomQuickActionStore.swift \
+                           Smallcast/Features/QuickActions/Model/QuickAction.swift \
+                           Smallcast/Features/QuickActions/Model/QuickActionFailure.swift \
+                           Smallcast/Features/QuickActions/Model/QuickActionPrompt.swift \
+                           Smallcast/Features/QuickActions/Model/QuickActionSettings.swift \
                            Smallcast/Features/QuickActions/Settings/QuickActionSettingsStore.swift
 run apple-intelligence-test Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/AI/Model/*.swift \
@@ -689,6 +757,7 @@ run mcp-oauth-test         Smallcast/Platform/ExecutableLocator.swift \
                            Smallcast/Features/AI/Model/AITool.swift \
                            Smallcast/Features/AI/Model/AIToolServer.swift \
                            Smallcast/Features/AI/Model/AIStreamDecoder.swift \
+                           Smallcast/Features/AI/Model/AIProviderFailure.swift \
                            Smallcast/Features/AI/Model/AIThinkTagDecoder.swift \
                            Smallcast/Features/AI/Model/AIRequest.swift \
                            Smallcast/Features/AI/Model/JSONValue.swift \
@@ -703,29 +772,12 @@ run slow mcp-stdio-test    Smallcast/Platform/ExecutableLocator.swift \
                            Smallcast/Features/AI/Model/AITool.swift \
                            Smallcast/Features/AI/Model/AIToolServer.swift \
                            Smallcast/Features/AI/Model/AIStreamDecoder.swift \
+                           Smallcast/Features/AI/Model/AIProviderFailure.swift \
                            Smallcast/Features/AI/Model/AIThinkTagDecoder.swift \
                            Smallcast/Features/AI/Model/AIRequest.swift \
                            Smallcast/Features/AI/Model/JSONValue.swift \
                            Smallcast/Features/MCP/Model/*.swift \
                            Smallcast/Features/MCP/Service/*.swift
-run slow codex-turn-test   Smallcast/Platform/AppPaths.swift \
-                           Smallcast/Features/AI/Model/*.swift \
-                           Smallcast/Features/AI/Service/AIProvider.swift \
-                           Smallcast/Features/AI/Service/ChatGPTSubscriptionManager.swift \
-                           Smallcast/Features/AI/Service/CodexAppServerClient.swift \
-                           Smallcast/Features/AI/Service/CodexHomeLocator.swift \
-                           Smallcast/Features/AI/Service/InstalledAIProbe.swift \
-                           Smallcast/Platform/ExecutableLocator.swift \
-                           Smallcast/Platform/ProcessExit.swift \
-                           Smallcast/Features/AI/Service/CodexTurnRunner.swift
-run installed-ai-test     Smallcast/Features/AI/Model/*.swift \
-                          Smallcast/Features/AI/Service/AIProvider.swift \
-                          Smallcast/Platform/AppPaths.swift \
-                          Smallcast/Platform/ExecutableLocator.swift \
-                          Smallcast/Platform/ProcessExit.swift \
-                          Smallcast/Features/AI/Service/InstalledCLIProvider.swift \
-                          Smallcast/Features/AI/Service/InstalledAIProbe.swift \
-                          Smallcast/Features/AI/Service/InstalledAIManager.swift
 
 if [ "$emit_db" -eq 1 ]; then
     printf ']\n' >> "$DB"
