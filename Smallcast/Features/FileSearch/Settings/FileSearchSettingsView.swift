@@ -15,6 +15,8 @@ struct FileSearchSettingsView: View {
             }
             .settingsAnchor(.fileSearchFileSearch)
 
+            FileSearchEngineSection()
+                .settingsEnabled(settings.fileSearchEnabled)
             FeatureCommandsSection(owner: .fileSearch, anchor: .fileSearchCommands)
                 .settingsEnabled(settings.fileSearchEnabled)
             FileSearchScopesSection()

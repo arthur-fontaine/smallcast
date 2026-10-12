@@ -121,8 +121,18 @@ run file-search-test       $L/SearchRelevance.swift \
                            Smallcast/Features/FileSearch/Model/*.swift
 run file-search-session-test Smallcast/Platform/Signposts.swift \
                              $L/SearchRelevance.swift \
+                             Smallcast/Platform/ExecutableLocator.swift \
+                             Smallcast/Platform/ProcessExit.swift \
+                             Smallcast/Features/AI/Service/InstalledAIProbe.swift \
                              Smallcast/Features/FileSearch/Model/*.swift \
                              Smallcast/Features/FileSearch/Service/*.swift
+run digup-test             Smallcast/Platform/Signposts.swift \
+                           $L/SearchRelevance.swift \
+                           Smallcast/Platform/ExecutableLocator.swift \
+                           Smallcast/Platform/ProcessExit.swift \
+                           Smallcast/Features/AI/Service/InstalledAIProbe.swift \
+                           Smallcast/Features/FileSearch/Model/*.swift \
+                           Smallcast/Features/FileSearch/Service/*.swift
 run menu-search-test       $L/SearchRelevance.swift \
                            Smallcast/Features/MenuSearch/Model/*.swift \
                            Smallcast/Features/MenuSearch/Service/*.swift

@@ -86,6 +86,7 @@ enum SettingsFileSchema {
         case .fileSearchEnabled: return bind(settings, \.fileSearchEnabled)
         case .fileSearchScopes: return bind(settings, \.fileSearchScopes)
         case .fileSearchIgnorePatterns: return bind(settings, \.fileSearchIgnorePatterns)
+        case .fileSearchEngine: return bind(settings, \.fileSearchEngine)
         case .fileSearchCommands: return launcher.commandsBinding(for: key, owner: .fileSearch)
         case .notesEnabled: return bind(settings, \.notesEnabled)
         case .notesRendersMarkdown: return bind(settings, \.notesRendersMarkdown)
@@ -163,6 +164,7 @@ enum SettingsFileSchema {
 
 extension PopToRootTimeout: SettingsFileRawValue {}
 extension EscapeKeyBehavior: SettingsFileRawValue {}
+extension FileSearchEngine: SettingsFileRawValue {}
 extension AppAppearance: SettingsFileRawValue {}
 extension PaletteTheme: SettingsFileRawValue {}
 extension SpotlightButton: SettingsFileRawValue {}

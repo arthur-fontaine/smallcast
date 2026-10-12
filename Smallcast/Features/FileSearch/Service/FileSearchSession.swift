@@ -24,6 +24,12 @@ final class FileSearchSession {
     @ObservationIgnored private var policy: FileSearchPolicy
     @ObservationIgnored private let debounce: Duration
     @ObservationIgnored private let searchOperation: SearchOperation
+    @ObservationIgnored private var digUpRun: Task<[FileSearchResult], Error>?
+
+    /// DigUp's matches ahead of Spotlight's while set: the Name and content engine.
+    @ObservationIgnored var digUp: DigUpSearchRunner? {
+        didSet { if digUp != oldValue { cancel() } }
+    }
 
     private struct Request: Equatable {
         let query: String
@@ -75,6 +81,7 @@ final class FileSearchSession {
         let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         let request = Request(query: query, filter: filter)
         guard request != self.request || state == .failed else { return }
+        digUpRun?.cancel()
         revision &+= 1
         self.request = request
         state = .searching
@@ -110,7 +117,21 @@ final class FileSearchSession {
             pendingSearch = nil
             let request = pending.request
             do {
-                let candidates = try await searchOperation(request.query, request.filter, policy)
+                let candidates: [FileSearchResult]
+                if let digUp {
+                    let home = homeDirectory
+                    let run = Task { [searchOperation, policy] in
+                        async let names = searchOperation(request.query, request.filter, policy)
+                        // DigUp failing still leaves the name search it adds to.
+                        let content = try? await digUp.results(
+                            for: request.query, filter: request.filter, homeDirectory: home)
+                        return DigUpSearchPolicy.merged(content: content ?? [], names: try await names)
+                    }
+                    digUpRun = run
+                    candidates = try await run.value
+                } else {
+                    candidates = try await searchOperation(request.query, request.filter, policy)
+                }
                 guard revision == pending.revision, self.request == request else { continue }
                 results = candidates
                 state = .ready
