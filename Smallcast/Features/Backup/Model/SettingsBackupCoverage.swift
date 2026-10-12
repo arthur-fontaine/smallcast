@@ -31,6 +31,7 @@ enum SettingsBackupCoverage {
         "fileSearchEnabled": .fileSearchEnabled,
         "fileSearchScopes": .fileSearchScopes,
         "fileSearchIgnorePatterns": .fileSearchIgnorePatterns,
+        "fileSearchDigUpEnabled": .fileSearchDigUpEnabled,
         "notesEnabled": .notesEnabled,
         "notesRendersMarkdown": .notesRendersMarkdown,
         "notesShowsFormattingBar": .notesShowsFormattingBar,
@@ -97,6 +98,8 @@ enum SettingsBackupCoverage {
             "Doubles as consent to record typing and download a model; an import must not grant either.",
         AppSettingsKey.extensionPackageManager.rawValue:
             "Names a tool on this Mac; the machine a backup lands on may not have it.",
+        AppSettingsKey.fileSearchDigUpPath.rawValue:
+            "Names a helper on this Mac; the Mac a backup lands on may not have it there.",
         AppSettingsKey.extensionCustomSearchPaths.rawValue:
             "Machine-local toolchain paths; the Mac a backup lands on may not have them, or may have "
             + "something else there.",

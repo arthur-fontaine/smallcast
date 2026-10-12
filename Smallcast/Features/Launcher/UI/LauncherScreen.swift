@@ -34,6 +34,8 @@ struct LauncherScreen: PaletteScreen {
     private let matchCount: Int
     /// The `Use "…" with` section, below every result; empty unless something is typed.
     private let fallbacks: [(fallback: Fallback, entry: AppEntry)]
+    /// DigUp's files, below the fallbacks: the only rows that arrive after the query does.
+    private let digUp: DigUpRootSection?
     /// Resolved in `init`: the palette indexes this several times per event, so it can't recompute.
     let rows: [Row]
 
@@ -78,7 +80,10 @@ struct LauncherScreen: PaletteScreen {
         // After the calculator: `#FF5733` is never arithmetic, so the two can't both answer.
         let color = calc == nil && pinned == nil ? ColorValue.parse(vm.query) : nil
         let fallbacks = core.fallbackCoordinator.entries(for: vm.query)
-        let entries = results.map(Row.entry) + fallbacks.map { Row.fallback($0.fallback, $0.entry) }
+        let digUp = DigUpRootSection.make(query: vm.query, core: core)
+        let entries =
+            results.map(Row.entry) + fallbacks.map { Row.fallback($0.fallback, $0.entry) }
+            + (digUp?.results.map(Row.file) ?? []) + (digUp?.hasMore == true ? [.moreFiles] : [])
         let pinsFavorites = vm.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         // At most one of them leads, so the flat index keeps a single-row offset.
         let meeting = pinsFavorites ? meeting : nil
@@ -86,6 +91,7 @@ struct LauncherScreen: PaletteScreen {
         self.results = results
         self.calc = calc
         self.fallbacks = fallbacks
+        self.digUp = digUp
         self.color = color
         self.pinsFavorites = pinsFavorites
         self.favoriteCount = pinsFavorites ? ordered.favoriteCount : 0
@@ -111,6 +117,8 @@ struct LauncherScreen: PaletteScreen {
         case entry(AppEntry)
         /// Prefixed, because the same command can also be a ranked hit above its own fallback row.
         case fallback(Fallback, AppEntry)
+        case file(FileSearchResult)
+        case moreFiles
 
         var id: String {
             switch self {
@@ -119,6 +127,8 @@ struct LauncherScreen: PaletteScreen {
             case .color: return "color-card"
             case .entry(let app): return app.id
             case .fallback(let fallback, _): return "fallback-" + fallback.id
+            case .file(let result): return "file-" + result.id
+            case .moreFiles: return "more-files"
             }
         }
     }
@@ -137,6 +147,8 @@ struct LauncherScreen: PaletteScreen {
             return meeting.link == nil ? "Open in Calendar" : "Join Meeting"
         case .entry(let app): return app.kind.descriptor.openVerb
         case .fallback(let fallback, _): return fallback.openVerb
+        case .file(let result): return result.isDirectory ? "Open Folder" : "Open File"
+        case .moreFiles: return "Show More Results"
         case nil: return "Open Application"
         }
     }
@@ -207,7 +219,7 @@ struct LauncherScreen: PaletteScreen {
     private func isCardSelected(_ selection: Int) -> Bool {
         switch row(at: selection) {
         case .calc, .meeting, .color: return true
-        case .entry, .fallback, nil: return false
+        case .entry, .fallback, .file, .moreFiles, nil: return false
         }
     }
 
@@ -245,7 +257,9 @@ struct LauncherScreen: PaletteScreen {
         case .fallback(let fallback, let app):
             return FallbackActionsMenu.content(
                 fallback: fallback, entry: app, query: vm.query, core: core)
-        case nil:
+        case .file(let result):
+            return DigUpRootSection.actions(for: result, core: core)
+        case .moreFiles, nil:
             return nil
         }
     }
@@ -262,6 +276,8 @@ struct LauncherScreen: PaletteScreen {
                 app, searchQuery: vm.query, arguments: argumentValues(for: app))
         case .fallback(let fallback, _):
             core.fallbackCoordinator.run(fallback, query: vm.query)
+        case .file(let result): core.fileSearchCoordinator.open(result)
+        case .moreFiles: core.fileSearchCoordinator.showDigUpResults(query: vm.query)
         case nil: break
         }
     }
@@ -284,6 +300,10 @@ struct LauncherScreen: PaletteScreen {
         if case .calc(let result) = row(at: selection) {
             return core.calculatorCoordinator.putAnswerInSearchBar(result)
         }
+        if case .file(let result) = row(at: selection) {
+            core.fileSearchCoordinator.showInFinder(result)
+            return true
+        }
         guard let app = entry(at: selection), app.canRevealInFinder else { return false }
         core.launcherCoordinator.showInFinder(app)
         return true
@@ -298,6 +318,10 @@ struct LauncherScreen: PaletteScreen {
     }
 
     func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
+        // ⌃⌘C copies a quicklink below, so a file row has to claim its chords first.
+        if case .file(let result) = row(at: selection) {
+            return DigUpRootSection.perform(shortcut, on: result, core: core)
+        }
         switch shortcut {
         case .toggleFavorite: return toggleFavorite(at: selection)
         case .hideFromSearch: return hideFromSearch(at: selection)
@@ -501,8 +525,24 @@ struct LauncherScreen: PaletteScreen {
                 openActions()
             },
             onDropped: { core.paletteCoordinator.dragLanded() },
-            fallbacks: fallbackSection
+            fallbacks: fallbackSection,
+            digUp: digUpSection
         )
+        .modifier(DigUpRootSearch(query: vm.query, core: core))
+    }
+
+    private var digUpSection: DigUpListSection? {
+        guard let digUp else { return nil }
+        let first = rows.count - digUp.rowCount
+        return DigUpListSection(
+            section: digUp,
+            onActivate: { activate(at: first + $0) },
+            onActions: {
+                vm.selection = first + $0
+                openActions()
+            },
+            onShowMore: { activate(at: rows.count - 1) },
+            onDropped: { core.paletteCoordinator.dragLanded() })
     }
 
     /// Nil when nothing is typed, which is the one state the section has no input for.
@@ -519,6 +559,8 @@ struct LauncherScreen: PaletteScreen {
             onConfigure: core.fallbackCoordinator.showSettings)
     }
 
-    /// Fallbacks are the tail of `rows`, so a click maps to its flat index without a search.
-    private func fallbackRow(at index: Int) -> Int { rows.count - fallbacks.count + index }
+    /// Fallbacks end `rows` but for DigUp's files, so a click maps to its flat index without a search.
+    private func fallbackRow(at index: Int) -> Int {
+        rows.count - (digUp?.rowCount ?? 0) - fallbacks.count + index
+    }
 }

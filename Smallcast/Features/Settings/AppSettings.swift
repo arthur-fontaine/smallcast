@@ -325,6 +325,16 @@ final class AppSettings {
         }
     }
 
+    /// DigUp's matches in place of the Search Files fallback; inert until its helper is found.
+    var fileSearchDigUpEnabled: Bool {
+        didSet { defaults.set(fileSearchDigUpEnabled, forKey: Key.fileSearchDigUpEnabled.rawValue) }
+    }
+
+    /// Empty finds the helper inside DigUp.app; a path stands in a build from source.
+    var fileSearchDigUpPath: String {
+        didSet { defaults.set(fileSearchDigUpPath, forKey: Key.fileSearchDigUpPath.rawValue) }
+    }
+
     var notesEnabled: Bool {
         didSet { defaults.set(notesEnabled, forKey: Key.notesEnabled.rawValue) }
     }
@@ -728,6 +738,8 @@ final class AppSettings {
             ?? FileSearchScope.defaultScopes
         fileSearchIgnorePatterns =
             defaults.stringArray(forKey: Key.fileSearchIgnorePatterns.rawValue) ?? []
+        fileSearchDigUpEnabled = defaults.bool(forKey: Key.fileSearchDigUpEnabled.rawValue)
+        fileSearchDigUpPath = defaults.string(forKey: Key.fileSearchDigUpPath.rawValue) ?? ""
         notesEnabled = defaults.bool(forKey: Key.notesEnabled.rawValue)
         dictationEnabled = defaults.bool(forKey: Key.dictationEnabled.rawValue)
         dictationMode =

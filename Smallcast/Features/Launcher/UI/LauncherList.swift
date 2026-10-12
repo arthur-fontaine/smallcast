@@ -22,6 +22,8 @@ struct LauncherList: View {
     let onDropped: () -> Void
     /// The `Use "…" with` section, always last; nil when nothing is typed.
     var fallbacks: FallbackSection?
+    /// DigUp's files, after the fallbacks; nil until DigUp answers the query.
+    var digUp: DigUpListSection?
     @Environment(RunningAppsMonitor.self) private var runningApps
 
     /// What the fallback section draws and where its rows go, addressed by position.
@@ -64,6 +66,8 @@ struct LauncherList: View {
         /// `slot` is the row's ⌘-digit, carried from the section build rather than searched.
         case app(AppEntry, slot: Character?)
         case fallback(AppEntry, index: Int)
+        case file(FileSearchResult, index: Int)
+        case moreFiles
         var id: String {
             switch self {
             case .header(let title): return "header-" + title
@@ -71,6 +75,8 @@ struct LauncherList: View {
             case .card(let card): return card.rowID
             case .app(let app, _): return app.id
             case .fallback(let app, _): return "fallback-" + app.id
+            case .file(let result, _): return "file-" + result.id
+            case .moreFiles: return "more-files"
             }
         }
     }
@@ -85,6 +91,13 @@ struct LauncherList: View {
         guard let fallbacks else { return [] }
         return [.fallbackHeader(fallbacks.title)]
             + fallbacks.entries.enumerated().map { Row.fallback($1, index: $0) }
+    }
+
+    private var digUpRows: [Row] {
+        guard let digUp else { return [] }
+        return [.header("Files")]
+            + digUp.section.results.enumerated().map { Row.file($1, index: $0) }
+            + (digUp.section.hasMore ? [.moreFiles] : [])
     }
 
     private var rows: [Row] {
@@ -133,13 +146,13 @@ struct LauncherList: View {
             grouped.keys.allSatisfy(kinds.contains),
             "kind missing from the launcher's section order: "
                 + grouped.keys.filter { !kinds.contains($0) }.map(\.rawValue).joined(separator: ", "))
-        return rows + fallbackRows
+        return rows + fallbackRows + digUpRows
     }
 
     var body: some View {
         let rows = rows
         return Group {
-            if results.isEmpty && card == nil && fallbacks == nil {
+            if results.isEmpty && card == nil && fallbacks == nil && digUp == nil {
                 EmptyResults(text: "No apps found")
             } else {
                 ScrollViewReader { proxy in
@@ -181,6 +194,19 @@ struct LauncherList: View {
                                     .onTapGesture { fallbacks?.onActivate(index) }
                                     .onRightClick { fallbacks?.onActions(index) }
                                     .selectionFrame(row.id == selectedRowID)
+                                case .file(let result, let index):
+                                    FileSearchRow(result: result, selected: row.id == selectedRowID)
+                                        .contentShape(Rectangle())
+                                        .onRowTap(drag: fileDrag(for: result)) {
+                                            digUp?.onActivate(index)
+                                        }
+                                        .onRightClick { digUp?.onActions(index) }
+                                        .selectionFrame(row.id == selectedRowID)
+                                case .moreFiles:
+                                    DigUpShowMoreRow(selected: row.id == selectedRowID)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { digUp?.onShowMore() }
+                                        .selectionFrame(row.id == selectedRowID)
                                 }
                             }
                         }
@@ -198,6 +224,12 @@ struct LauncherList: View {
                 }
             }
         }
+    }
+
+    private func fileDrag(for result: FileSearchResult) -> RowDrag {
+        RowDrag(
+            item: { .file(result.url, image: IconCache.cachedFitted(forFile: result.id)) },
+            dropped: { digUp?.onDropped() })
     }
 
     /// Cache-only icon: the row holds its own smaller bitmap, and a decode would stall the drag.

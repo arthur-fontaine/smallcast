@@ -40,7 +40,17 @@ final class FileSearchCoordinator {
     /// `query` is the fallback row's: the screen opens already narrowed to what was typed.
     func show(query: String = "") {
         guard settings.fileSearchEnabled else { return }
+        session.digUp = nil
         paletteCoordinator.togglePalette(mode: .fileSearch, seeding: query.isEmpty ? nil : query)
+    }
+
+    /// The same screen, answered by DigUp: root search's Show More row.
+    func showDigUpResults(query: String) {
+        guard settings.fileSearchEnabled else { return }
+        core.digUpState.refresh(customPath: settings.fileSearchDigUpPath)
+        session.digUp = core.digUpState.runner(
+            limit: DigUpSearchPolicy.panelLimit, enabled: settings.fileSearchDigUpEnabled)
+        paletteCoordinator.togglePalette(mode: .fileSearch, seeding: query)
     }
 
     func open(_ result: FileSearchResult) {

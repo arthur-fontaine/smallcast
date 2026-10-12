@@ -27,9 +27,16 @@ final class FallbackCoordinator {
     /// The launcher's rows. An empty query is nobody's input, so it earns no section at all.
     func entries(for query: String) -> [(fallback: Fallback, entry: AppEntry)] {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
-        return available.filter(store.isEnabled).compactMap { fallback in
+        let replaced: Fallback? = digUpReplacesSearchFiles ? .builtin(.searchFiles) : nil
+        return available.filter { store.isEnabled($0) && $0 != replaced }.compactMap { fallback in
             entry(for: fallback).map { (fallback, $0) }
         }
+    }
+
+    /// DigUp's rows stand in for this row, wherever the reader ordered or switched it.
+    var digUpReplacesSearchFiles: Bool {
+        settings.fileSearchDigUpEnabled && core.digUpState.helper != nil
+            && available.contains(.builtin(.searchFiles)) && store.isEnabled(.builtin(.searchFiles))
     }
 
     /// Nil for a quicklink deleted since the order was stored.

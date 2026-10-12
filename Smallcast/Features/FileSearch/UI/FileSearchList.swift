@@ -54,7 +54,7 @@ struct FileSearchList: View {
     }
 }
 
-private struct FileSearchRow: View {
+struct FileSearchRow: View {
 
     @Environment(\.metrics) private var metrics
     let result: FileSearchResult

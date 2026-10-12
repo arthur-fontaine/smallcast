@@ -24,6 +24,12 @@ final class FileSearchSession {
     @ObservationIgnored private var policy: FileSearchPolicy
     @ObservationIgnored private let debounce: Duration
     @ObservationIgnored private let searchOperation: SearchOperation
+    @ObservationIgnored private var digUpRun: Task<[FileSearchResult], Error>?
+
+    /// DigUp's helper in place of Spotlight while set: what the Show More row hands the screen.
+    @ObservationIgnored var digUp: DigUpSearchRunner? {
+        didSet { if digUp != oldValue { cancel() } }
+    }
 
     private struct Request: Equatable {
         let query: String
@@ -75,6 +81,7 @@ final class FileSearchSession {
         let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         let request = Request(query: query, filter: filter)
         guard request != self.request || state == .failed else { return }
+        digUpRun?.cancel()
         revision &+= 1
         self.request = request
         state = .searching
@@ -110,7 +117,18 @@ final class FileSearchSession {
             pendingSearch = nil
             let request = pending.request
             do {
-                let candidates = try await searchOperation(request.query, request.filter, policy)
+                let candidates: [FileSearchResult]
+                if let digUp {
+                    let home = homeDirectory
+                    let run = Task {
+                        try await digUp.results(
+                            for: request.query, filter: request.filter, homeDirectory: home)
+                    }
+                    digUpRun = run
+                    candidates = try await run.value
+                } else {
+                    candidates = try await searchOperation(request.query, request.filter, policy)
+                }
                 guard revision == pending.revision, self.request == request else { continue }
                 results = candidates
                 state = .ready
