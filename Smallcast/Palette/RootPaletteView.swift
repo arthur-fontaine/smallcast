@@ -372,7 +372,6 @@ struct RootPaletteView: View {
     private func emojiObservers(_ content: some View) -> some View {
         content
             .onChange(of: vm.emojiCategoryFilter) { land() }
-            .onChange(of: vm.appCategoryFilter) { land() }
             .onChange(of: core.pinnedEmoji.revision) { emojiGridChanged() }
             .onChange(of: (screen as? EmojiScreen)?.frequentlyUsed) { old, new in
                 guard let old, let new else { return }
@@ -388,6 +387,28 @@ struct RootPaletteView: View {
             }
     }
 
+    /// The digit slots, the bar's buttons and the Applications grid, split out like the emoji ones.
+    @ViewBuilder
+    private func spotlightObservers(_ content: some View) -> some View {
+        content
+            .onChange(of: vm.appCategoryFilter) { land() }
+            // ⌘1…⌘0 arrives as a slot index from AppKit keyCode matching.
+            .onChange(of: vm.favoriteSlotToken) {
+                guard let index = vm.favoriteSlotIndex else { return }
+                if let chord = core.paletteCoordinator.spotlightChord(at: index) {
+                    performSpotlightChord(chord)
+                } else {
+                    performShortcut(.favoriteSlot(index))
+                }
+            }
+            // The window's shadow is cut from what it draws, so it is recut once the buttons settle.
+            .onChange(of: railRevealed) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + Theme.LiquidGlass.settle * 2) {
+                    hostWindow?.invalidateShadow()
+                }
+            }
+    }
+
     /// Pins and density move cells under the selection, and can change an open Actions menu's rows.
     private func emojiGridChanged() {
         guard vm.mode == .emoji else { return }
@@ -398,7 +419,7 @@ struct RootPaletteView: View {
     /// Split from `body` for the same reason `keyHandlers` is: one chain cannot carry them all.
     @ViewBuilder
     private func stateObservers(_ content: some View) -> some View {
-        emojiObservers(content)
+        spotlightObservers(emojiObservers(content))
             // Every show bumps focusToken so the search field refocuses.
             .onChange(of: vm.focusToken) {
                 searchFocused = !screen.hidesSearchField
@@ -473,21 +494,6 @@ struct RootPaletteView: View {
                 searchFocused = true
                 // Next turn, past the refocus that selects all, so typing extends the answer.
                 Task { @MainActor in (hostWindow as? PalettePanel)?.moveFieldEditorCaretToEnd() }
-            }
-            // ⌘1…⌘0 arrives as a slot index from AppKit keyCode matching.
-            .onChange(of: vm.favoriteSlotToken) {
-                guard let index = vm.favoriteSlotIndex else { return }
-                if let chord = core.paletteCoordinator.spotlightChord(at: index) {
-                    performSpotlightChord(chord)
-                } else {
-                    performShortcut(.favoriteSlot(index))
-                }
-            }
-            // The window's shadow is cut from what it draws, so it is recut once the buttons settle.
-            .onChange(of: railRevealed) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + Theme.LiquidGlass.settle * 2) {
-                    hostWindow?.invalidateShadow()
-                }
             }
             // One optional makes "exactly one menu" structural; this only presents it.
             .onChange(of: openMenu) {
