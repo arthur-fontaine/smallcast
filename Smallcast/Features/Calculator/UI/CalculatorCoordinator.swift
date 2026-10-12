@@ -7,7 +7,6 @@ final class CalculatorCoordinator {
     private let palette: PaletteState
     private let currencyRates: CurrencyRateStore
     private let paletteCoordinator: PaletteCoordinator
-    /// Dialogs, for the one action here that can't be undone.
     private unowned let core: AppCore
 
     init(
@@ -68,6 +67,17 @@ final class CalculatorCoordinator {
         Paster.copyPlainText(format.localized(copyText))
     }
 
+    /// `⌘↵` on the card: the answer becomes the query, so the next step chains onto it.
+    @discardableResult
+    func putAnswerInSearchBar(_ result: CalcResult) -> Bool {
+        guard case .value(let display, let copyText) = result.payload, result.canChain,
+            !core.palette.isComposing
+        else { return false }
+        calcHistory.record(expression: result.expression, result: display)
+        core.palette.rewriteQuery(format.localized(copyText))
+        return true
+    }
+
     /// `⇧⌘↵` on the card: the whole calculation, for pasting into a note or a message.
     func copyCalculationWithExpression(_ result: CalcResult) {
         guard case .value(let display, let copyText) = result.payload else { return }
@@ -81,7 +91,7 @@ final class CalculatorCoordinator {
     /// Enter on a Calculator History row: re-copy the stored answer (no re-record).
     func copyHistoryEntry(_ entry: CalcHistoryEntry) {
         paletteCoordinator.hidePalette(restoreFocus: false)
-        Paster.copyPlainText(format.localized(entry.result.replacingOccurrences(of: ",", with: "")))
+        Paster.copyPlainText(format.localized(entry.copyText))
     }
 
     func copyHistoryExpression(_ entry: CalcHistoryEntry) {
