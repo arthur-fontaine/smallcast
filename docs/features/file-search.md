@@ -281,6 +281,12 @@ stay DigUp's.
   typed `fileSearchDigUpPath` (a build from source) first, else DigUp.app by bundle id, then in
   `/Applications` and `~/Applications`. The engine is carried by backups and `settings.json`
   (`fileSearch.engine`); the path is machine state and is carried by neither.
+- **Having it is not having set it up.** An installed DigUp has indexed nothing until its onboarding
+  chose folders, which `DigUpLocator.isSetUp` reads from DigUp's defaults (`onboarded`, `roots`).
+  Choosing Name and content then asks whether to open DigUp, and the section says it isn't set up and
+  offers Open DigUp; it re-reads when Smallcast becomes active again. Smallcast never downloads the
+  model or indexes a folder itself: DigUp keeps its index current only while it runs, so setting it up
+  is DigUp's to do.
 - **In root search it takes the Search Files fallback's place.** With Name and content in effect and
   the Search Files fallback offered and checked, `FallbackCoordinator.digUpReplacesSearchFiles` drops
   that static row and `DigUpRootSection` adds up to `DigUpSearchPolicy.rootRowLimit` (5) files **after

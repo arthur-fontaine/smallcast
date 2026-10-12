@@ -29,6 +29,9 @@ struct FileSearchEngineSection: View {
                         if state.availability == .notInstalled {
                             Button("Get DigUp…") { NSWorkspace.shared.open(DigUpLocator.downloadURL) }
                         }
+                        if state.helper != nil, !state.isSetUp {
+                            Button("Open DigUp") { core.fileSearchCoordinator.openDigUp() }
+                        }
                     }
                 } label: {
                     Text(statusTitle)
@@ -48,11 +51,22 @@ struct FileSearchEngineSection: View {
             draftPath = settings.fileSearchDigUpPath
             refresh()
         }
+        .onChange(of: settings.fileSearchEngine) { _, engine in
+            if engine == .nameAndContent { Task { await core.fileSearchCoordinator.offerDigUpSetup() } }
+        }
+        .task {
+            // Back from DigUp's onboarding, the status should say so without reopening Settings.
+            for await _ in NotificationCenter.default.notifications(
+                named: NSApplication.didBecomeActiveNotification)
+            {
+                refresh()
+            }
+        }
     }
 
     private var statusTitle: String {
         switch state.availability {
-        case .found: return "DigUp installed"
+        case .found: return state.isSetUp ? "DigUp installed" : "DigUp isn’t set up"
         case .notInstalled: return "DigUp not installed"
         case .missingCustomPath: return "DigUp helper not found"
         }
@@ -60,7 +74,10 @@ struct FileSearchEngineSection: View {
 
     private var statusDetail: String {
         switch state.availability {
-        case .found: return "Searches the folders you chose in DigUp."
+        case .found:
+            return state.isSetUp
+                ? "Searches the folders you chose in DigUp."
+                : "Choose its folders in DigUp. Until then, File Search finds files by name."
         case .notInstalled: return "Until it is, File Search finds files by name."
         case .missingCustomPath(let path): return "Nothing that runs is at \(path)."
         }
