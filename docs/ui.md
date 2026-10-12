@@ -420,6 +420,13 @@ it swaps that screen rather than stacking on it.
   resting end and travels out, 55ms after the one before it. The capsule pulling back uncovers the
   circles as beads that fuse and then separate. The circles' own spring is barely underdamped
   (0.86), since the last one rests on the window's edge and any overshoot would be clipped there.
+- **Each glyph is drawn from its `NSImage` and sized optically.** `Image(systemName:)` positions a
+  symbol by its typographic alignment rect, whose offset varies by symbol. At 100pt it runs from 18pt
+  for the grid to 34.5pt for `doc.on.doc`, so the glyphs drifted off-centre. The image's own box
+  centres its ink to within half a point, so `RailGlyph` draws that. One point size also gives one
+  glyph a box about 19% larger than another's, so each is scaled until its box's geometric mean is
+  `railGlyphOptical`. `face.smiling` draws as its own inverse in Dark on macOS 27, so the rail picks
+  the outline name per appearance.
 - **Glyphs are drawn above the glass, not inside it,** where a morph smears them. Each one rides its
   circle's position and scale, and blurs in 0.24s after its circle starts. The container renders the
   morph slightly behind the views' geometry, so an earlier glyph floats outside a bubble that has

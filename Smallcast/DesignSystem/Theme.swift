@@ -366,7 +366,8 @@ enum Theme {
         static let railBlend: CGFloat = 8
         /// Parked inside the capsule's end this small, so each button pinches out of it.
         static let railParkedScale: CGFloat = 0.36
-        static let railGlyphSize: CGFloat = 22
+        /// A glyph box's geometric mean: Spotlight's glyphs share an optical size, not a point size.
+        static let railGlyphOptical: CGFloat = 27.5
         /// One button after another, as Spotlight beads them off the capsule.
         static let railStagger: TimeInterval = 0.055
         /// A summon lands first; the buttons extrude once the surface has arrived.

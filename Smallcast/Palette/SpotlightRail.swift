@@ -96,9 +96,7 @@ struct SpotlightRailGlyphs: View {
     var body: some View {
         ForEach(Array(rail.buttons.enumerated()), id: \.element) { index, button in
             let revealed = rail.isRevealed
-            SymbolImage(
-                name: button.systemImage, size: metrics.scaled(Theme.LiquidGlass.railGlyphSize),
-                monochrome: true)
+            RailGlyph(name: button.systemImage, optical: metrics.scaled(Theme.LiquidGlass.railGlyphOptical))
                 .foregroundStyle(Theme.Colors.textSecondary)
                 .animation(reduceMotion ? nil : fade(index: index)) {
                     $0.opacity(revealed ? 1 : 0)
@@ -120,5 +118,45 @@ struct SpotlightRailGlyphs: View {
             Theme.LiquidGlass.railRevealDelay + Theme.LiquidGlass.railGlyphDelay
             + Theme.LiquidGlass.railStagger * Double(index)
         return .easeOut(duration: Theme.LiquidGlass.railGlyphFade).delay(delay)
+    }
+}
+
+/// One rail glyph, sized optically and centred on its ink rather than on its type metrics.
+private struct RailGlyph: View {
+    let name: String
+    let optical: CGFloat
+    @Environment(\.colorScheme) private var colorScheme
+
+    /// Measured on macOS 27: this one draws as its own inverse in Dark, so the outline swaps names.
+    private var outlineName: String {
+        name == "face.smiling" && colorScheme == .dark ? "face.smiling.inverse" : name
+    }
+
+    var body: some View {
+        if let image = RailGlyph.image(outlineName, optical: optical) {
+            // From the `NSImage`: SwiftUI's own symbol sits on its baseline, which drifts per glyph.
+            Image(nsImage: image).renderingMode(.template)
+        }
+    }
+
+    /// A box at 100pt, kept per name; only its proportions matter, never its pixels.
+    @MainActor private static var referenceBoxes: [String: CGSize] = [:]
+
+    @MainActor private static func image(_ name: String, optical: CGFloat) -> NSImage? {
+        guard let symbol = NSImage(systemSymbolName: name, accessibilityDescription: nil)
+        else { return nil }
+        let reference: CGSize
+        if let cached = referenceBoxes[name] {
+            reference = cached
+        } else {
+            let sized = symbol.withSymbolConfiguration(
+                NSImage.SymbolConfiguration(pointSize: 100, weight: .regular))
+            reference = sized?.size ?? CGSize(width: 100, height: 100)
+            referenceBoxes[name] = reference
+        }
+        // A tall glyph and a wide one read as one size when their boxes share an area.
+        let mean = (reference.width * reference.height).squareRoot() / 100
+        return symbol.withSymbolConfiguration(
+            NSImage.SymbolConfiguration(pointSize: optical / max(mean, 0.01), weight: .regular))
     }
 }
