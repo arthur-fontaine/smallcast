@@ -38,6 +38,24 @@ final class PaletteCoordinator {
 
     // MARK: - Palette control
 
+    /// Set for the one navigation a bar button makes from another button's screen.
+    private var swapsNextScreen = false
+
+    /// A bar button's command, run so the screen it opens replaces another button's screen.
+    func openFromSpotlightButton(_ open: () -> Void) {
+        swapsNextScreen = settings.availableSpotlightButtons.contains { $0.mode == palette.mode }
+        defer { swapsNextScreen = false }
+        open()
+    }
+
+    /// What ⌘1…⌘0 mean right now, if the Liquid Glass bar's buttons claim them.
+    func spotlightChord(at index: Int) -> SpotlightButtonChord? {
+        SpotlightButtonChord.resolve(
+            isLiquidGlass: settings.paletteTheme == .liquidGlass, compactMode: settings.compactMode,
+            buttons: settings.availableSpotlightButtons, collapsed: paletteIsCollapsed,
+            mode: palette.mode, index: index)
+    }
+
     var isVisible: Bool { windowController.isVisible }
 
     var panelFrame: CGRect? { windowController.visibleFrame }
@@ -81,7 +99,8 @@ final class PaletteCoordinator {
     /// Navigating keeps the screen under as the back step; the launcher is the root and never has one.
     func navigate(to mode: PaletteMode) {
         if windowController.isVisible, palette.mode != mode, mode != .launcher {
-            palette.push(mode: mode)
+            // Spotlight swaps one button's screen for another's, so Escape is still one step home.
+            if swapsNextScreen { palette.replace(mode: mode) } else { palette.push(mode: mode) }
         } else {
             palette.prepare(mode: mode)
         }

@@ -27,6 +27,7 @@ struct RootPaletteView: View {
     @Environment(ExtensionManager.self) private var extensions
     @Environment(AppSettings.self) private var settings
     @Environment(\.metrics) private var metrics
+    @Environment(\.paletteTheme) private var theme
     @Environment(\.openURL) private var openURL
     @FocusState private var searchFocused: Bool
     /// Kept apart from the search field's own focus. See docs/features/palette.md.
@@ -45,6 +46,9 @@ struct RootPaletteView: View {
     @State private var hostWindow: NSWindow?
     /// The pending scroll request; modes are exclusive, so one piece of state serves all.
     @State private var scroll = ScrollIntent(kind: .top)
+    /// The bar button just chosen, fusing back into the capsule before its screen opens.
+    @State private var mergingButton: SpotlightButton?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Compact vs. full; the source of truth is on `AppCore`, so the two can't disagree.
     private var isCollapsed: Bool { core.paletteCoordinator.paletteIsCollapsed }
@@ -59,6 +63,11 @@ struct RootPaletteView: View {
                 meeting: core.calendarCoordinator.cardedMeeting, now: meetingClock.now,
                 openActions: openActions, openArgumentOptions: openArgumentOptions,
                 scrollToFollow: { scroll = ScrollIntent(kind: .follow) })
+        case .applications:
+            return AppGridScreen(
+                appIndex: appIndex, launchHistory: launchHistory, favorites: favorites,
+                visibility: visibility, runningApps: runningApps, core: core, vm: vm,
+                openActions: openActions)
         case .uninstall:
             return UninstallScreen(
                 session: uninstall, core: core, vm: vm, openActions: openActions)
@@ -327,6 +336,7 @@ struct RootPaletteView: View {
                         screen.body(selection: sel, scroll: scroll)
                     }
                 }
+                .modifier(LiquidGlassListClip(theme: theme))
                 .safeAreaInset(edge: .top, spacing: 0) { header }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     if !isCollapsed {
@@ -348,20 +358,12 @@ struct RootPaletteView: View {
                 )
                 // The window's frame is the size source, so the glass and clip stay matched.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .background(Theme.Colors.panelScrim)
-                .background(GlassEffectView())
-                .overlay {
-                    Theme.Colors.dialogDimming
-                        .opacity(core.isDimmingPaletteForDialog ? 1 : 0)
-                        .allowsHitTesting(false)
-                }
-                .animation(
-                    .easeOut(
-                        duration: core.isDimmingPaletteForDialog
-                            ? Theme.Duration.dialogEnter : Theme.Duration.dialogExit),
-                    value: core.isDimmingPaletteForDialog
-                )
-                .clipShape(RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous))),
+                .modifier(
+                    PaletteSurface(
+                        isDimmed: core.isDimmingPaletteForDialog, presentation: vm.presentation,
+                        rail: SpotlightRail(
+                            buttons: spotlightButtons, isRevealed: railRevealed,
+                            activate: activateSpotlightButton)))),
             selection: sel)
     }
 
@@ -385,6 +387,28 @@ struct RootPaletteView: View {
             }
     }
 
+    /// The digit slots, the bar's buttons and the Applications grid, split out like the emoji ones.
+    @ViewBuilder
+    private func spotlightObservers(_ content: some View) -> some View {
+        content
+            .onChange(of: vm.appCategoryFilter) { land() }
+            // ⌘1…⌘0 arrives as a slot index from AppKit keyCode matching.
+            .onChange(of: vm.favoriteSlotToken) {
+                guard let index = vm.favoriteSlotIndex else { return }
+                if let chord = core.paletteCoordinator.spotlightChord(at: index) {
+                    performSpotlightChord(chord)
+                } else {
+                    performShortcut(.favoriteSlot(index))
+                }
+            }
+            // The window's shadow is cut from what it draws, so it is recut once the buttons settle.
+            .onChange(of: railRevealed) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + Theme.LiquidGlass.settle * 2) {
+                    hostWindow?.invalidateShadow()
+                }
+            }
+    }
+
     /// Pins and density move cells under the selection, and can change an open Actions menu's rows.
     private func emojiGridChanged() {
         guard vm.mode == .emoji else { return }
@@ -395,7 +419,7 @@ struct RootPaletteView: View {
     /// Split from `body` for the same reason `keyHandlers` is: one chain cannot carry them all.
     @ViewBuilder
     private func stateObservers(_ content: some View) -> some View {
-        emojiObservers(content)
+        spotlightObservers(emojiObservers(content))
             // Every show bumps focusToken so the search field refocuses.
             .onChange(of: vm.focusToken) {
                 searchFocused = !screen.hidesSearchField
@@ -470,10 +494,6 @@ struct RootPaletteView: View {
                 searchFocused = true
                 // Next turn, past the refocus that selects all, so typing extends the answer.
                 Task { @MainActor in (hostWindow as? PalettePanel)?.moveFieldEditorCaretToEnd() }
-            }
-            // ⌘1…⌘0 arrives as a slot index from AppKit keyCode matching.
-            .onChange(of: vm.favoriteSlotToken) {
-                if let index = vm.favoriteSlotIndex { performShortcut(.favoriteSlot(index)) }
             }
             // One optional makes "exactly one menu" structural; this only presents it.
             .onChange(of: openMenu) {
@@ -754,7 +774,8 @@ struct RootPaletteView: View {
                 }
             }
             // Compact pins favorites beside the field; expanded shows them as rows.
-            if isCollapsed, settings.showFavoritesInCompactMode,
+            // The bar's buttons take ⌘1…⌘5 and the room beside the field, so favorites step aside.
+            if isCollapsed, settings.showFavoritesInCompactMode, spotlightButtons.isEmpty,
                 let launcher = screen as? LauncherScreen
             {
                 let favorites = launcher.compactFavorites
@@ -781,6 +802,16 @@ struct RootPaletteView: View {
         // Identical metrics in both states, so typing can't move the search bar.
         .frame(height: metrics.size.headerHeight)
         .padding(.top, metrics.size.headerPadding)
+        // Where the compact capsule ended, so expanding draws the divider along its old edge.
+        .padding(.bottom, dividesHeader ? metrics.size.headerPadding : 0)
+        .overlay(alignment: .bottom) {
+            if dividesHeader {
+                Rectangle()
+                    .fill(Theme.Colors.separator)
+                    .frame(height: Theme.Size.hairline)
+                    .padding(.horizontal, metrics.spacing.md * 2)
+            }
+        }
         .frame(maxWidth: .infinity)
         // Next turn, once the show's `land()` and search refocus are done, so neither undoes it.
         .onChange(of: vm.pendingArgumentEntryID) {
@@ -794,6 +825,55 @@ struct RootPaletteView: View {
     private var extensionCommandScreen: ExtensionCommandScreen? {
         guard vm.mode == .extensionCommand else { return nil }
         return screen as? ExtensionCommandScreen
+    }
+
+    /// Spotlight rules its field off from the results; Smallcast lets them dissolve beneath it.
+    private var dividesHeader: Bool { theme == .liquidGlass && !isCollapsed }
+
+    private var searchFieldFont: Font {
+        theme == .liquidGlass
+            ? .system(size: metrics.scaled(Theme.LiquidGlass.searchFieldSize), weight: .regular)
+            : metrics.typography.searchField
+    }
+
+    private var searchFieldNSFont: NSFont {
+        theme == .liquidGlass
+            ? .systemFont(ofSize: metrics.scaled(Theme.LiquidGlass.searchFieldSize), weight: .regular)
+            : metrics.typography.searchFieldNSFont
+    }
+
+    /// Only Liquid Glass's compact bar has buttons; elsewhere there is nowhere to put them.
+    private var spotlightButtons: [SpotlightButton] {
+        guard theme == .liquidGlass, settings.compactMode else { return [] }
+        return settings.availableSpotlightButtons
+    }
+
+    /// Out on every summon, once the surface has arrived, and back in as soon as anything is typed.
+    private var railRevealed: Bool {
+        !spotlightButtons.isEmpty && isCollapsed && vm.isVisible && vm.presentation == .shown
+            && mergingButton == nil
+    }
+
+    /// Spotlight fuses the chosen button back into the capsule, then grows its screen below.
+    private func activateSpotlightButton(_ button: SpotlightButton) {
+        guard railRevealed, !reduceMotion else {
+            core.launcherCoordinator.openSpotlightButton(button)
+            return
+        }
+        mergingButton = button
+        DispatchQueue.main.asyncAfter(deadline: .now() + Theme.LiquidGlass.railMerge) {
+            core.launcherCoordinator.openSpotlightButton(button)
+            mergingButton = nil
+        }
+    }
+
+    private func performSpotlightChord(_ chord: SpotlightButtonChord) {
+        switch chord {
+        case .search:
+            if vm.mode == .launcher { searchFocused = true } else { vm.prepare(mode: .launcher) }
+        case .open(let button): activateSpotlightButton(button)
+        case .consumed: break
+        }
     }
 
     /// Whichever screen offers one; the compact bar has no room for it.
@@ -861,7 +941,7 @@ struct RootPaletteView: View {
     /// The field's own text, floored for the caret and capped so the strip stays on screen.
     /// Empty, that is the prompt where one is drawn — which is what seats the strip right after it.
     private func searchFieldWidth(for accessory: PaletteHeaderAccessory) -> CGFloat {
-        let font = metrics.typography.searchFieldNSFont
+        let font = searchFieldNSFont
         let text = vm.query.isEmpty ? searchPrompt : vm.query
         let typed = (text as NSString).size(withAttributes: [.font: font]).width
         let chrome = metrics.size.headerIconSlot + metrics.spacing.md * 3 + metrics.spacing.xl
@@ -887,7 +967,7 @@ struct RootPaletteView: View {
         @Bindable var vm = vm
         return TextField("", text: $vm.query)
             .textFieldStyle(.plain)
-            .font(metrics.typography.searchField)
+            .font(searchFieldFont)
             .tint(Theme.Colors.textPrimary)
             .focused($searchFocused)
             // Fills the row's height, so there's no gap above it for topDragStrip to meet.
@@ -896,7 +976,7 @@ struct RootPaletteView: View {
                 // An IME's marked text leaves `query` empty, so the placeholder would overlap it.
                 if vm.query.isEmpty, !vm.isComposing {
                     Text(searchPrompt)
-                        .font(metrics.typography.searchField)
+                        .font(searchFieldFont)
                         .foregroundStyle(Theme.Colors.textTertiary)
                         .lineLimit(1)
                         // Never a click target: tapping the placeholder must still land the caret.
@@ -994,7 +1074,7 @@ struct RootPaletteView: View {
             }
         }
         .padding(metrics.spacing.xs)
-        .frosted(in: Capsule())
+        .paletteControlSurface(in: Capsule())
     }
 
     /// The one path opening the Actions menu, sampling the state its rows depend on.
@@ -1581,6 +1661,20 @@ private struct SearchFieldHiding: ViewModifier {
     }
 }
 
+/// Clips rows at the divider; keyed on theme alone, as a compact-bar branch would rebuild the list.
+private struct LiquidGlassListClip: ViewModifier {
+    let theme: PaletteTheme
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        switch theme {
+        case .smallcast: content
+        // The footer still floats over the rows, so only the top edge is held to the safe area.
+        case .liquidGlass: content.mask { Rectangle().ignoresSafeArea(edges: .bottom) }
+        }
+    }
+}
+
 /// The footer's menu circle; hover lives here, so a sweep never re-renders the body.
 private struct MenuCircleButton: View {
     let action: () -> Void
@@ -1600,7 +1694,7 @@ private struct MenuCircleButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .frosted(in: Circle())
+        .paletteControlSurface(in: Circle())
     }
 }
 

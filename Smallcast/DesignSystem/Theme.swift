@@ -160,6 +160,12 @@ enum Theme {
         /// Symmetric clearance between the emoji grid and both panel edges.
         static let emojiGridInset: CGFloat = 16
         static let emojiCell: CGFloat = 56
+        /// Spotlight's Applications grid: seven across, an app-icon tile above a one-line name.
+        static let appGridColumns = 7
+        static let appGridIcon: CGFloat = 48
+        static let appGridCellHeight: CGFloat = 84
+        /// The chip row above the grid, as Spotlight sets its categories under the field.
+        static let appGridChipHeight: CGFloat = 24
         static let menuWidth: CGFloat = 276
         static let formMenuMinimumWidth: CGFloat = 200
         static let formMenuExtraRowsHeight: CGFloat = 20
@@ -210,6 +216,8 @@ enum Theme {
         /// The narrowest the pane column may get before a grouped row's control starts colliding.
         static let settingsDetailMinimum: CGFloat = 420
         static let settingsRowIcon: CGFloat = 20
+        /// One option tile in a Settings row that picks a look by showing it: window mode, theme.
+        static let settingsModePreview = CGSize(width: 135, height: 80)
         /// A sidebar glyph inside its tinted tile; the tile's inset brings it to the row icon's size.
         static let settingsSidebarGlyph: CGFloat = 14
         /// AI Chat's opening size; the user owns it from there, autosaved.
@@ -347,6 +355,50 @@ enum Theme {
         static let roomSettle: TimeInterval = 0.25
     }
 
+    /// The Liquid Glass theme's own values; the Smallcast theme never reads them.
+    @MainActor
+    enum LiquidGlass {
+        /// Spotlight's field, set larger than `searchFieldSize` against the same bar height.
+        static let searchFieldSize: CGFloat = 24
+        /// The card starts this much narrower than it lands, and settles from the centre.
+        static let enterScale: CGFloat = 0.96
+        /// Under 1: a window as large as its surface would clip a frame that grew past it.
+        static let exitScale: CGFloat = 0.98
+        /// Opacity rides the window's alpha, so the shadow fades with the surface it belongs to.
+        static let enterFade: TimeInterval = 0.14
+        static let settle: TimeInterval = 0.3
+        static let exitFade: TimeInterval = 0.12
+        /// The capsule growing into the results card, and the card folding back.
+        static let resize: TimeInterval = 0.28
+        static let resizeTiming = CAMediaTimingFunction(controlPoints: 0.2, 0.8, 0.2, 1)
+        static let fadeTiming = CAMediaTimingFunction(controlPoints: 0.42, 0, 0.58, 1)
+        /// Between the capsule and its first button, and between buttons: Spotlight's 10pt.
+        static let railGap: CGFloat = 10
+        /// Each button sits a point inside the bar's height, as Spotlight's 54pt beside its 56pt.
+        static let railInset: CGFloat = 1
+        /// Under `railGap`, so resting buttons stand apart and only moving ones fuse.
+        static let railBlend: CGFloat = 8
+        /// Parked inside the capsule's end this small, so each button pinches out of it.
+        static let railParkedScale: CGFloat = 0.36
+        /// A glyph box's geometric mean: Spotlight's glyphs share an optical size, not a point size.
+        static let railGlyphOptical: CGFloat = 27.5
+        /// One button after another, as Spotlight beads them off the capsule.
+        static let railStagger: TimeInterval = 0.055
+        /// A summon lands first; the buttons extrude once the surface has arrived.
+        static let railRevealDelay: TimeInterval = 0.12
+        /// The glyph surfaces once its glass has formed, and blurs in rather than popping.
+        static let railGlyphDelay: TimeInterval = 0.24
+        static let railGlyphFade: TimeInterval = 0.16
+        static let railGlyphBlur: CGFloat = 4
+        /// A chosen button fuses back into the capsule before its screen grows below it.
+        static let railMerge: TimeInterval = 0.2
+        /// Measured off Spotlight: the capsule undershoots as it shortens, then settles.
+        static let railReveal = Animation.spring(response: 0.44, dampingFraction: 0.62)
+        static let railHide = Animation.spring(response: 0.38, dampingFraction: 0.76)
+        /// The buttons barely overshoot: the last rests on the window's edge, which would clip it.
+        static let railButton = Animation.spring(response: 0.44, dampingFraction: 0.86)
+    }
+
     enum RoomMotion {
         /// Quick to leave, long to settle, so a card reads as the window it is about to become.
         static let glide = Animation.timingCurve(0.2, 0, 0, 1, duration: Theme.Duration.roomGlide)
@@ -430,6 +482,8 @@ enum Theme {
 
         /// The ramp's inverse: the scrim darkens the dark surface and lightens the light one.
         static let panelScrim = adaptive(dark: .srgbInk(0, alpha: 0.40), light: .srgbInk(1, alpha: 0.55))
+        /// Liquid Glass's faint wash: the glass tints itself, so this only steadies the ink.
+        static let glassScrim = adaptive(dark: .srgbInk(0, alpha: 0.12), light: .srgbInk(1, alpha: 0.10))
         /// Modal separation inside Smallcast: the launcher recedes while its dialog is in front.
         static let dialogDimming = adaptive(
             dark: .srgbInk(0, alpha: 0.34), light: .srgbInk(0, alpha: 0.34))
@@ -503,6 +557,11 @@ enum Theme {
         /// The two squares of a checkerboard, behind a colour with alpha to show.
         static let checkerLight = Color(nsColor: .srgbInk(1, alpha: 0.22))
         static let checkerDark = Color(nsColor: .srgbInk(0, alpha: 0.22))
+        /// The bright desk behind the Theme previews: glass shows only what it has behind it.
+        static let themePreviewDesk = [
+            Color(red: 0.36, green: 0.62, blue: 0.98), Color(red: 0.98, green: 0.72, blue: 0.48)
+        ]
+        static let themePreviewDeskShade = Color(red: 0.12, green: 0.36, blue: 0.86)
         /// The violet of the app mark, used only to tint the About support callout.
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
         /// The palette's drop guides while dragging, and once a release would snap it home.

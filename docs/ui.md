@@ -29,6 +29,10 @@ Five load-bearing ideas, in priority order:
 4. **Edges dissolve, they don't clip.** Scroll-driven mask, no separators between list and bars.
 5. **Glass only on floating controls.** The main surface is never glass; pills/menus/circles are.
 
+All of the above is the **Smallcast** theme, the default. The **Liquid Glass** theme deliberately
+breaks ideas 1, 4 and 5 to look like Spotlight on Tahoe — see [Themes](#themes). Everything else in
+this document holds in both.
+
 ---
 
 ## Non-negotiable invariants
@@ -40,8 +44,8 @@ These are the things that quietly break the look if changed. Preserve them unles
 - **No grays, no opaque fills on the surface.** Reach for `Theme.Colors.*` instead of `.gray`, `NSColor.windowBackground`, etc.
 - **Three things stay fixed in both appearances, on purpose.** The `EdgeDissolve`/`OverflowFade` gradients are **mask luminance, not color** — inverting them breaks the dissolve everywhere. `ExtensionTintColors` and a tinted `IconCache` tile keep white ink, because a saturated tile carries its own contrast. And `IconCache` cannot use a dynamic `NSColor` at all: it rasterizes off-main, so the surface is carried explicitly and is part of the cache key.
 - **An icon is drawn for a surface *and* a system icon style, and both move under you.** macOS restyles the icons `NSWorkspace` hands out when System Settings → Appearance → **Icon & widget style** changes, so `IconStyleMonitor` and Smallcast's own appearance both call `IconCache.invalidateStyled()`. **The monitor may not invalidate on the notification itself.** AppKit posts `NSWorkspaceIconAppearanceConfigurationDidChange` before IconServices has swapped what `NSWorkspace` vends — measured at 25–120ms behind, jittering run to run — and the images it hands back are live objects macOS restyles in place, so flattening one on the signal freezes the *outgoing* style into a bitmap nothing ever invalidates again. `IconStyleMonitor` therefore polls `IconCache.styleFingerprint()` until the pixels actually move, and only then invalidates. Waiting also sidesteps the cost: re-flattening every icon the instant a restyle begins forces a cold IconServices regeneration, measured at 160× the settled draw cost. That drops the cached bitmaps, bumps every cache key so an in-flight decode cannot repopulate a stale one, and moves `IconCache.style.generation`. **Any view that draws an icon must key its fetch on that generation** — wrap the view's own key in `IconRequest`, or call `IconCache.observeStyle()` where the icon is resolved synchronously in a `body`. It is reached through `IconCache` rather than injected precisely because icons are drawn in menus, popovers and every list, where a missed injection would be a silent staleness bug.
-- **No hard dividers between the list and the bars.** The header and bottom bar are `safeAreaInset` overlays with no background; separation comes from `edgeDissolve()`, nothing else. (One deliberate exception: the vertical hairline between a list and its preview pane, as the clipboard and file search screens draw.)
-- **The panel corner is clipped once, at the root.** `RootPaletteView.body` ends with `.background(panelScrim) → .background(GlassEffectView()) → .clipShape(RoundedRectangle(26, .continuous))`. Keep that order; the scrim goes _over_ the glass, and the clip is last.
+- **No hard dividers between the list and the bars.** The header and bottom bar are `safeAreaInset` overlays with no background; separation comes from `edgeDissolve()`, nothing else. (Two deliberate exceptions: the vertical hairline between a list and its preview pane, as the clipboard and file search screens draw, and the Liquid Glass theme's rule under the search field — see [Themes](#themes).)
+- **The panel corner is clipped once, at the root, by `PaletteSurface`.** In the Smallcast theme it is `.background(panelScrim) → .background(GlassEffectView()) → .clipShape(RoundedRectangle(26, .continuous))`. Keep that order; the scrim goes _over_ the glass, and the clip is last. Liquid Glass keeps the same order with its own scrim, glass and shape.
 - **Don't use the native scroll edge effect.** Inside a transparent panel it renders a hard-bounded rectangle. Use `edgeDissolve()`, or a gradient `mask` where a surface owns its own fade — `scrollEdgeEffectStyle` draws a *material* where a scroll view meets a safe area, so over a panel that already has `panelScrim` + `GlassEffectView` it composites to nothing. Tried and rejected on `QuickActionResultView`, with and without `safeAreaBar`. This is a rule about the borderless panels; the Settings window is a titled `NSWindow` whose system titlebar draws the band itself (see "Settings").
 - **Test over a light desktop.** Transparency and corner masking bugs only show over bright wallpaper. Dark wallpaper hides them.
 - **No `NSAlert` or system popovers.** Every confirmation, failure report, value prompt and transient readout is Smallcast's own SwiftUI surface (see "Dialogs & HUD"). An Aqua alert on an alpha-over-vibrancy app reads as a different product, and its `runModal` run loop keeps Carbon hotkeys firing underneath.
@@ -214,6 +218,7 @@ shipped. Light is the same stop with the ink inverted, and is the only column op
 | Token             | Dark           | Light          | Use                                              |
 | ----------------- | -------------- | -------------- | ------------------------------------------------ |
 | `panelScrim`      | black **0.40** | white **0.55** | the panel scrim over the glass                   |
+| `glassScrim`      | black 0.12     | white 0.10     | Liquid Glass's faint wash over its regular glass |
 | `selection`       | white 0.10     | black 0.09     | selected row fill (keyboard/active selection)    |
 | `rowHover`        | white 0.05     | black 0.045    | mouse-hover fill (always fainter than selection) |
 | `menuHover`       | white 0.10     | black 0.09     | popover-menu row hover                           |
@@ -234,7 +239,8 @@ shipped. Light is the same stop with the ink inverted, and is the only column op
 
 `panelScrim` is the ramp's inverse — it darkens the dark surface and lightens the light one — so it
 is an `adaptive` pair, not a `ramp`. So is `composerSendInk`, black 0.85 on the dark disc and white
-on the light one.
+on the light one. `glassScrim` is the same inversion as `panelScrim`, faint enough that the glass
+does its own tinting.
 `brand`, `primaryAction`, `destructive`, `success` and `dropGuideArmed` are fixed hues and adapt on
 their own.
 
@@ -364,6 +370,109 @@ with `surface: .window`, which leaves out `edgeDissolve` and `thinScrollbar` —
 against the palette's bars — and caps the column at `aiChatReadingWidth`, centred.
 
 ---
+
+## Themes
+
+Source: `Features/Settings/PaletteTheme.swift`, `Palette/PaletteSurface.swift`,
+`Palette/PaletteWindowController.swift`.
+
+`AppSettings.paletteTheme` picks how the palette is drawn: **Smallcast** (everything above) or
+**Liquid Glass**, modelled on Tahoe's Spotlight. It is independent of Light/Dark, which stays
+`AppAppearance`'s call. It reaches the palette's views as `\.paletteTheme`, set beside `\.metrics` in
+`paletteEnvironment`, and the window controller reads `settings.paletteTheme` directly. Only the
+chrome reads it: rows, section headers, keycaps, menus and every screen render identically in both.
+Its own values live in `Theme.LiquidGlass` and `Theme.Colors.glassScrim`.
+
+Liquid Glass differs in five places, each measured against Spotlight:
+
+- **One glass surface.** `PaletteSurface` draws `glassScrim` over SwiftUI `.glassEffect(.regular)`
+  instead of `panelScrim` over `GlassEffectView`. The corner radius is half of `compactHeight`, so
+  the compact bar is a capsule, and its ends become the card's corners as it grows — Spotlight's
+  field and results are one shape, not a capsule over a card.
+- **A rule under the field.** Expanded, the header gains `headerPadding` below the field, so it ends
+  exactly where the compact capsule did, and draws a `separator` hairline inset `md * 2` along that
+  edge. `LiquidGlassListClip` clips the list there, because a row ghosting above a rule reads as a
+  rendering fault. The bottom edge stays unclipped, so the footer still floats over dissolving rows.
+- **A larger field.** `Theme.LiquidGlass.searchFieldSize` (24pt) against the same header height.
+  The accessory strip measures with the same font, through `RootPaletteView.searchFieldNSFont`.
+- **Footer controls in regular glass.** The `frosted` clear glass is tuned for Smallcast's scrim. Over
+  Liquid Glass, a matte fill let a row's label read straight through the pill, so
+  `paletteControlSurface(in:)` frosts them with `.regular` instead.
+- **Motion.** The Smallcast theme has none; Liquid Glass has three, and none of them under Reduce
+  Motion:
+  - **Arrival.** The window alpha fades in over 0.14s, carrying its shadow with it. Meanwhile the
+    surface settles from 96% width on a 0.3s spring with no bounce. Spotlight starts wider and
+    undershoots, but a surface as large as its window would clip any frame that grew past it.
+  - **Departure.** A 0.12s fade with a slight shrink, after which the panel orders out. It is closed
+    from the first frame: `isVisible` is false, input is dropped, and pop-to-root waits for the fade.
+  - **Resize.** Compact to expanded is an animated frame change, so the capsule grows into the card
+    with the top edge held.
+
+The selection fill is unchanged on purpose: Spotlight's highlight is the same neutral wash.
+
+### The compact bar's buttons
+
+Source: `Palette/SpotlightRail.swift`, `Palette/SpotlightButton.swift`.
+
+Liquid Glass, in the Compact window mode, sets up to four glass circles beside the capsule, as
+Spotlight sets Applications, Files, Actions and Clipboard beside its own. They are Applications,
+Files, Quick AI and Clipboard by default; Quick AI stands where Spotlight puts Actions. **Every
+glyph is outline line art**, as Spotlight's are, so a button doesn't always borrow its screen's
+symbol. Quick AI's `sparkles` is solid and sat heavier than its neighbours, so the button uses
+`text.bubble`. `apple.intelligence` would match too, but SF Symbols reserves it for Apple's own
+features.
+`AppSettings.spotlightButtons` holds them in order (`appearance.spotlightButtons`). A button whose
+feature is switched off is dropped by `availableSpotlightButtons`. A button runs its launcher
+command through `LauncherCoordinator.openSpotlightButton`, and opened from another button's screen
+it swaps that screen rather than stacking on it.
+
+- **They come out on every summon,** once the arrival has landed. They go back in the moment the bar
+  stops being the bare root search: a typed letter, a screen, a hide. Spotlight's own idle bar
+  reveals them on hover instead. The rail does not use hover at all, so a palette summoned under a
+  still pointer has nothing to arm.
+- **One `GlassEffectContainer` holds the capsule and the circles,** with `railBlend` (8pt) below the
+  10pt gap. Buttons at rest stand apart, and only moving ones fuse. The container is clipped to the
+  panel's own shape. Glass casts a soft shadow of its own, and left unclipped the window's square
+  corners showed it as a tint, black in Dark. The buttons fit inside that shape, since in compact it
+  is a capsule as wide as the window. The content is framed to the
+  capsule's width and clipped to it, so the field never runs under a button.
+- **The motion is Spotlight's, from a recording of it.** The capsule shortens on a spring that
+  undershoots (0.44s, damping 0.62). Each circle starts parked at 36% just inside the capsule's
+  resting end and travels out, 55ms after the one before it. The capsule pulling back uncovers the
+  circles as beads that fuse and then separate. The circles' own spring is barely underdamped
+  (0.86), since the last one rests on the window's edge and any overshoot would be clipped there.
+- **Each glyph is drawn from its `NSImage` and sized optically.** `Image(systemName:)` positions a
+  symbol by its typographic alignment rect, whose offset varies by symbol. At 100pt it runs from 18pt
+  for the grid to 34.5pt for `doc.on.doc`, so the glyphs drifted off-centre. The image's own box
+  centres its ink to within half a point, so `RailGlyph` draws that. One point size also gives one
+  glyph a box about 19% larger than another's, so each is scaled until its box's geometric mean is
+  `railGlyphOptical`. `face.smiling` draws as its own inverse in Dark on macOS 27, so the rail picks
+  the outline name per appearance.
+- **Glyphs are drawn above the glass, not inside it,** where a morph smears them. Each one rides its
+  circle's position and scale, and blurs in 0.24s after its circle starts. The container renders the
+  morph slightly behind the views' geometry, so an earlier glyph floats outside a bubble that has
+  not yet arrived.
+- **Choosing a button fuses it back first.** `RootPaletteView.mergingButton` hides the rail for
+  `railMerge` (0.2s), which plays the hide motion, and only then opens the screen, whose card grows
+  below. Reduce Motion opens at once, and removes the motion but never the buttons.
+- **No tooltips:** the compact window is exactly as tall as the bar, so a label above or below a
+  button would hang off the window. Each button carries an accessibility label instead.
+
+**Settings → Bar Buttons** is a pane of its own, beside General. It holds a master switch,
+`spotlightButtonsEnabled`, which keeps the list when switched off, and one picker per slot with
+**None**. The slot after the last adds a button. A button picked from another slot trades places with
+it, and None closes the gap. That one control sets which buttons appear, their order and their
+number; `SpotlightButton.assigning` is the rule, pinned by `spotlight-button-test`.
+
+Under the Smallcast theme the pane is dimmed but never closed. The sidebar row is dimmed, with a
+`.help` label saying why, yet stays selectable, so the reader never depends on search to reach it.
+Selected, it opens on a section explaining that the buttons belong to Liquid Glass, with **Use
+Liquid Glass** beside it, and everything below dimmed. Outside the Compact window mode, the pane says the buttons
+only appear there and offers **Use Compact**.
+
+**Settings → General → Theme** shows each option as a live `PaletteThemePreview` tile — a miniature
+drawn with the real tokens over a bright gradient, since glass shows only what it has behind it — and
+the light/dark picker beside it is titled **Appearance**.
 
 ## The edge dissolve
 

@@ -52,6 +52,13 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
 Everything resolved "once per summon" is resolved there deliberately, not per render. `AppCore` holds
 only the closure wiring; the behaviour is `PaletteCoordinator`'s.
 
+Under the Liquid Glass theme, `show()` and `hide()` also animate: the window alpha and
+`PaletteState.presentation` together. A fading-out panel is already closed: `isVisible` reports
+false, it ignores the mouse, `PalettePanel` drops its keystrokes, and the pop-to-root reset waits out
+the fade. A summon during that fade turns it back around; the generation counter keeps the old fade's
+completion from ordering out the new panel. The compact↔expanded swap animates the frame, with the
+top edge still the anchor. See [ui.md](../ui.md#themes).
+
 ## Screens
 
 `PaletteState` (mode / query / selection / `focusToken`) is the bridge between the panel and the app.
@@ -577,7 +584,9 @@ handled in `PalettePanel.sendEvent` before `super` hands the event to the respon
 - **The physical number-row slots.** `FavoriteSlots` matches ⌘1…⌘0 by key code before fixed command
   chords, then publishes the resolved position to the active screen. Only the launcher and clipboard
   screens intercept these slots; other screens keep their own ⌘-number shortcuts. The launcher's
-  compact visibility setting is visual only and does not disable its favorite slots.
+  compact visibility setting is visual only and does not disable its favorite slots. The one
+  exception is the Liquid Glass compact bar's buttons: wherever `SpotlightButtonChord.resolve` claims
+  a digit, it outranks both. See [launcher.md](launcher.md#-digit-slots).
 - **Chords AppKit has already bound to a selector.** `⌘.` is the one that bites: AppKit binds it to
   `cancelOperation:` alongside Escape, so `interpretKeyEvents` hands it to the field editor and
   `onKeyPress(keys: ["."])` never fires. Pin (⌘.) therefore arrives through `onCommandShortcut`,

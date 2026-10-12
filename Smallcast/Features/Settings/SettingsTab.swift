@@ -1,5 +1,5 @@
 enum SettingsTab: CaseIterable, Identifiable {
-    case general, applications, search, systemSettings, systemActions, commands, quicklinks,
+    case general, barButtons, applications, search, systemSettings, systemActions, commands, quicklinks,
         appleShortcuts, fallbacks, clipboard, snippets, fileSearch, windowManagement, navigation,
         notes, calendar, emoji, dictation, ai, quickActions, extensions, permissions, backup,
         miscellaneous, about
@@ -9,6 +9,7 @@ enum SettingsTab: CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .general: return "General"
+        case .barButtons: return "Bar Buttons"
         case .applications: return "Applications"
         case .search: return "Search"
         case .systemSettings: return "System Settings"
@@ -39,6 +40,7 @@ enum SettingsTab: CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .general: return "switch.2"
+        case .barButtons: return "capsule"
         case .applications: return "square.grid.2x2"
         case .search: return "magnifyingglass"
         case .systemSettings: return "gearshape"
@@ -84,7 +86,7 @@ enum SettingsSection: CaseIterable, Identifiable {
 
     var tabs: [SettingsTab] {
         switch self {
-        case .general: return [.general, .permissions]
+        case .general: return [.general, .barButtons, .permissions]
         case .launcher:
             return [
                 .applications, .search, .systemSettings, .systemActions, .commands, .quicklinks,
