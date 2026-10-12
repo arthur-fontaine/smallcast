@@ -389,9 +389,9 @@ Liquid Glass differs in five places, each measured against Spotlight:
   instead of `panelScrim` over `GlassEffectView`. The corner radius is half of `compactHeight`, so
   the compact bar is a capsule, and its ends become the card's corners as it grows — Spotlight's
   field and results are one shape, not a capsule over a card.
-- **A rule under the field.** Expanded, the header gains `headerPadding` below the field, so it ends
-  exactly where the compact capsule did, and draws a `separator` hairline inset `md * 2` along that
-  edge. `LiquidGlassListClip` clips the list there, because a row ghosting above a rule reads as a
+- **A rule under the field.** Expanded, a `separator` hairline inset `md * 2` is drawn `headerPadding`
+  below the field, where the compact capsule ended. The list takes that gap as safe-area padding, so
+  the header keeps one height in both states. `LiquidGlassListClip` clips the list there, because a row ghosting above a rule reads as a
   rendering fault. The bottom edge stays unclipped, so the footer still floats over dissolving rows.
 - **A larger field.** `Theme.LiquidGlass.searchFieldSize` (24pt) against the same header height.
   The accessory strip measures with the same font, through `RootPaletteView.searchFieldNSFont`.
@@ -404,9 +404,19 @@ Liquid Glass differs in five places, each measured against Spotlight:
     surface settles from 96% width on a 0.3s spring with no bounce. Spotlight starts wider and
     undershoots, but a surface as large as its window would clip any frame that grew past it.
   - **Departure.** A 0.12s fade with a slight shrink, after which the panel orders out. It is closed
-    from the first frame: `isVisible` is false, input is dropped, and pop-to-root waits for the fade.
+    from the first frame: `isVisible` is false and input is dropped. The bar's buttons stay out, so
+    the bar fades whole. A pop to root asked for mid-fade, such as Escape out of a hotkey-opened
+    screen, is deferred until the panel is gone, since resetting first repaints the fading panel as
+    the root search and snaps it to the bar's height.
   - **Resize.** Compact to expanded is an animated frame change, so the capsule grows into the card
-    with the top edge held.
+    with the top edge held. It also runs on a re-show that changes height: opening a screen from a
+    hotkey while the bar is up grows the card instead of jumping. With the bar's buttons out, the
+    expand waits `expandDelay` (0.1s) for them to fuse back, so the card grows at full width. The
+    controller keeps the animation's target, so a second request for the same frame never restarts
+    it. A different one replaces it through the animator, never a bare `setFrame` it would fight.
+  - **What rides the capsule's spring.** Only the glass fill and the content's mask. The content
+    itself never takes an implicit animation. Put on the content, the spring animated every change
+    made in the same transaction: the header's own height, the screen swap, the list arriving.
 
 The selection fill is unchanged on purpose: Spotlight's highlight is the same neutral wash.
 
@@ -448,10 +458,11 @@ it swaps that screen rather than stacking on it.
   glyph a box about 19% larger than another's, so each is scaled until its box's geometric mean is
   `railGlyphOptical`. `face.smiling` draws as its own inverse in Dark on macOS 27, so the rail picks
   the outline name per appearance.
-- **Glyphs are drawn above the glass, not inside it,** where a morph smears them. Each one rides its
-  circle's position and scale, and blurs in 0.24s after its circle starts. The container renders the
-  morph slightly behind the views' geometry, so an earlier glyph floats outside a bubble that has
-  not yet arrived.
+- **Glyphs are drawn above the glass, not inside it,** where a morph smears them. Each one stays at
+  its circle's resting place and only scales with it, blurring in 0.24s after its circle starts and
+  out in half the fade on the way back. Sent home with the circles, the four glyphs piled onto one
+  point and read as a black blot. The container renders the morph slightly behind the views'
+  geometry, so a glyph that travelled would float outside a bubble still on its way.
 - **Choosing a button fuses it back first.** `RootPaletteView.mergingButton` hides the rail for
   `railMerge` (0.2s), which plays the hide motion, and only then opens the screen, whose card grows
   below. Reduce Motion opens at once, and removes the motion but never the buttons.

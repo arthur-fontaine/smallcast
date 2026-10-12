@@ -394,7 +394,10 @@ enum Theme {
         static let railMerge: TimeInterval = 0.2
         /// Measured off Spotlight: the capsule undershoots as it shortens, then settles.
         static let railReveal = Animation.spring(response: 0.44, dampingFraction: 0.62)
-        static let railHide = Animation.spring(response: 0.38, dampingFraction: 0.76)
+        /// Quick and barely bouncy: typing fuses the buttons back before the card grows below.
+        static let railHide = Animation.spring(response: 0.3, dampingFraction: 0.82)
+        /// The window holds its height this long, so the card grows at full width, not beside them.
+        static let expandDelay: TimeInterval = 0.1
         /// The buttons barely overshoot: the last rests on the window's edge, which would clip it.
         static let railButton = Animation.spring(response: 0.44, dampingFraction: 0.86)
     }

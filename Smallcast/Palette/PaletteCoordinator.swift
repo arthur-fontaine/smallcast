@@ -48,6 +48,12 @@ final class PaletteCoordinator {
         open()
     }
 
+    /// True when the compact bar draws its Liquid Glass buttons, whether or not they are out now.
+    var showsSpotlightButtons: Bool {
+        settings.paletteTheme == .liquidGlass && settings.compactMode
+            && !settings.availableSpotlightButtons.isEmpty
+    }
+
     /// What ⌘1…⌘0 mean right now, if the Liquid Glass bar's buttons claim them.
     func spotlightChord(at index: Int) -> SpotlightButtonChord? {
         SpotlightButtonChord.resolve(

@@ -30,6 +30,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private var presentationGeneration = 0
     /// True while a Liquid Glass panel fades out: still on screen, but already closed.
     private var isDismissing = false
+    /// A reset asked for mid-fade, run once the panel is gone.
+    private var popsToRootOnDeparture = false
+    /// Where an animated resize is heading, so a second request for it never restarts it.
+    private var frameTarget: NSRect?
     /// ⌘V: `Edit ▸ Paste` claims it before `sendEvent` whenever the board also carries text.
     private var pasteMonitor: Any?
     /// ⌘⎋: the window server claims it, so no keystroke is left for the responder chain to see.
@@ -89,6 +93,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             let animates = arrives && animatesPresentation
             presentationGeneration += 1
             setDismissing(false, panel: panel)
+            // The summon decides the screen now; a reset the cancelled fade owed is moot.
+            popsToRootOnDeparture = false
             if animates, !panel.isVisible {
                 panel.alphaValue = 0
                 core.palette.presentation = .entering
@@ -103,7 +109,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             // Re-resolve the anchor now, then hold it so resizes never move the window.
             anchor = nil
             // Size and place before ordering front, so a compact summon never flashes.
-            positionPanel(panel, collapsed: core.paletteCoordinator.paletteIsCollapsed)
+            positionPanel(
+                panel, collapsed: core.paletteCoordinator.paletteIsCollapsed, animated: !arrives)
             // Flush first-mount layout off-screen, so the safe-area settle isn't visible.
             panel.contentView?.layoutSubtreeIfNeeded()
             core.inputSourceSwitcher.beginSession(
@@ -177,6 +184,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         setDismissing(false, panel: panel)
         panel.alphaValue = 1
         core.palette.presentation = .shown
+        if popsToRootOnDeparture { popToRoot() }
     }
 
     /// A fading panel takes no input: a click lands on what is behind it, a keystroke nowhere.
@@ -285,13 +293,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             workInProgress
             ? max(core.settings.popToRootTimeout.interval, Self.workInProgressGrace)
             : core.settings.popToRootTimeout.interval
-        // A fading surface must not repaint as the root search on its way out.
-        let delay = isDismissing ? max(interval, Theme.LiquidGlass.exitFade) : interval
-        guard delay > 0 else {
+        guard interval > 0 else {
             popToRoot()
             return
         }
-        popToRootTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) {
+        popToRootTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) {
             [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
@@ -303,6 +309,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     /// The screen only: a conversation is not a typed query, and `Opens To` decides its lifetime.
     private func popToRoot() {
+        // A fading panel must not repaint as the root search, nor shrink to its bar, on its way out.
+        guard !isDismissing else {
+            popsToRootOnDeparture = true
+            return
+        }
+        popsToRootOnDeparture = false
         core.palette.prepare(mode: .launcher)
         isPoppedToRoot = true
     }
@@ -584,7 +596,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Resize to the given state, top edge anchored; applied even while hidden.
     func applyCollapsed(_ collapsed: Bool) {
         guard let panel else { return }
-        positionPanel(panel, collapsed: collapsed, animated: true)
+        // Out of the bar's buttons, the card waits for them to fuse back, so it grows full width.
+        let waits = !collapsed && core.paletteCoordinator.showsSpotlightButtons
+        positionPanel(
+            panel, collapsed: collapsed, animated: true,
+            delay: waits ? Theme.LiquidGlass.expandDelay : 0)
     }
 
     /// A new width invalidates the placement the cached anchor encoded, so re-resolve it.
@@ -595,23 +611,54 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     }
 
     /// Size to height and place against the session anchor, so the list grows downward.
-    private func positionPanel(_ panel: NSPanel, collapsed: Bool, animated: Bool = false) {
+    private func positionPanel(
+        _ panel: NSPanel, collapsed: Bool, animated: Bool = false, delay: TimeInterval = 0
+    ) {
         guard let anchor = resolveAnchor() else { return }
         let size = metrics.size
         let height = collapsed ? size.compactHeight : size.panelHeight
         let frame = NSRect(
             x: anchor.x, y: anchor.y - height, width: size.panelWidth, height: height)
+        guard frame != frameTarget else { return }
         // Liquid Glass grows its capsule into the card; the top edge is still the one held.
         guard animated, isVisible, animatesPresentation, panel.frame.size != frame.size else {
-            panel.setFrame(frame, display: true)
+            setFrameNow(frame, of: panel)
             return
         }
+        frameTarget = frame
+        guard delay > 0 else {
+            animateFrame(to: frame, of: panel)
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self, weak panel] in
+            guard let self, let panel, frameTarget == frame else { return }
+            animateFrame(to: frame, of: panel)
+        }
+    }
+
+    private func animateFrame(to frame: NSRect, of panel: NSPanel) {
         NSAnimationContext.runAnimationGroup { context in
             context.duration = Theme.LiquidGlass.resize
             context.timingFunction = Theme.LiquidGlass.resizeTiming
             panel.animator().setFrame(frame, display: true)
-        } completionHandler: { [weak panel] in
-            MainActor.assumeIsolated { panel?.invalidateShadow() }
+        } completionHandler: { [weak self, weak panel] in
+            MainActor.assumeIsolated {
+                if self?.frameTarget == frame { self?.frameTarget = nil }
+                panel?.invalidateShadow()
+            }
+        }
+    }
+
+    /// Through the animator at zero duration, so an in-flight resize is replaced, not fought.
+    private func setFrameNow(_ frame: NSRect, of panel: NSPanel) {
+        guard frameTarget != nil else {
+            panel.setFrame(frame, display: true)
+            return
+        }
+        frameTarget = nil
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0
+            panel.animator().setFrame(frame, display: true)
         }
     }
 

@@ -22,24 +22,32 @@ struct PaletteSurface: ViewModifier {
         case .liquidGlass:
             let shape = PaletteSurface.liquidGlassShape(metrics)
             let geometry = SpotlightRailGeometry(metrics: metrics, count: rail.buttons.count)
+            let width = geometry.capsuleWidth(revealed: rail.isRevealed)
             // One container, or the buttons could never bead off the capsule they come out of.
             GlassEffectContainer(spacing: metrics.scaled(Theme.LiquidGlass.railBlend)) {
                 ZStack(alignment: .topLeading) {
-                    dimmable(
-                        content
-                            // Narrowed with the capsule, so the field never runs under a button.
-                            .frame(width: geometry.capsuleWidth(revealed: rail.isRevealed))
-                            .background(Theme.Colors.glassScrim)
-                    )
-                    .clipShape(shape)
-                    .glassEffect(.regular, in: shape)
-                    .animation(capsuleMotion, value: rail.isRevealed)
+                    // Only the glass rides the spring: on the content, it animated every change.
+                    shape.fill(Theme.Colors.glassScrim)
+                        .frame(width: width)
+                        .frame(maxHeight: .infinity)
+                        .glassEffect(.regular, in: shape)
+                        .animation(capsuleMotion, value: rail.isRevealed)
                     SpotlightRailGlass(rail: rail, geometry: geometry)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             // Glass casts a soft shadow; unclipped, the window's square corners show it as a tint.
             .clipShape(shape)
+            .overlay(alignment: .topLeading) {
+                // Narrowed with the capsule, so the field never runs under a button.
+                dimmable(content.frame(width: width))
+                    .mask(alignment: .topLeading) {
+                        shape
+                            .frame(width: width)
+                            .frame(maxHeight: .infinity)
+                            .animation(capsuleMotion, value: rail.isRevealed)
+                    }
+            }
             .overlay(alignment: .topLeading) { SpotlightRailGlyphs(rail: rail, geometry: geometry) }
             .scaleEffect(x: presentationScale, y: 1)
         }
