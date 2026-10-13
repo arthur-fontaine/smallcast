@@ -61,7 +61,7 @@ struct DigUpTests {
             try await runnerAnswers(stub)
             await runnerFailure(stub)
             await cancellationEndsTheHelper(stub)
-            try await sessionAddsDigUpToSpotlight(stub)
+            try await sessionAddsDigUpToNames(stub)
         } catch {
             expect(false, "the stub helper could be set up: \(error)")
         }
@@ -185,17 +185,15 @@ struct DigUpTests {
         if case .success = outcome { expect(false, "a cancelled search publishes nothing") }
     }
 
-    static func sessionAddsDigUpToSpotlight(_ stub: StubHelper) async throws {
+    static func sessionAddsDigUpToNames(_ stub: StubHelper) async throws {
         let clause = try stub.makeFile("clause.pdf")
         let notes = try stub.makeFile("lease notes.txt")
         try #"[{"path": "\#(clause.path)", "kind": "pdf"}]"#
             .write(to: stub.answer, atomically: true, encoding: .utf8)
-        let home = stub.directory
-        let policy = FileSearchPolicy(
-            scopes: FileSearchScope.defaultScopes, ignorePatterns: [], homeDirectory: home)
-        nonisolated(unsafe) var spotlightCalls = 0
-        let session = FileSearchSession(policy: policy, debounce: .milliseconds(10)) { _, _, _ in
-            spotlightCalls += 1
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        nonisolated(unsafe) var nameCalls = 0
+        let session = FileSearchSession { _, _ in
+            nameCalls += 1
             return [notes, clause].map {
                 FileSearchResult(url: $0, isDirectory: false, homeDirectory: home)
             }
@@ -223,12 +221,12 @@ struct DigUpTests {
 
         session.digUp = nil
         expect(session.results.isEmpty && session.state == .idle, "switching engine drops the rows")
-        let callsBefore = spotlightCalls
+        let callsBefore = nameCalls
         session.search("pet clause")
         await waitUntil(seconds: 1) { session.state == .ready }
         expect(
-            spotlightCalls == callsBefore + 1 && session.results.count == 2,
-            "with the Name engine the same session searches Spotlight alone")
+            nameCalls == callsBefore + 1 && session.results.count == 2,
+            "with the Name engine the same session searches the index alone")
     }
 
     static func merging() {

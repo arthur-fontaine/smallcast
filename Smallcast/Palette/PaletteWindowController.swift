@@ -283,6 +283,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Pop to Root Search: reset now, or after the delay unless a reopen consumes it. Something the
     /// user was in the middle of, dismissed rather than finished, always gets at least the grace.
     private func schedulePopToRoot(reason: PaletteHideReason) {
+        guard !core.extensions.isSigningIn else { return }
         popToRootTimer?.invalidate()
         // A sub-screen counts the same as typed text: both are work, and neither is finished.
         let workInProgress =
@@ -326,9 +327,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         popToRoot()
     }
 
-    /// True while a hidden palette still holds pre-close state; consuming cancels the reset.
+    /// True while a hidden palette keeps its screen: a reset is pending, or a sign-in holds it.
     func consumePreservedState() -> Bool {
-        guard let timer = popToRootTimer else { return false }
+        guard let timer = popToRootTimer else { return core.extensions.isSigningIn }
         timer.invalidate()
         popToRootTimer = nil
         queryWasPreserved = true
