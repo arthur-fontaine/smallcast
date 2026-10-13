@@ -58,6 +58,9 @@ final class FileSearchCoordinator {
         indexer.apply(policy)
         // DigUp indexes its own folders; what File Search may show is still File Search's to say.
         core.digUpState.apply(policy)
+        if session.digUp != nil {
+            session.digUp = core.digUpState.search(limit: DigUpSearchPolicy.panelLimit)
+        }
     }
 
     /// DigUp's service runs only while something can ask it: File Search on, Name and content.

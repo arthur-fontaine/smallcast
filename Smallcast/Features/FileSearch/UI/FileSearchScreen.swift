@@ -18,6 +18,10 @@ struct FileSearchScreen: PaletteScreen {
 
     private var needsAccess: Bool { indexer.status == .needsAccess }
 
+    private var digUpSearched: Bool {
+        session.digUp != nil && core.digUpState.isSetUp && !core.digUpState.serviceFailed
+    }
+
     /// ↵ on the access hint opens the one pane that can fix it.
     var actsWithoutRows: Bool { needsAccess }
 
@@ -161,7 +165,7 @@ struct FileSearchScreen: PaletteScreen {
         } else {
             EmptyResults(
                 text: vm.fileSearchFilter.emptyMessage,
-                detail: session.digUp == nil ? nil : "DigUp found nothing inside your files either.")
+                detail: digUpSearched ? "DigUp found nothing inside your files either." : nil)
         }
     }
 }
