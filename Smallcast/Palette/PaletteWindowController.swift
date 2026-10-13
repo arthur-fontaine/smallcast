@@ -624,14 +624,14 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             x: anchor.x, y: anchor.y - height, width: size.panelWidth, height: height)
         guard frame != frameTarget else { return }
         // The card, not the window: mid-fold the window still holds the height it is asked for.
-        let current = core.palette.surfaceGlassHeight ?? panel.frame.height
+        let current = core.palette.surfaceHeight ?? panel.frame.height
         guard animated, isVisible, animatesPresentation, current != height else {
             frameTarget = nil
             followShadow(false, of: panel)
             panel.setFrame(frame, display: true)
             var instant = Transaction()
             instant.disablesAnimations = true
-            withTransaction(instant) { setSurfaceHeight(height) }
+            withTransaction(instant) { core.palette.surfaceHeight = height }
             return
         }
         // A resizing window steps its frame a beat ahead of what it draws, so the card's edge shook.
@@ -645,18 +645,13 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         let motion = grows ? Theme.LiquidGlass.expand.delay(delay) : Theme.LiquidGlass.fold
         followShadow(true, of: panel)
         withAnimation(motion) {
-            core.palette.surfaceGlassHeight = height
+            core.palette.surfaceHeight = height
         } completion: { [weak self, weak panel] in
             guard let self, let panel, frameTarget == frame else { return }
             frameTarget = nil
             followShadow(false, of: panel)
             if !grows { panel.setFrame(frame, display: true) }
             panel.invalidateShadow()
-        }
-        // Folding, the rows are already the ones inside; only a growing card could outrun them.
-        let lag = grows ? Theme.LiquidGlass.glassLag : 0
-        withAnimation(grows ? Theme.LiquidGlass.expand.delay(delay + lag) : motion) {
-            core.palette.surfaceContentHeight = height
         }
     }
 
@@ -674,11 +669,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     @objc private func recutShadow() {
         panel?.invalidateShadow()
-    }
-
-    private func setSurfaceHeight(_ height: CGFloat) {
-        core.palette.surfaceGlassHeight = height
-        core.palette.surfaceContentHeight = height
     }
 
     /// The display to anchor to; never `NSScreen.main`, which follows the focused window.

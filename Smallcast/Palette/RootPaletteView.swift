@@ -365,8 +365,7 @@ struct RootPaletteView: View {
                         rail: SpotlightRail(
                             buttons: spotlightButtons, isRevealed: railRevealed,
                             activate: activateSpotlightButton),
-                        glassHeight: vm.surfaceGlassHeight,
-                        contentHeight: vm.surfaceContentHeight))),
+                        height: vm.surfaceHeight))),
             selection: sel)
     }
 
