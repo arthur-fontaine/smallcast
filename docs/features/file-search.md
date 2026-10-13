@@ -30,7 +30,8 @@ feature is enabled in Settings. The design follows [fsearch](https://github.com/
 - **A superseded query never publishes.** The session runs one search at a time, keeps only the newest
   pending request, and checks its revision before publishing.
 - **Names come from the index, contents from DigUp.** With the [Name and content engine](#engine),
-  DigUp's matches lead every list, from an index DigUp builds and owns; the filename index's follow.
+  DigUp's strong matches lead every list, from an index DigUp builds and owns, and never wait on it:
+  the names are on screen first.
 - **Share is the one system popover, and the palette stays up under it.** `AGENTS.md` keeps Smallcast's
   own dialogs because a question or a report is Smallcast's to word. A share sheet is neither: it is
   AirDrop, Mail and Messages, and re-drawing it would mean re-implementing the transports and losing
@@ -249,55 +250,88 @@ Files command and its hotkey, root search and its Show More row alike:
 | Find files by | Answers with |
 | --- | --- |
 | Name (default) | the filename index, as described above |
-| Name and content | [DigUp](https://github.com/ARahim3/DigUp)'s matches first, then the index's name matches it did not return |
+| Name and content | [DigUp](https://github.com/ARahim3/DigUp)'s strong matches, then the index's name matches, then DigUp's weaker ones |
 
 DigUp finds a file by what is in it — a photo by what it shows, a PDF by a clause, a recording by what
-is said — with an on-device embedding model. Smallcast embeds none of it: it runs the command-line
+is said — with an on-device embedding model. Smallcast embeds none of it: it talks to the command-line
 helper DigUp.app ships (`Contents/Helpers/digup`), so the model, the folders indexed and the index
 stay DigUp's.
 
 - **DigUp adds to the filename index, never replaces it.** DigUp reads only the folders and the kinds it
-  indexes — no folders, archives or apps — so `FileSearchSession` runs both and
-  `DigUpSearchPolicy.merged` keeps DigUp's order, then appends every name match DigUp did not return. A
-  failing helper still leaves the name search, the blank query still lists Recent, and the
-  Folders and Archives filters still answer.
+  indexes — no folders, archives or apps — so `FileSearchSession` runs both. A failing helper still
+  leaves the name search, the blank query still lists Recent, and the Folders and Archives filters
+  still answer.
+- **A long tail never buries a name.** A meaning search returns a hundred-odd hits, of which DigUp marks
+  the leading `strong` ones as standing out — its own panel folds the rest away. So
+  `DigUpSearchPolicy.merged` lists the strong hits, then every name match, then the weaker hits, each
+  file once.
+- **One search service, kept warm.** `DigUpSearchService` runs `digup search-service` (DigUp 0.6.1+)
+  once, on the first search, and keeps it: the index stays open and the query encoder loaded, so a
+  search costs DigUp 3–20 ms instead of the ~550 ms a `digup search` launch paid for every keystroke.
+  Requests and replies are JSON lines matched by `id`; a cancelled search resumes at once and its late
+  reply is dropped. Both lists share it through `DigUpState`, which starts it only while File Search
+  is on with Name and content chosen, and stops it otherwise. The service lets its encoder go after
+  five idle minutes, and leaves on EOF if Smallcast does.
+- **Names first, contents as they come.** Names cost milliseconds and are published the moment they
+  land — unless DigUp is still out, in which case they wait up to `contentGrace` (80 ms) so a warm
+  answer draws the list once. Opening the screen sends `prewarm`, so the model loads while the first
+  word is typed; with the encoder still cold, each query asks for keywords first (`meaning: false`,
+  the last word as a prefix) and then for meaning. When DigUp's rows land above names already shown,
+  `onRepublish` lets `FileSearchCoordinator` keep the selection on the same file — unless it was on
+  the first row, which then stays on the new first row.
+- **Loading says so, late.** While DigUp reads, the list's header shows "Searching contents" and,
+  with no name match at all, the screen says "Searching inside your files…" — both only after
+  `progressDelay` (300 ms), so a warm search never flashes them. Root search's Files header waits the
+  same way. An empty result says DigUp found nothing either.
+- **File Search's scopes bound DigUp's answers.** DigUp indexes the folders chosen in its own app;
+  `DigUpSearchPolicy.admits` then keeps a hit only under one of File Search's scopes and with no
+  ignored folder on its way down, as the crawl would have. The service itself is started on DigUp's
+  own `roots`, `excludedFolders` and `excludedTypes`, read from its defaults and never written, as
+  its app does. The section warns when none of DigUp's folders lies in a scope.
+- **Its index is reloaded when DigUp wrote it.** The service keeps vectors in memory, and DigUp's app
+  re-indexes on its own. Before the screen opens or root search's first letter, `DigUpState.prepare`
+  compares `index.sqlite` and its write-ahead log against the last modification seen and sends
+  `reload` when they moved.
 - **Choosing it is not having it.** Like Dictation's models, Name and content can be picked before
   DigUp is installed; the section then says DigUp is not installed, offers Get DigUp… and Check Again,
   and File Search keeps finding by name until `DigUpState` finds the helper. `DigUpLocator` takes the
   typed `fileSearchDigUpPath` (a build from source) first, else DigUp.app by bundle id, then in
   `/Applications` and `~/Applications`. The engine is carried by backups and `settings.json`
-  (`fileSearch.engine`); the path is machine state and is carried by neither.
+  (`fileSearch.engine`); the path is machine state and is carried by neither. A helper whose service
+  ends before it says `ready` — older than 0.6.1, or with no index yet — is not launched again until
+  the next refresh, and the section says DigUp couldn't start searching.
 - **Having it is not having set it up.** An installed DigUp has indexed nothing until its onboarding
   chose folders, which `DigUpLocator.isSetUp` reads from DigUp's defaults (`onboarded`, `roots`).
   Choosing Name and content then asks whether to open DigUp, and the section says it isn't set up and
   offers Open DigUp; it re-reads when Smallcast becomes active again. Smallcast never downloads the
   model or indexes a folder itself: DigUp keeps its index current only while it runs, so setting it up
   is DigUp's to do.
-- **In root search it takes the Search Files fallback's place.** With Name and content in effect and
-  the Search Files fallback offered and checked, `FallbackCoordinator.digUpReplacesSearchFiles` drops
-  that static row and `DigUpRootSection` adds up to `DigUpSearchPolicy.rootRowLimit` (5) files **after
-  every fallback**, then Show More Results, which runs `FileSearchCoordinator.show(query:)` like the
-  row it replaced. Unchecking Search Files in Settings ▸ Fallbacks hides both.
+- **In root search it takes the Search Files fallback's place.** With File Search on, Name and content
+  in effect and the Search Files fallback offered and checked,
+  `FallbackCoordinator.digUpReplacesSearchFiles` drops that static row and `DigUpRootSection` adds up
+  to `DigUpSearchPolicy.rootRowLimit` (5) files **after every fallback**, then Show More Results, which
+  runs `FileSearchCoordinator.show(query:)` like the row it replaced. It asks DigUp for
+  `rootRequestLimit` (40), since the scopes thin the answer. Unchecking Search Files in Settings ▸
+  Fallbacks hides both.
 - **Its rows are the tail of `LauncherScreen.rows`**, the only rows that arrive after the query does.
   Appended last, a late answer never moves a row the selection is already on; `fallbackRow(at:)`
   subtracts `DigUpRootSection.rowCount`, since the fallbacks are no longer the last rows.
 - **The engine is read at every entry.** `show(query:)` sets `FileSearchSession.digUp` from it each
   time, so a change in Settings applies to the next search without reaching into an open screen.
-  Root search keeps its own session, `AppCore.digUpPreview`, driven by `DigUpRootSearch`; the scopes
-  and ignore patterns apply to both.
-- **One helper run per query, and a newer query kills the older one.** `DigUpSearchRunner` runs
-  `digup search <words> -n N --json` through `InstalledAIProbe.run`, whose cancellation terminates the
-  process; the session cancels the running search as soon as a newer request lands.
-- **No paging.** DigUp returns only the files whose match stands out, so the screen asks once for up to
-  `DigUpSearchPolicy.panelLimit` (500). The type filter maps to `--kind`.
+  Root search keeps its own session, `AppCore.digUpPreview`, driven by `DigUpRootSearch`.
+- **No paging.** The screen asks once for up to `DigUpSearchPolicy.panelLimit` (500). The type filter
+  maps to the request's `kinds`.
 - **A moved index still answers.** DigUp keeps a moved index or model folder in its own defaults
   (`indexDir`, `modelsDir` in `com.abdurrahim.DigUp`), which its helper does not read; `DigUpLocator`
   passes them on as `--index` and `DIGUP_MODELS`.
-- **A result opens the file.** DigUp also knows the page or the moment that matched; opening there
-  (Preview's search, QuickTime's position) is not done yet.
+- **A result says why it matched.** A hit's `excerpt`, its matched words between « », rides on
+  `FileSearchResult.excerpt`, and the preview shows it above Information as Why It Matched. Opening at
+  the page or the moment that matched (Preview's search, QuickTime's position) is not done yet.
 
-`digup-test` covers the arguments, the decoding, the merge and the runner against a stub helper,
-including a stale run killed by a newer query and a failing helper that leaves the name matches.
+`digup-test` covers the requests, the decoding, the scopes, the fold and the excerpt, then runs a
+`/bin/sh` stand-in for the service: replies matched by id, a cancelled search's late reply dropped,
+a crash survived, an old helper marked unsupported, names published before a slow DigUp, a warm
+answer drawn once, and a cold encoder asked for keywords first.
 
 ## Invocation
 

@@ -68,6 +68,7 @@ struct LauncherList: View {
         case fallback(AppEntry, index: Int)
         case file(FileSearchResult, index: Int)
         case moreFiles
+        case filesHeader(isSearching: Bool, isEmpty: Bool)
         var id: String {
             switch self {
             case .header(let title): return "header-" + title
@@ -77,6 +78,7 @@ struct LauncherList: View {
             case .fallback(let app, _): return "fallback-" + app.id
             case .file(let result, _): return "file-" + result.id
             case .moreFiles: return "more-files"
+            case .filesHeader: return "header-Files"
             }
         }
     }
@@ -95,7 +97,8 @@ struct LauncherList: View {
 
     private var digUpRows: [Row] {
         guard let digUp else { return [] }
-        return [.header("Files")]
+        let section = digUp.section
+        return [.filesHeader(isSearching: section.isSearching, isEmpty: section.results.isEmpty)]
             + digUp.section.results.enumerated().map { Row.file($1, index: $0) }
             + (digUp.section.hasMore ? [.moreFiles] : [])
     }
@@ -162,6 +165,10 @@ struct LauncherList: View {
                                 switch row {
                                 case .header(let title):
                                     SectionHeader(title: title, isFirst: row.id == rows.first?.id)
+                                case .filesHeader(let isSearching, let isEmpty):
+                                    ContentSearchHeader(
+                                        title: "Files", isFirst: row.id == rows.first?.id,
+                                        isSearching: isSearching, waitsToAppear: isEmpty)
                                 case .fallbackHeader(let title):
                                     SectionHeader(
                                         title: title, isFirst: row.id == rows.first?.id,

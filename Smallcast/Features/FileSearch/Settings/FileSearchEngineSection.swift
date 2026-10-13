@@ -29,7 +29,7 @@ struct FileSearchEngineSection: View {
                         if state.availability == .notInstalled {
                             Button("Get DigUp…") { NSWorkspace.shared.open(DigUpLocator.downloadURL) }
                         }
-                        if state.helper != nil, !state.isSetUp {
+                        if state.helper != nil, !state.isSetUp || state.serviceFailed {
                             Button("Open DigUp") { core.fileSearchCoordinator.openDigUp() }
                         }
                     }
@@ -66,7 +66,9 @@ struct FileSearchEngineSection: View {
 
     private var statusTitle: String {
         switch state.availability {
-        case .found: return state.isSetUp ? "DigUp installed" : "DigUp isn’t set up"
+        case .found:
+            if !state.isSetUp { return "DigUp isn’t set up" }
+            return state.serviceFailed ? "DigUp couldn’t start searching" : "DigUp installed"
         case .notInstalled: return "DigUp not installed"
         case .missingCustomPath: return "DigUp helper not found"
         }
@@ -75,9 +77,17 @@ struct FileSearchEngineSection: View {
     private var statusDetail: String {
         switch state.availability {
         case .found:
-            return state.isSetUp
-                ? "Searches the folders you chose in DigUp."
-                : "Choose its folders in DigUp. Until then, File Search finds files by name."
+            guard state.isSetUp else {
+                return "Choose its folders in DigUp. Until then, File Search finds files by name."
+            }
+            if state.serviceFailed {
+                return "It needs DigUp 0.6.1 or later and a finished first index. Until then, File "
+                    + "Search finds files by name."
+            }
+            guard !state.folders.roots.isEmpty, state.reachableRoots.isEmpty else {
+                return "Searches inside the folders you chose in DigUp, as far as the scopes below reach."
+            }
+            return "None of DigUp’s folders is in the scopes below, so it finds nothing inside files."
         case .notInstalled: return "Until it is, File Search finds files by name."
         case .missingCustomPath(let path): return "Nothing that runs is at \(path)."
         }

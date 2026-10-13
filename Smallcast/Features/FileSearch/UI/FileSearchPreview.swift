@@ -15,6 +15,7 @@ struct FileSearchPreview: View {
                     .frame(maxWidth: .infinity)
                     .layoutPriority(1)
                 ScrollView {
+                    if let excerpt = result.excerpt { DigUpMatchSection(excerpt: excerpt) }
                     FileSearchInfoSection(result: result)
                 }
             }

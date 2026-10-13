@@ -38,6 +38,28 @@ enum DigUpLocator {
         return (defaults?.string(forKey: "indexDir"), defaults?.string(forKey: "modelsDir"))
     }
 
+    /// Read, never written: these are DigUp's settings, and its app is where they change.
+    static func folders() -> DigUpFolders {
+        let defaults = UserDefaults(suiteName: bundleIdentifier)
+        return DigUpFolders(
+            roots: defaults?.stringArray(forKey: "roots") ?? [],
+            skipped: defaults?.stringArray(forKey: "excludedFolders") ?? [],
+            types: defaults?.stringArray(forKey: "excludedTypes") ?? [])
+    }
+
+    /// When DigUp last wrote its index, so a searcher opened before that can reload it.
+    static func indexModified(indexDirectory: String?) -> Date? {
+        let directory =
+            indexDirectory.map { ($0 as NSString).expandingTildeInPath }
+            ?? FileManager.default.homeDirectoryForCurrentUser
+            .appending(path: "Library/Application Support/DigUp/index.noindex").path
+        // SQLite's write-ahead log changes on every commit; the database file only on a checkpoint.
+        return ["index.sqlite", "index.sqlite-wal"].compactMap { name in
+            try? FileManager.default.attributesOfItem(atPath: directory + "/" + name)[.modificationDate]
+                as? Date
+        }.max()
+    }
+
     /// DigUp's onboarding records its folders here; until then its index holds nothing to find.
     static func isSetUp() -> Bool {
         let defaults = UserDefaults(suiteName: bundleIdentifier)

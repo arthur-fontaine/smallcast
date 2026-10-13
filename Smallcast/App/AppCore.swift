@@ -300,7 +300,7 @@ final class AppCore {
             windowSwitchCoordinator.applyEnabled()
             menuSearchCoordinator.applyEnabled()
             fileSearchCoordinator.applyPolicy()
-            digUpState.refresh(customPath: settings.fileSearchDigUpPath)
+            fileSearchCoordinator.applyDigUp()
             notesCoordinator.applyEnabled()
             installedAI.launchSettings = { [aiSettings] in aiSettings.launch(for: $0) }
             chatGPTSubscription.launchSettings = { [aiSettings] in aiSettings.launch(for: .codex) }
@@ -678,8 +678,11 @@ final class AppCore {
             { _ = $0.clipboardTextSearchEnabled }, reproject: { $0.applyClipboardTextSearch() })
         track({ _ = $0.fileSearchEnabled }, reproject: { $0.fileSearchCoordinator.applyEnabled() })
         track(
-            { _ = $0.fileSearchDigUpPath },
-            reproject: { $0.digUpState.refresh(customPath: $0.settings.fileSearchDigUpPath) })
+            {
+                _ = $0.fileSearchEnabled
+                _ = $0.fileSearchEngine
+                _ = $0.fileSearchDigUpPath
+            }, reproject: { $0.fileSearchCoordinator.applyDigUp() })
         // Two features, one switch: each coordinator gates only its own command and mode.
         track(
             { _ = $0.navigationEnabled },

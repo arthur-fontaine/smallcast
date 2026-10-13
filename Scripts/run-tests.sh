@@ -120,7 +120,7 @@ run slow -O fuzz-test      $L/SearchRelevance.swift $L/ScriptRomanization.swift 
 FS=Smallcast/Features/FileSearch
 FILE_INDEX="$FS/Service/FileIndex.swift $FS/Service/FileIndexSnapshot.swift $FS/Service/FileIndexCrawler.swift"
 DIGUP="Smallcast/Platform/ExecutableLocator.swift Smallcast/Platform/ProcessExit.swift \
-       Smallcast/Features/AI/Service/InstalledAIProbe.swift $FS/Service/DigUpSearchRunner.swift"
+       $FS/Service/DigUpSearchService.swift"
 run file-search-test       $FS/Model/*.swift
 run file-index-test        $FS/Model/*.swift $FILE_INDEX
 run file-search-session-test $FS/Model/*.swift $FS/Service/FileSearchSession.swift $FILE_INDEX \
