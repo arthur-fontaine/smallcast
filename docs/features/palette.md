@@ -9,7 +9,9 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
   `sizingOptions = []` so SwiftUI never drives the window size — otherwise the hosting view resizes the
   panel to fit content and the top edge drifts on the compact↔expanded swap. A user drag is the one
   frame change that starts elsewhere, and `windowDidMove` folds it back into the anchor so the
-  controller stays the authority.
+  controller stays the authority. `sizingOptions = []` alone is not enough: a frame set just before
+  an animated SwiftUI update is replayed by the hosting view as that animation, from the old size.
+  Liquid Glass lays the window out right after growing it, before the card's spring starts.
 - **The flat `selection` index must match the visible row order exactly**, including the inline
   calculator card at index 0 when present. Selection is the single source of truth for highlight and
   activation. `Features/PaletteRowIndex.swift` is that mapping and stays **Foundation-only and pure** —

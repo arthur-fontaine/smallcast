@@ -358,14 +358,15 @@ struct RootPaletteView: View {
                         installHeaderArrowHandler(in: $0)
                     }
                 )
-                // The window's frame is the size source, so the glass and clip stay matched.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .modifier(
                     PaletteSurface(
                         isDimmed: core.isDimmingPaletteForDialog, presentation: vm.presentation,
                         rail: SpotlightRail(
                             buttons: spotlightButtons, isRevealed: railRevealed,
-                            activate: activateSpotlightButton)))),
+                            activate: activateSpotlightButton),
+                        glassHeight: vm.surfaceGlassHeight,
+                        contentHeight: vm.surfaceContentHeight))),
             selection: sel)
     }
 
