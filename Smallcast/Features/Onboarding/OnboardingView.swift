@@ -61,7 +61,7 @@ struct OnboardingView: View {
             VStack(spacing: Theme.Spacing.xs) {
                 Text(title)
                     .font(.title2.weight(.bold))
-                Text(subtitle)
+                subtitle
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -94,11 +94,11 @@ struct OnboardingView: View {
         }
     }
 
-    private var subtitle: String {
+    private var subtitle: Text {
         switch step {
-        case 0: "Set a shortcut to summon the launcher from anywhere."
-        case 1: "Let Smallcast paste items back into the app you were using."
-        case 2: "Bring your shortcuts, favorites, and clipboard history along."
+        case 0: Text("Set a shortcut to summon the launcher from anywhere.")
+        case 1: Text("Let Smallcast paste items back into the app you were using.")
+        case 2: Text("Bring your shortcuts, favorites, and clipboard history along.")
         default: readyMessage
         }
     }
@@ -119,11 +119,11 @@ struct OnboardingView: View {
         }
     }
 
-    private var readyMessage: String {
+    private var readyMessage: Text {
         if let caps = hotKeys.binding(for: .togglePalette)?.keycaps {
-            return "Press \(caps.joined()) anytime to start using Smallcast."
+            return Text("Press \(KeyCapChip.inlineText(caps)) anytime to start using Smallcast.")
         }
-        return "Smallcast is ready. Set a shortcut in Settings to summon it."
+        return Text("Smallcast is ready. Set a shortcut in Settings to summon it.")
     }
 
     // MARK: - Step content

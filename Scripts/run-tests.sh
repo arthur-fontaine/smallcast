@@ -117,31 +117,21 @@ L=Smallcast/Features/Launcher/Model
 run slow -O fuzz-test      $L/SearchRelevance.swift $L/ScriptRomanization.swift \
                            $L/LauncherMatch.swift $L/EntryNaming.swift $L/LauncherOrder.swift \
                            $L/LauncherRankingStore.swift $L/LauncherSuggestions.swift
-run file-search-test       $L/SearchRelevance.swift \
-                           Smallcast/Features/FileSearch/Model/*.swift
-run file-search-session-test Smallcast/Platform/Signposts.swift \
-                             $L/SearchRelevance.swift \
-                             Smallcast/Platform/ExecutableLocator.swift \
-                             Smallcast/Platform/ProcessExit.swift \
-                             Smallcast/Features/AI/Service/InstalledAIProbe.swift \
-                             Smallcast/Features/FileSearch/Model/*.swift \
-                             Smallcast/Features/FileSearch/Service/*.swift
-run digup-test             Smallcast/Platform/Signposts.swift \
-                           $L/SearchRelevance.swift \
-                           Smallcast/Platform/ExecutableLocator.swift \
-                           Smallcast/Platform/ProcessExit.swift \
-                           Smallcast/Features/AI/Service/InstalledAIProbe.swift \
-                           Smallcast/Features/FileSearch/Model/*.swift \
-                           Smallcast/Features/FileSearch/Service/*.swift
+FS=Smallcast/Features/FileSearch
+FILE_INDEX="$FS/Service/FileIndex.swift $FS/Service/FileIndexSnapshot.swift $FS/Service/FileIndexCrawler.swift"
+DIGUP="Smallcast/Platform/ExecutableLocator.swift Smallcast/Platform/ProcessExit.swift \
+       Smallcast/Features/AI/Service/InstalledAIProbe.swift $FS/Service/DigUpSearchRunner.swift"
+run file-search-test       $FS/Model/*.swift
+run file-index-test        $FS/Model/*.swift $FILE_INDEX
+run file-search-session-test $FS/Model/*.swift $FS/Service/FileSearchSession.swift $FILE_INDEX \
+                             $DIGUP
+run digup-test             $FS/Model/*.swift $FS/Service/FileSearchSession.swift $FILE_INDEX $DIGUP
 run menu-search-test       $L/SearchRelevance.swift \
                            Smallcast/Features/MenuSearch/Model/*.swift \
                            Smallcast/Features/MenuSearch/Service/*.swift
 run window-switch-test     $L/SearchRelevance.swift \
                            Smallcast/Features/WindowSwitcher/Model/*.swift
-run index file-search-performance Smallcast/Platform/Signposts.swift \
-                           $L/SearchRelevance.swift \
-                           Smallcast/Features/FileSearch/Model/*.swift \
-                           Smallcast/Features/FileSearch/Service/FileSearchService.swift
+run index file-search-performance $FS/Model/*.swift $FILE_INDEX
 run ranking-test           $L/SearchRelevance.swift $L/ScriptRomanization.swift \
                            $L/LauncherMatch.swift $L/LauncherRankingStore.swift
 run launch-history-test    $L/LaunchHistoryStore.swift
