@@ -26,6 +26,20 @@ final class FileSearchCoordinator {
         self.windowController = windowController
         self.core = core
         indexer.onIndexChanged = { [weak session] in session?.refresh() }
+        session.onRepublish = { [palette] old, new in
+            Self.keepSelection(on: palette, from: old, to: new)
+        }
+    }
+
+    /// DigUp's rows land above the names a moment later; the selection stays on the same file.
+    private static func keepSelection(
+        on palette: PaletteState, from old: [FileSearchResult], to new: [FileSearchResult]
+    ) {
+        guard palette.mode == .fileSearch, palette.selection > 0,
+            old.indices.contains(palette.selection),
+            let index = new.firstIndex(where: { $0.id == old[palette.selection].id })
+        else { return }
+        palette.selection = index
     }
 
     func applyEnabled() {
@@ -37,11 +51,20 @@ final class FileSearchCoordinator {
     }
 
     func applyPolicy() {
-        indexer.apply(
-            FileSearchPolicy(
-                scopes: settings.fileSearchScopes,
-                ignorePatterns: settings.fileSearchIgnorePatterns,
-                homeDirectory: FileManager.default.homeDirectoryForCurrentUser))
+        let policy = FileSearchPolicy(
+            scopes: settings.fileSearchScopes,
+            ignorePatterns: settings.fileSearchIgnorePatterns,
+            homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
+        indexer.apply(policy)
+        // DigUp indexes its own folders; what File Search may show is still File Search's to say.
+        core.digUpState.apply(policy)
+    }
+
+    /// DigUp's service runs only while something can ask it: File Search on, Name and content.
+    func applyDigUp() {
+        core.digUpState.setEnabled(
+            settings.fileSearchEnabled && settings.fileSearchEngine == .nameAndContent,
+            customPath: settings.fileSearchDigUpPath)
     }
 
     func rebuildIndex() {
@@ -57,11 +80,10 @@ final class FileSearchCoordinator {
     func show(query: String = "") {
         guard settings.fileSearchEnabled else { return }
         indexer.refreshAccess()
-        // Read at every entry: the engine changes in Settings while no screen is open.
+        // DigUp's folders and index change in its own app, so they are read again at every entry.
         core.digUpState.refresh(customPath: settings.fileSearchDigUpPath)
-        session.digUp = core.digUpState.runner(
-            limit: DigUpSearchPolicy.panelLimit,
-            enabled: settings.fileSearchEngine == .nameAndContent)
+        core.digUpState.prepare(prewarming: true)
+        session.digUp = core.digUpState.search(limit: DigUpSearchPolicy.panelLimit)
         paletteCoordinator.togglePalette(mode: .fileSearch, seeding: query.isEmpty ? nil : query)
     }
 

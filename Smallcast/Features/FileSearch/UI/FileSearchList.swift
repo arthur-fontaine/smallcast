@@ -5,6 +5,7 @@ struct FileSearchList: View {
     @Environment(\.metrics) private var metrics
     let title: String
     let results: [FileSearchResult]
+    var isSearchingContent = false
     let selectedID: FileSearchResult.ID?
     let scroll: ScrollIntent
     let onSelect: (FileSearchResult) -> Void
@@ -20,7 +21,7 @@ struct FileSearchList: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    SectionHeader(title: title, isFirst: true)
+                    ContentSearchHeader(title: title, isFirst: true, isSearching: isSearchingContent)
                     ForEach(results) { result in
                         FileSearchRow(result: result, selected: result.id == selectedID)
                             .selectionFrame(result.id == selectedID)

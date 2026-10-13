@@ -108,6 +108,7 @@ struct FileSearchScreen: PaletteScreen {
                 FileSearchList(
                     title: isShowingRecents ? "Recent" : "Results",
                     results: rows,
+                    isSearchingContent: session.isSearchingContent,
                     selectedID: selected?.id,
                     scroll: scroll,
                     onSelect: { result in vm.selection = rows.firstIndex(of: result) ?? 0 },
@@ -151,12 +152,16 @@ struct FileSearchScreen: PaletteScreen {
                 text: "Couldn’t build the file index",
                 detail: "Try Rebuild Index in Settings ▸ File Search.",
                 systemImage: "exclamationmark.triangle")
+        } else if session.isSearchingContent {
+            ContentSearchPlaceholder()
         } else if session.state != .ready {
             Color.clear
         } else if isShowingRecents {
             EmptyResults(text: "Type to search files and folders")
         } else {
-            EmptyResults(text: vm.fileSearchFilter.emptyMessage)
+            EmptyResults(
+                text: vm.fileSearchFilter.emptyMessage,
+                detail: session.digUp == nil ? nil : "DigUp found nothing inside your files either.")
         }
     }
 }

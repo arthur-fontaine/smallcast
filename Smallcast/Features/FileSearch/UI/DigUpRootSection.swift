@@ -4,6 +4,8 @@ import SwiftUI
 struct DigUpRootSection: Equatable {
     let results: [FileSearchResult]
     let hasMore: Bool
+    /// DigUp is still reading for this query, so more files may join the ones shown.
+    let isSearching: Bool
 
     /// Rows this section adds to the flat selection index, Show More included.
     var rowCount: Int { results.count + (hasMore ? 1 : 0) }
@@ -14,10 +16,13 @@ struct DigUpRootSection: Equatable {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty,
             core.fallbackCoordinator.digUpReplacesSearchFiles
         else { return nil }
-        let found = core.digUpPreview.results
-        guard !found.isEmpty else { return nil }
+        let preview = core.digUpPreview
+        let found = preview.results
+        guard !found.isEmpty || preview.isSearchingContent else { return nil }
         let limit = DigUpSearchPolicy.rootRowLimit
-        return DigUpRootSection(results: Array(found.prefix(limit)), hasMore: found.count > limit)
+        return DigUpRootSection(
+            results: Array(found.prefix(limit)), hasMore: found.count > limit,
+            isSearching: preview.isSearchingContent)
     }
 
     /// File Search's menu minus Quick Look and Trash, which only its own screen carries out.
@@ -77,18 +82,24 @@ struct DigUpRootSearch: ViewModifier {
 
     private struct Request: Equatable {
         let query: String
-        let runner: DigUpSearchRunner?
+        let search: DigUpSearch?
     }
 
     func body(content: Content) -> some View {
-        let runner = core.digUpState.runner(
-            limit: DigUpSearchPolicy.rootRowLimit + 1,
-            enabled: core.fallbackCoordinator.digUpReplacesSearchFiles)
+        let search =
+            core.fallbackCoordinator.digUpReplacesSearchFiles
+            ? core.digUpState.search(limit: DigUpSearchPolicy.rootRequestLimit) : nil
+        let isBlank = query.trimmingCharacters(in: .whitespaces).isEmpty
         return content
-            .task(id: Request(query: query, runner: runner)) {
+            .task(id: Request(query: query, search: search)) {
                 let preview = core.digUpPreview
-                preview.digUp = runner
-                if runner == nil { preview.cancel() } else { preview.search(query) }
+                preview.digUp = search
+                guard search != nil, !isBlank else { return preview.cancel() }
+                preview.search(query)
+            }
+            // The first letter typed is when to catch up with DigUp's indexing.
+            .onChange(of: isBlank) { _, blank in
+                if !blank, search != nil { core.digUpState.prepare(prewarming: false) }
             }
             .onDisappear { core.digUpPreview.cancel() }
     }
