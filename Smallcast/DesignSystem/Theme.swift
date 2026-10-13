@@ -371,8 +371,6 @@ enum Theme {
         /// The capsule growing into the results card: unhurried, and never past the window's edge.
         static let expand = Animation.spring(duration: 0.58, bounce: 0)
         static let fold = Animation.spring(duration: 0.36, bounce: 0)
-        /// A 60Hz frame: glass draws one behind the rows above it, which would hang past its edge.
-        static let glassLag: TimeInterval = 1.0 / 60
         static let fadeTiming = CAMediaTimingFunction(controlPoints: 0.42, 0, 0.58, 1)
         /// Between the capsule and its first button, and between buttons: Spotlight's 10pt.
         static let railGap: CGFloat = 10

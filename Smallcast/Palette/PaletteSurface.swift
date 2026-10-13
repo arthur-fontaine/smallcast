@@ -5,8 +5,7 @@ struct PaletteSurface: ViewModifier {
     let isDimmed: Bool
     let presentation: PalettePresentation
     var rail: SpotlightRail = .none
-    var glassHeight: CGFloat?
-    var contentHeight: CGFloat?
+    var height: CGFloat?
     @Environment(\.paletteTheme) private var theme
     @Environment(\.metrics) private var metrics
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -38,16 +37,14 @@ struct PaletteSurface: ViewModifier {
                         SpotlightRailGlass(rail: rail, geometry: geometry)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    // Handed the card's spring, glass re-runs it on each frame's size and falls behind.
-                    .transaction { $0.animation = nil }
                 }
                 // Glass casts a soft shadow; unclipped, the window's square corners show it as a tint.
                 .clipShape(shape)
                 .overlay(alignment: .topLeading) { SpotlightRailGlyphs(rail: rail, geometry: geometry) }
-                .frame(height: glassHeight, alignment: .top)
+                .modifier(SurfaceHeight(height: height))
                 // Narrowed with the capsule, so the field never runs under a button.
                 dimmable(content.frame(width: width))
-                    .frame(height: contentHeight, alignment: .top)
+                    .modifier(SurfaceHeight(height: height))
                     // Sized by that height, not the rows': squeezed, they overflow it.
                     .mask(alignment: .topLeading) {
                         shape
@@ -93,6 +90,20 @@ struct PaletteSurface: ViewModifier {
                 .easeOut(duration: isDimmed ? Theme.Duration.dialogEnter : Theme.Duration.dialogExit),
                 value: isDimmed
             )
+    }
+}
+
+/// Interpolated here, so the glass is handed a plain size each frame rather than the spring itself.
+private nonisolated struct SurfaceHeight: ViewModifier, Animatable {
+    var height: CGFloat?
+
+    var animatableData: CGFloat {
+        get { height ?? 0 }
+        set { height = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        content.frame(height: height, alignment: .top)
     }
 }
 
