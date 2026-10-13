@@ -34,6 +34,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private var popsToRootOnDeparture = false
     /// Where an animated resize is heading, so a second request for it never restarts it.
     private var frameTarget: NSRect?
+    /// Live while the card moves inside a still window, which never recuts its own shadow.
+    private var shadowLink: CADisplayLink?
     /// ⌘V: `Edit ▸ Paste` claims it before `sendEvent` whenever the board also carries text.
     private var pasteMonitor: Any?
     /// ⌘⎋: the window server claims it, so no keystroke is left for the responder chain to see.
@@ -621,46 +623,62 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         let frame = NSRect(
             x: anchor.x, y: anchor.y - height, width: size.panelWidth, height: height)
         guard frame != frameTarget else { return }
-        // Liquid Glass grows its capsule into the card; the top edge is still the one held.
-        guard animated, isVisible, animatesPresentation, panel.frame.size != frame.size else {
-            setFrameNow(frame, of: panel)
-            return
-        }
-        frameTarget = frame
-        guard delay > 0 else {
-            animateFrame(to: frame, of: panel)
-            return
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self, weak panel] in
-            guard let self, let panel, frameTarget == frame else { return }
-            animateFrame(to: frame, of: panel)
-        }
-    }
-
-    private func animateFrame(to frame: NSRect, of panel: NSPanel) {
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = Theme.LiquidGlass.resize
-            context.timingFunction = Theme.LiquidGlass.resizeTiming
-            panel.animator().setFrame(frame, display: true)
-        } completionHandler: { [weak self, weak panel] in
-            MainActor.assumeIsolated {
-                if self?.frameTarget == frame { self?.frameTarget = nil }
-                panel?.invalidateShadow()
-            }
-        }
-    }
-
-    /// Through the animator at zero duration, so an in-flight resize is replaced, not fought.
-    private func setFrameNow(_ frame: NSRect, of panel: NSPanel) {
-        guard frameTarget != nil else {
+        // The card, not the window: mid-fold the window still holds the height it is asked for.
+        let current = core.palette.surfaceGlassHeight ?? panel.frame.height
+        guard animated, isVisible, animatesPresentation, current != height else {
+            frameTarget = nil
+            followShadow(false, of: panel)
             panel.setFrame(frame, display: true)
+            var instant = Transaction()
+            instant.disablesAnimations = true
+            withTransaction(instant) { setSurfaceHeight(height) }
             return
         }
-        frameTarget = nil
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0
-            panel.animator().setFrame(frame, display: true)
+        // A resizing window steps its frame a beat ahead of what it draws, so the card's edge shook.
+        frameTarget = frame
+        let grows = height > current
+        if grows {
+            panel.setFrame(frame, display: true)
+            // Laid out later, the hosting view would replay the new size as the spring below.
+            panel.layoutIfNeeded()
         }
+        let motion = grows ? Theme.LiquidGlass.expand.delay(delay) : Theme.LiquidGlass.fold
+        followShadow(true, of: panel)
+        withAnimation(motion) {
+            core.palette.surfaceGlassHeight = height
+        } completion: { [weak self, weak panel] in
+            guard let self, let panel, frameTarget == frame else { return }
+            frameTarget = nil
+            followShadow(false, of: panel)
+            if !grows { panel.setFrame(frame, display: true) }
+            panel.invalidateShadow()
+        }
+        // Folding, the rows are already the ones inside; only a growing card could outrun them.
+        let lag = grows ? Theme.LiquidGlass.glassLag : 0
+        withAnimation(grows ? Theme.LiquidGlass.expand.delay(delay + lag) : motion) {
+            core.palette.surfaceContentHeight = height
+        }
+    }
+
+    private func followShadow(_ follows: Bool, of panel: NSPanel) {
+        guard follows else {
+            shadowLink?.invalidate()
+            shadowLink = nil
+            return
+        }
+        guard shadowLink == nil, let view = panel.contentView else { return }
+        let link = view.displayLink(target: self, selector: #selector(recutShadow))
+        link.add(to: .main, forMode: .common)
+        shadowLink = link
+    }
+
+    @objc private func recutShadow() {
+        panel?.invalidateShadow()
+    }
+
+    private func setSurfaceHeight(_ height: CGFloat) {
+        core.palette.surfaceGlassHeight = height
+        core.palette.surfaceContentHeight = height
     }
 
     /// The display to anchor to; never `NSScreen.main`, which follows the focused window.

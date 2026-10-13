@@ -42,6 +42,10 @@ final class PaletteState {
     private(set) var isVisible = false
     /// Driven by `PaletteWindowController`, which also owns the window alpha that rides with it.
     var presentation: PalettePresentation = .shown
+    /// Liquid Glass's card inside a window already at its larger size; nil fills the window.
+    var surfaceGlassHeight: CGFloat?
+    /// Trails `surfaceGlassHeight` by a frame, as the glass draws a frame behind the rows on it.
+    var surfaceContentHeight: CGFloat?
     /// Changes every time the palette is shown so the search field can re-focus.
     var focusToken = UUID()
     /// Bumped when a screen opens fresh, so its list lands again even when nothing else changed.

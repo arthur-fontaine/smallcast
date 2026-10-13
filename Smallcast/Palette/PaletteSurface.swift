@@ -5,6 +5,8 @@ struct PaletteSurface: ViewModifier {
     let isDimmed: Bool
     let presentation: PalettePresentation
     var rail: SpotlightRail = .none
+    var glassHeight: CGFloat?
+    var contentHeight: CGFloat?
     @Environment(\.paletteTheme) private var theme
     @Environment(\.metrics) private var metrics
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -23,24 +25,30 @@ struct PaletteSurface: ViewModifier {
             let shape = PaletteSurface.liquidGlassShape(metrics)
             let geometry = SpotlightRailGeometry(metrics: metrics, count: rail.buttons.count)
             let width = geometry.capsuleWidth(revealed: rail.isRevealed)
-            // One container, or the buttons could never bead off the capsule they come out of.
-            GlassEffectContainer(spacing: metrics.scaled(Theme.LiquidGlass.railBlend)) {
-                ZStack(alignment: .topLeading) {
-                    // Only the glass rides the spring: on the content, it animated every change.
-                    shape.fill(Theme.Colors.glassScrim)
-                        .frame(width: width)
-                        .frame(maxHeight: .infinity)
-                        .glassEffect(.regular, in: shape)
-                        .animation(capsuleMotion, value: rail.isRevealed)
-                    SpotlightRailGlass(rail: rail, geometry: geometry)
+            ZStack(alignment: .topLeading) {
+                // One container, or the buttons could never bead off the capsule they come out of.
+                GlassEffectContainer(spacing: metrics.scaled(Theme.LiquidGlass.railBlend)) {
+                    ZStack(alignment: .topLeading) {
+                        // Only the glass rides the spring: on the content, it animated every change.
+                        shape.fill(Theme.Colors.glassScrim)
+                            .frame(width: width)
+                            .frame(maxHeight: .infinity)
+                            .glassEffect(.regular, in: shape)
+                            .animation(capsuleMotion, value: rail.isRevealed)
+                        SpotlightRailGlass(rail: rail, geometry: geometry)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    // Handed the card's spring, glass re-runs it on each frame's size and falls behind.
+                    .transaction { $0.animation = nil }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            }
-            // Glass casts a soft shadow; unclipped, the window's square corners show it as a tint.
-            .clipShape(shape)
-            .overlay(alignment: .topLeading) {
+                // Glass casts a soft shadow; unclipped, the window's square corners show it as a tint.
+                .clipShape(shape)
+                .overlay(alignment: .topLeading) { SpotlightRailGlyphs(rail: rail, geometry: geometry) }
+                .frame(height: glassHeight, alignment: .top)
                 // Narrowed with the capsule, so the field never runs under a button.
                 dimmable(content.frame(width: width))
+                    .frame(height: contentHeight, alignment: .top)
+                    // Sized by that height, not the rows': squeezed, they overflow it.
                     .mask(alignment: .topLeading) {
                         shape
                             .frame(width: width)
@@ -48,7 +56,7 @@ struct PaletteSurface: ViewModifier {
                             .animation(capsuleMotion, value: rail.isRevealed)
                     }
             }
-            .overlay(alignment: .topLeading) { SpotlightRailGlyphs(rail: rail, geometry: geometry) }
+            .frame(maxHeight: .infinity, alignment: .top)
             .scaleEffect(x: presentationScale, y: 1)
         }
     }

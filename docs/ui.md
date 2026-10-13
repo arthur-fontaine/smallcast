@@ -408,12 +408,23 @@ Liquid Glass differs in five places, each measured against Spotlight:
     the bar fades whole. A pop to root asked for mid-fade, such as Escape out of a hotkey-opened
     screen, is deferred until the panel is gone, since resetting first repaints the fading panel as
     the root search and snaps it to the bar's height.
-  - **Resize.** Compact to expanded is an animated frame change, so the capsule grows into the card
-    with the top edge held. It also runs on a re-show that changes height: opening a screen from a
-    hotkey while the bar is up grows the card instead of jumping. With the bar's buttons out, the
-    expand waits `expandDelay` (0.1s) for them to fuse back, so the card grows at full width. The
-    controller keeps the animation's target, so a second request for the same frame never restarts
-    it. A different one replaces it through the animator, never a bare `setFrame` it would fight.
+  - **Resize.** The window never animates its frame. A resizing window moves its frame a beat ahead
+    of what it draws, so the card's edge shook and the first step jumped most of the way. Growing,
+    the window takes its full height at once and the card grows inside it on `expand`, a 0.58s
+    spring with no bounce. Folding, the card shrinks on `fold`, 0.36s, and the window follows when
+    the spring lands. The card's height lives on `PaletteState` as two values: the glass's, and
+    the content's, which starts `glassLag` (one 60Hz frame) later. Glass draws a frame behind the
+    rows above it, so rows on the same spring would hang past its edge. The glass layer also drops
+    any inherited animation. Handed the card's spring, it re-runs it on every frame's size and falls
+    further behind. It also runs on a re-show that changes height: opening a screen from a hotkey
+    while the bar is up grows the card instead of jumping. With the bar's buttons out, the expand
+    waits `expandDelay` (0.1s) for them to fuse back, so the card grows at full width. The
+    controller keeps the target, so a second request for the same height never restarts it. While
+    the card moves, a display link recuts the window's shadow, which a still window never does.
+  - **The glass's thickness.** Liquid Glass thickens with its size, so the compact capsule is clear
+    and the card is frosted, and the system switches between the two around 70pt. The card passes
+    that height early when growing and late when folding. The look cannot be pinned short of
+    drawing the bar as a slice of the larger glass, which loses its clear look and lower rim.
   - **What rides the capsule's spring.** Only the glass fill and the content's mask. The content
     itself never takes an implicit animation. Put on the content, the spring animated every change
     made in the same transaction: the header's own height, the screen swap, the list arriving.
