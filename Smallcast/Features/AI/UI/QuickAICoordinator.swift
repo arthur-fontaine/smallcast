@@ -47,6 +47,14 @@ final class QuickAICoordinator {
         send(prompt)
     }
 
+    /// The App Launcher chord held: dictate a question, asked as soon as it is transcribed.
+    func listenForQuestion() {
+        guard settings.aiEnabled else { return }
+        let started = core.dictationCoordinator.listen(handingOffTo: { [weak self] in self?.ask($0) })
+        // The capsule takes key on show, which would dismiss the palette under it anyway.
+        if started { paletteCoordinator.hidePalette(reason: .dismissed) }
+    }
+
     /// Off leaves the screen too, so the palette never shows a feature that is gone.
     func leave() {
         if palette.mode == .ai || palette.mode == .aiHistory { palette.prepare(mode: .launcher) }

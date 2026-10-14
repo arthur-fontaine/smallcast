@@ -22,6 +22,13 @@ final class HotKeyManager {
             syncModifierTaps()
         }
     }
+    var onLauncherHeld: (() -> Void)?
+    var onLauncherHoldReleased: (() -> Void)?
+    var onLauncherHoldCancelled: (() -> Void)?
+    /// Off, the App Launcher chord toggles on every press exactly as it always has.
+    var launcherHoldEnabled = false {
+        didSet { if !launcherHoldEnabled { cancelLauncherHold() } }
+    }
     /// The launcher's own command funnel, so a shortcut and a palette row run the same thing.
     var onRunCommand: ((CommandID) -> Void)?
     var onRunCustomCommand: ((UUID) -> Void)?
@@ -46,6 +53,7 @@ final class HotKeyManager {
             guard recordingAction != oldValue else { return }
             let recording = recordingAction != nil
             if recording, dictationEnabled, dictationHoldToTalk { onDictationCancelled?() }
+            if recording { cancelLauncherHold() }
             if recording { secureInputPressedActions.removeAll(keepingCapacity: true) }
             center.isPaused = recording
             modifierTapMonitor.isPaused = recording
@@ -71,6 +79,13 @@ final class HotKeyManager {
     private var secureInputReplacedActions: [HotKeyAction] = []
     private var secureInputPressedActions: [String: HotKeyAction] = [:]
     private var secureInputHint: KeyShortcut?
+    private enum LauncherKey { case up, pressed, held }
+    @ObservationIgnored private var launcherKey = LauncherKey.up
+    @ObservationIgnored private var launcherHoldTask: Task<Void, Never>?
+    @ObservationIgnored private var launcherLastPress = ContinuousClock.now
+    private static let launcherHoldDelay = Duration.milliseconds(400)
+    /// Longer than macOS's slowest key repeat, so a wider gap means the release was lost.
+    private static let launcherRepeatGap = Duration.seconds(2)
     private static let secureInputHintID = "secureInputHint"
     /// Every binding, loaded once in `start()` and written through on change.
     private var bindings: [HotKeyAction: HotKeyBinding] = [:]
@@ -197,6 +212,7 @@ final class HotKeyManager {
     /// Persists or clears the binding and swaps live registration.
     func setBinding(_ binding: HotKeyBinding?, for action: HotKeyAction) {
         if action == .dictation, binding != self.binding(for: action) { onDictationCancelled?() }
+        if action == .togglePalette { cancelLauncherHold() }
         let previous = bindings[action]
         clearSecureInputEquivalents()
         if let binding,
@@ -293,12 +309,12 @@ final class HotKeyManager {
                         secureInputPressedActions[id] =
                             ModifierKey.rightControl.isHeld(in: flags) ? action : original
                     }
-                    if let selected = secureInputPressedActions[id] { perform(selected) }
+                    if let selected = secureInputPressedActions[id] { keyDown(selected) }
                 },
                 onKeyUp: { [weak self] in
                     isPressed = false
-                    if self?.secureInputPressedActions.removeValue(forKey: id) == .dictation {
-                        self?.onDictationReleased?()
+                    if let released = self?.secureInputPressedActions.removeValue(forKey: id) {
+                        self?.keyUp(released)
                     }
                 })
             secureInputEquivalentIDs.append(id)
@@ -307,6 +323,7 @@ final class HotKeyManager {
 
     private func clearSecureInputEquivalents() {
         if secureInputPressedActions.values.contains(.dictation) { onDictationCancelled?() }
+        if secureInputPressedActions.values.contains(.togglePalette) { cancelLauncherHold() }
         secureInputPressedActions.removeAll(keepingCapacity: true)
         secureInputEquivalentIDs.forEach { center.unregister(id: $0) }
         secureInputEquivalentIDs.removeAll(keepingCapacity: true)
@@ -403,8 +420,54 @@ final class HotKeyManager {
         guard let shortcut = binding(for: action)?.shortcut else { return }
         center.register(
             id: action.defaultsKey, shortcut: shortcut,
-            onKeyDown: { [weak self] _ in self?.perform(action) },
-            onKeyUp: action == .dictation ? { [weak self] in self?.onDictationReleased?() } : nil)
+            onKeyDown: { [weak self] _ in self?.keyDown(action) },
+            onKeyUp: action == .dictation || action == .togglePalette
+                ? { [weak self] in self?.keyUp(action) } : nil)
+    }
+
+    private func keyDown(_ action: HotKeyAction) {
+        guard action == .togglePalette, launcherHoldEnabled else {
+            perform(action)
+            return
+        }
+        let now = ContinuousClock.now
+        defer { launcherLastPress = now }
+        if launcherKey != .up, now - launcherLastPress > Self.launcherRepeatGap { cancelLauncherHold() }
+        // Carbon repeats a held chord's press; only the first one may toggle.
+        guard launcherKey == .up else { return }
+        perform(action)
+        launcherKey = .pressed
+        launcherHoldTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.launcherHoldDelay)
+            guard let self, !Task.isCancelled, launcherKey == .pressed else { return }
+            launcherKey = .held
+            onLauncherHeld?()
+        }
+    }
+
+    private func keyUp(_ action: HotKeyAction) {
+        switch action {
+        case .dictation:
+            onDictationReleased?()
+        case .togglePalette:
+            let wasHeld = launcherKey == .held
+            resetLauncherKey()
+            if wasHeld { onLauncherHoldReleased?() }
+        default:
+            break
+        }
+    }
+
+    private func cancelLauncherHold() {
+        let wasHeld = launcherKey == .held
+        resetLauncherKey()
+        if wasHeld { onLauncherHoldCancelled?() }
+    }
+
+    private func resetLauncherKey() {
+        launcherHoldTask?.cancel()
+        launcherHoldTask = nil
+        launcherKey = .up
     }
 
     /// Rebuilt wholesale, so the map can't drift from what is on disk.

@@ -370,9 +370,17 @@ final class AppCore {
             hotKeys.onTogglePalette = { [weak self] in self?.paletteCoordinator.togglePalette() }
             hotKeys.dictationEnabled = settings.dictationEnabled
             hotKeys.dictationHoldToTalk = settings.dictationMode == .pushToTalk
+            hotKeys.launcherHoldEnabled = launcherHoldAsksAI
             hotKeys.onDictationPressed = { [weak self] in self?.dictationCoordinator.pressed() }
             hotKeys.onDictationReleased = { [weak self] in self?.dictationCoordinator.released() }
             hotKeys.onDictationCancelled = { [weak self] in self?.dictationCoordinator.cancel() }
+            hotKeys.onLauncherHeld = { [weak self] in self?.quickAICoordinator.listenForQuestion() }
+            hotKeys.onLauncherHoldReleased = { [weak self] in
+                self?.dictationCoordinator.releaseHandoff()
+            }
+            hotKeys.onLauncherHoldCancelled = { [weak self] in
+                self?.dictationCoordinator.cancelHandoff()
+            }
             hotKeys.onRunCommand = { [weak self] id in self?.launcherCoordinator.runCommand(id) }
             hotKeys.onRunCustomCommand = { [weak self] id in
                 self?.customCommandCoordinator.runCustomCommand(id: id)
@@ -701,10 +709,13 @@ final class AppCore {
             {
                 _ = $0.dictationEnabled
                 _ = $0.dictationMode
+                _ = $0.dictationHoldLauncherAsksAI
+                _ = $0.aiEnabled
             },
             reproject: {
                 $0.hotKeys.dictationHoldToTalk = $0.settings.dictationMode == .pushToTalk
                 $0.hotKeys.dictationEnabled = $0.settings.dictationEnabled
+                $0.hotKeys.launcherHoldEnabled = $0.launcherHoldAsksAI
             })
         track(
             {
@@ -809,6 +820,10 @@ final class AppCore {
         defer { chatsRunTheirOwnTools = runsOwnTools }
         guard let previous = chatsRunTheirOwnTools, previous != runsOwnTools else { return }
         mcpCoordinator.applyEnabled()
+    }
+
+    private var launcherHoldAsksAI: Bool {
+        settings.dictationHoldLauncherAsksAI && settings.dictationEnabled && settings.aiEnabled
     }
 
     /// Without a Hyper key the chord means nothing, so a literal ⌃⌥⌘ combo is left as recorded.

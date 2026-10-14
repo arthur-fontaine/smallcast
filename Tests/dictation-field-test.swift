@@ -12,6 +12,8 @@ struct DictationFieldTest {
         try await testWindowClose()
         try await testQueuedCancellation(closing: false)
         try await testQueuedCancellation(closing: true)
+        try await testHandoff()
+        try await testHandoffScope()
         print("ALL PASSED")
     }
 
@@ -126,6 +128,49 @@ struct DictationFieldTest {
         expect(first.text == "First draft", "Queued speech cannot write into its canceled draft")
         expect(state.chat.text == (closing ? "First draft" : "New chat"), "Queued speech cannot cross chats")
         expect(fixture.messages.isEmpty, "Discarding queued speech is silent")
+    }
+
+    private static func testHandoff() async throws {
+        for releasesWhileStarting in [false, true] {
+            let fixture = Fixture()
+            let copies = Paster.copies.count
+            var questions: [String] = []
+            let started = fixture.coordinator.listen(handingOffTo: { questions.append($0) })
+            expect(started, "A hold reports that it started listening")
+            if !releasesWhileStarting { try await wait { fixture.panel.isVisible } }
+            fixture.coordinator.releaseHandoff()
+            try await wait { fixture.models.pending != nil }
+            fixture.models.finish("  What time is it in Tokyo?  ")
+            try await wait { !questions.isEmpty }
+            expect(questions == ["What time is it in Tokyo?"], "A hold hands its trimmed transcript off")
+            expect(Paster.copies.count == copies, "A handoff never touches the clipboard")
+            expect(!fixture.panel.isVisible, "The capsule closes once the question is handed off")
+        }
+
+        let fixture = Fixture()
+        var questions: [String] = []
+        fixture.coordinator.listen(handingOffTo: { questions.append($0) })
+        try await wait { fixture.capture.isRecording }
+        fixture.coordinator.cancelHandoff()
+        try await wait { !fixture.capture.isRecording }
+        expect(fixture.models.pending == nil, "A cancelled hold is never transcribed")
+        expect(questions.isEmpty, "A cancelled hold asks nothing")
+    }
+
+    private static func testHandoffScope() async throws {
+        let fixture = Fixture()
+        let editor = ComposerTextView()
+        try await fixture.start(into: editor)
+        var questions: [String] = []
+        let started = fixture.coordinator.listen(handingOffTo: { questions.append($0) })
+        expect(!started, "A refused hold reports that it never started")
+        fixture.coordinator.releaseHandoff()
+        fixture.coordinator.cancelHandoff()
+        expect(fixture.capture.isRecording, "The launcher's chord cannot end a field's session")
+        expect(fixture.coordinator.field != nil, "A hold cannot take over a running session")
+        fixture.coordinator.cancel(in: editor)
+        try await wait { !fixture.capture.isRecording }
+        expect(questions.isEmpty, "A refused hold never hands anything off")
     }
 
     private static func wait(until condition: () -> Bool) async throws {

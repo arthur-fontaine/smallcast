@@ -23,6 +23,8 @@ final class DictationCoordinator {
     @ObservationIgnored private var stopTask: Task<Void, Never>?
     @ObservationIgnored private var finishWhenStarted = false
     @ObservationIgnored private var target: InjectionTarget?
+    /// Receives the transcript in place of any field or the clipboard; nil for an insertion.
+    @ObservationIgnored private var handoff: ((String) -> Void)?
     /// The field a mic button is dictating into; nil for a shortcut's session.
     private(set) var field: DictationField?
 
@@ -122,6 +124,26 @@ final class DictationCoordinator {
         begin(target: .ownEditor(editor))
     }
 
+    /// Held rather than toggled whatever the mode setting: `releaseHandoff()` is what finishes it.
+    @discardableResult
+    func listen(handingOffTo handoff: @escaping (String) -> Void) -> Bool {
+        guard settings.dictationEnabled, phase == .idle else { return false }
+        self.handoff = handoff
+        begin(target: nil)
+        return phase != .idle
+    }
+
+    /// Scoped like `cancel(in:)`: the launcher's chord must not end a shortcut's own session.
+    func releaseHandoff() {
+        guard handoff != nil else { return }
+        finish()
+    }
+
+    func cancelHandoff() {
+        guard handoff != nil else { return }
+        cancel()
+    }
+
     private func finish() {
         if phase == .starting {
             finishWhenStarted = true
@@ -133,6 +155,7 @@ final class DictationCoordinator {
     private func begin(target: InjectionTarget?) {
         guard models.isInstalled(settings.dictationModel) else {
             field = nil
+            handoff = nil
             showMessage("Download the dictation model in Settings first", .danger)
             return
         }
@@ -190,6 +213,12 @@ final class DictationCoordinator {
                     samples, model: model,
                     language: language)
                 guard token == current else { return }
+                if let handoff {
+                    let text = DictationTextFormatter.format(transcript, context: nil)
+                    reset(cancelTranscription: false)
+                    if !text.isEmpty { handoff(text) }
+                    return
+                }
                 // A mic belongs to its field: the text goes in there, never to the clipboard.
                 let destination = field == nil ? settings.dictationDestination : .paste
                 let context = destination.pastes ? DictationInsertionContext.read(in: target) : nil
@@ -264,6 +293,7 @@ final class DictationCoordinator {
         phase = .idle
         target = nil
         field = nil
+        handoff = nil
         panel.close()
         audioDucker.end()
     }

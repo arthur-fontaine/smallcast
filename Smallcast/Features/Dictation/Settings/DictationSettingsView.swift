@@ -71,6 +71,13 @@ struct DictationSettingsView: View {
                         .font(.caption)
                         .foregroundStyle(issue == nil ? Color.secondary : Color.orange)
                     }
+                    Toggle(isOn: $settings.dictationHoldLauncherAsksAI) {
+                        SettingsRowTitle(.dictationCommands, "Hold App Launcher shortcut to ask AI")
+                        Text(
+                            settings.aiEnabled
+                                ? "Keep holding it while you speak; release to send your question to AI."
+                                : "Turn on AI to use this.")
+                    }
                 } header: {
                     SettingsSectionHeader(.dictationCommands)
                 }

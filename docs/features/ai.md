@@ -242,8 +242,8 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   asked for — and the transcript is saved regardless, so the old conversation is one ⌘K → Chat
   History away, and in the window's sidebar. The window has no policy: it reopens on whatever it
   last showed.
-- **Arriving with a question skips the open policy entirely.** `ask(_:)` — ⇥ from the launcher, and
-  the Quick AI fallback row — always starts a new chat and submits the text, because a question asked
+- **Arriving with a question skips the open policy entirely.** `ask(_:)` — ⇥ from the launcher,
+  the Quick AI fallback row and a question dictated by holding the App Launcher chord — always starts a new chat and submits the text, because a question asked
   outright is not a summon: resuming a transcript to append an unrelated line to it would be the one
   reading of `Quick AI opens to` nobody wants. It is `showPalette(mode: .ai)` and `send`, never
   `show`.
