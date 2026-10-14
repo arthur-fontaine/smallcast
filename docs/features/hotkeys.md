@@ -6,7 +6,7 @@
 - `HotKeyBinding` — what an action is bound to: `.combo(KeyShortcut)`,
   `.doubleTap(DoubleTapModifier)`, sided `.modifier` / `.doubleModifier`, `.globe`, or `.doubleGlobe`.
 - `HotKeyCenter` — the Carbon `RegisterEventHotKey` layer, pausable.
-- Dictation alone also observes Carbon's key-release event for hold-to-talk.
+- Dictation and the App Launcher chord also observe Carbon's key-release event, for holds.
 - `DoubleTapModifier` / `DoubleTapDetector` — the double-tap recognizer.
 - `ModifierKey` / `ModifierKeyDetector` — reported sides, lone presses, taps and holds.
 - `ModifierTapMonitor` — the shared modifier-only tap, including Dictation's hold/release callbacks.
@@ -142,6 +142,14 @@ starts after 250 ms held alone, so ordinary modifier+key chords do not briefly s
 key, modifier or mouse click cancels a pending or active hold; Return and Escape belong to the dictation
 panel while listening. Release finishes the recording. Pausing, rebinding, disabling Dictation,
 session changes and tap teardown cancel any hold. Double-tap bindings require toggle mode.
+
+Holding the App Launcher chord asks AI by voice when Dictation, AI and Settings → Dictation's
+“Hold App Launcher shortcut to ask AI” are all on. The press still toggles the palette at once, so a
+tap costs nothing. Carbon repeats a held chord's press, so only the first press toggles until release; a press more
+than 2 s after the last one is a new press, since a lost release would otherwise jam the chord.
+After 400 ms still held, `onLauncherHeld` fires and the release finishes the recording.
+Pausing for a recorder, rebinding the chord or turning the feature off cancels it. A modifier-only
+App Launcher binding has no release, so it cannot hold.
 
 ## Double-tap modifiers
 

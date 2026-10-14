@@ -359,6 +359,7 @@ enum SettingsSearchCatalog {
         .init(.dictationDictation, "Enable Dictation"),
         .init(.dictationCommands, "Shortcut behavior"),
         .init(.dictationCommands, "Shortcut"),
+        .init(.dictationCommands, "Hold App Launcher shortcut to ask AI", keywords: ["voice", "chat"]),
         .init(.dictationModel, "Model"),
         .init(.dictationModel, "Engine", keywords: ["parakeet", "redux", "ultra", "qwen"]),
         .init(.dictationModel, "Language"),

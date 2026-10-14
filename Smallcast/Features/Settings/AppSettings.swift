@@ -384,6 +384,13 @@ final class AppSettings {
         }
     }
 
+    /// Holding the App Launcher chord dictates a question to Quick AI instead.
+    var dictationHoldLauncherAsksAI: Bool {
+        didSet {
+            defaults.set(dictationHoldLauncherAsksAI, forKey: Key.dictationHoldLauncherAsksAI.rawValue)
+        }
+    }
+
     var dictationIdleRelease: DictationIdleRelease {
         didSet { defaults.set(dictationIdleRelease.rawValue, forKey: Key.dictationIdleRelease.rawValue) }
     }
@@ -787,6 +794,9 @@ final class AppSettings {
         dictationAdaptsCapitalization =
             defaults.object(forKey: Key.dictationAdaptsCapitalization.rawValue) == nil
             || defaults.bool(forKey: Key.dictationAdaptsCapitalization.rawValue)
+        dictationHoldLauncherAsksAI =
+            defaults.object(forKey: Key.dictationHoldLauncherAsksAI.rawValue) == nil
+            || defaults.bool(forKey: Key.dictationHoldLauncherAsksAI.rawValue)
         dictationIdleRelease =
             defaults.object(forKey: Key.dictationIdleRelease.rawValue)
             .flatMap { $0 as? Int }
