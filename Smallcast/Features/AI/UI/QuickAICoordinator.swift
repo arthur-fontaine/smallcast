@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 /// The palette's AI screen: summoning, the open policy, and handing a chat on to the window.
 @MainActor
@@ -50,11 +50,38 @@ final class QuickAICoordinator {
     /// The App Launcher chord held: Quick AI listens at once, and asks when the words are in.
     func listenForQuestion() {
         guard settings.aiEnabled else { return }
+        // Read before listening, which is what sends the bar's buttons back into it.
+        let fuses =
+            paletteCoordinator.spotlightButtonsAreOut
+            && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         guard core.dictationCoordinator.listen(handingOffTo: { [weak self] in self?.answer($0) })
         else { return }
+        guard fuses else { return openForQuestion() }
+        // Recording starts now; only the bar waits, for the buttons still coming out to land.
+        palette.holdsVoiceQuestion = true
+        Task { [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(until: paletteCoordinator.spotlightButtonsLandAt, clock: .continuous)
+            palette.holdsVoiceQuestion = false
+            guard paletteCoordinator.isAskingByVoice() else { return }
+            try? await Task.sleep(for: .seconds(paletteCoordinator.spotlightButtonsFuseDuration))
+            // Answered, abandoned or dismissed while the buttons went home: nothing is left to open.
+            guard paletteCoordinator.isAskingByVoice(), paletteCoordinator.isVisible,
+                palette.mode == .launcher
+            else { return }
+            openForQuestion()
+        }
+    }
+
+    /// Also reopens a palette the press closed. Compact, it stays a bar until the words are in.
+    private func openForQuestion() {
         chat.startNewChat()
-        // Also reopens a palette the press closed. Compact, it stays a bar until the words are in.
-        paletteCoordinator.showPalette(mode: .ai)
+        // Not `showPalette` on a palette already up: showing it again cut the buttons' fuse short.
+        if paletteCoordinator.isVisible {
+            paletteCoordinator.navigate(to: .ai)
+        } else {
+            paletteCoordinator.showPalette(mode: .ai)
+        }
     }
 
     private func answer(_ question: String?) {

@@ -41,7 +41,13 @@ final class PaletteState {
     /// Ordering out leaves the SwiftUI tree mounted, so a media preview needs this to stop playing.
     private(set) var isVisible = false
     /// Driven by `PaletteWindowController`, which also owns the window alpha that rides with it.
-    var presentation: PalettePresentation = .shown
+    var presentation: PalettePresentation = .shown {
+        didSet { if presentation == .shown, oldValue != .shown { landedAt = .now } }
+    }
+    /// When the palette last finished arriving, which is when the bar's buttons start coming out.
+    @ObservationIgnored private(set) var landedAt = ContinuousClock.now
+    /// True while a dictated question waits for the bar's buttons to land before it shows.
+    var holdsVoiceQuestion = false
     /// Liquid Glass's card inside a window already at its larger size; nil fills the window.
     var surfaceHeight: CGFloat?
     /// Changes every time the palette is shown so the search field can re-focus.
