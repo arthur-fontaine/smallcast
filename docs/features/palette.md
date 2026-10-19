@@ -227,10 +227,14 @@ a third screen; ringing round forever therefore never grows the stack past two.
 ### Inline row arguments
 
 A selected row can declare arguments, and they are typed **in the header, beside the search field** —
-not on a screen of their own. Three features answer this way, each owning its own strip: an extension
-command through `ExtensionArgumentsAccessory`, a quicklink through `QuicklinkArgumentsAccessory`, a
-custom command through `CustomCommandArgumentsAccessory`. The last two draw the same fields,
-`DesignSystem/InlineArgumentFields`; an extension draws its own. The palette knows none of them: `PaletteScreen.headerAccessory(at:focus:)` hands back a `PaletteHeaderAccessory`
+not on a screen of their own. Four features answer this way: an extension command through
+`ExtensionArgumentsAccessory`, a custom command through `CustomCommandArgumentsAccessory`, and a
+quicklink or a quick prompt through `TemplateArgumentsAccessory`, which reads the fields off a
+`SnippetTemplateEngine` template. All but the extension draw the same fields,
+`DesignSystem/InlineArgumentFields`; an extension draws its own. A quick prompt's strip also draws
+the template's own words before each field after the first (`InlineArgument.leadingText`, from
+`connectingWords(in:)`), so `Translate {text} to {language}` reads *Translate [text] to [language]*;
+a quicklink's would be query-string noise, so it draws none. The palette knows none of them: `PaletteScreen.headerAccessory(at:focus:)` hands back a `PaletteHeaderAccessory`
 — a width, the field names in Tab order, the first field still owed a value, a menu for a field that is
 chosen rather than typed, and an opaque view. That costs the header its one simple rule, so it holds
 these invariants:

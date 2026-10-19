@@ -320,7 +320,8 @@ offered under a `Use “…” with…` header **below every result**, whatever 
 row leads because it recognised the query; a fallback trails because nothing did.
 
 `Fallback` (`Launcher/Model/`) is the whole vocabulary — `.builtin(Builtin)` for the four shipped
-destinations and `.quicklink(UUID)` for a user's own. `Builtin` exists rather than a bare `CommandID`
+destinations, `.quicklink(UUID)` and `.quickPrompt(UUID)` for a user's own, and `.preset(UUID)` for a
+named row over one of those two. `Builtin` exists rather than a bare `CommandID`
 so `FallbackCoordinator.run` is **exhaustive**: a fifth built-in cannot compile without saying where
 its query goes. `Fallback.id` is deliberately the row's own `AppEntry.id`, which is what lets a stored
 order name a live row across a rename or a reinstall.
@@ -332,6 +333,8 @@ order name a live row across a rename or a reinstall.
 | Run Shell Command | `/bin/zsh`, streamed into the Command Output window | always |
 | Define Word | the dictionary screen, already showing the entry (see [dictionary.md](dictionary.md)) | the Define Word command is visible in Settings › Commands |
 | a quicklink | its first `{argument}` | `quicklinksEnabled`, and the link has a placeholder |
+| a [quick prompt](quick-prompts.md) | its first `{argument}`, then Quick AI | `aiEnabled`, and the prompt has an argument |
+| a preset | the first argument the preset leaves empty | its quicklink or prompt is offered |
 
 **A quicklink earns a fallback row by declaring a placeholder**, nothing else —
 `QuicklinkDestination.containsPlaceholder`. `openQuicklink(id:filling:)` assigns the query to the
@@ -341,6 +344,17 @@ sends the row to Search Quicklinks with its header fields pre-filled (see
 not an `{argument}` and is resolved by replacing the context, so seeding it through `userArguments`
 would silently do nothing.
 
+**A preset renames a quicklink or prompt and answers some of its arguments.** `FallbackPreset` holds a
+name, a target and the values given; the query fills the first argument left empty, preferring an owed
+one — `FallbackPreset.values(filling:into:given:)`, the same rule a plain quicklink or prompt fallback
+uses with nothing given, and the rule the editor's note quotes. So `Translate to English` over
+`Translate {argument name="text"} to {argument name="language"}` gives `language` and sends the query
+as `text`. The row draws its target's glyph and kind with the target's name as its subtitle, and a
+target can carry any number of presets. Settings ▸ Fallbacks adds one from **Add Preset** or a target
+row's button and edits it from its own row (`FallbackPresetEditorPanel`). Presets live in
+`FallbackStore` beside the order, and one whose target was deleted is pruned when either library
+changes.
+
 **Run Shell Command carries its own switch, not the custom-command library's.** Turning off Custom
 Commands hides a library of saved commands; it says nothing about a shell line someone types
 deliberately. The fallback's checkbox is the switch. The run is an ad-hoc `CustomCommand` that is
@@ -348,7 +362,7 @@ never stored — same streaming window, same Stop button — so `CustomCommandCo
 `lastShellCommand` for the window's Rerun, which has no library entry to look up. It sources the
 shell config (`ll` should mean the reader's own alias) and takes the runner's default home directory.
 
-**The order and the checkboxes are not in a settings backup.** The fallback list is where an import
+**The order, the checkboxes and the presets are not in a settings backup.** The fallback list is where an import
 could arm shell execution from the launcher, which is the line `snippetsEnabled` already draws:
 a flag that grants a capability is never carried by a backup.
 

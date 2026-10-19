@@ -53,7 +53,7 @@ extension SettingsTab {
         case .commands: [.createCustomCommand, .searchCustomCommands]
         case .quicklinks:
             [.createQuicklink, .searchQuicklinks, .importQuicklinks, .exportQuicklinks]
-        case .ai: [.quickAI, .aiChat]
+        case .ai: [.quickAI, .aiChat, .createQuickPrompt]
         case .quickActions: [.fixGrammar, .rewrite, .translate, .summarize]
         case .fileSearch: [.searchFiles]
         case .notes: [.showNotes, .createNote, .searchNotes]

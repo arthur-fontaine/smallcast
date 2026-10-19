@@ -291,7 +291,10 @@ enum SettingsSearchCatalog {
     private static let fallbacks: [SettingsSearchEntry] = [
         .init(
             pane: .fallbacks,
-            keywords: ["no results", "empty", "search web", "order"])
+            keywords: ["no results", "empty", "search web", "order", "preset", "prefill"]),
+        .init(
+            .fallbacksFallbacks, "Add Preset",
+            keywords: ["prefill", "argument", "rename", "translate", "quicklink", "quick prompt"])
     ]
 
     private static let ai: [SettingsSearchEntry] = [
@@ -310,6 +313,9 @@ enum SettingsSearchCatalog {
         .init(.aiChat, "Ask from the launcher", keywords: ["chord", "option return", "tab", "shortcut"]),
         .init(.aiChat, "Web search", keywords: ["browse", "internet"]),
         .init(.aiChat, "Tool call rounds", keywords: ["mcp", "tools", "limit", "loop", "agent", "unlimited"]),
+        .init(
+            .aiQuickPrompts, "Add Quick Prompt",
+            keywords: ["prompt", "template", "argument", "translate", "prefill", "ai command"]),
         .init(
             .aiConversations, "Quick AI opens to",
             keywords: ["new chat", "last", "summon", "resume"]),

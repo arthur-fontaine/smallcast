@@ -389,6 +389,7 @@ final class AppSettings {
 }
 
 struct InterfaceSize { var metrics: Int { 0 } }
+typealias InterfaceMetrics = Int
 enum CommandID { case createQuicklink, searchQuicklinks, importQuicklinks, exportQuicklinks }
 
 @MainActor
@@ -533,7 +534,10 @@ enum QuicklinkLauncher {
     }
 }
 
-struct InlineArgument { let id: String; let title: String; let options: [String]; let isOptional: Bool }
+struct InlineArgument {
+    let id: String; let title: String; let options: [String]; let isOptional: Bool
+    var leadingText: String?
+}
 struct InlineArgumentFields: View {
     let arguments: [InlineArgument]
     let symbol: String?

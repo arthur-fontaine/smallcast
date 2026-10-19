@@ -134,6 +134,39 @@ enum SnippetTemplateEngine {
         }
     }
 
+    /// The words written just before each argument after the first, keyed by name, so a strip of
+    /// fields can read as the sentence it fills: `Translate {text} to {language}` gives `to`.
+    static func connectingWords(in text: String, maximumWords: Int = 3) -> [String: String] {
+        var words: [String: String] = [:]
+        var seen = Set<String>()
+        var literal = ""
+        for segment in parseSegments(text) {
+            switch segment {
+            case .literal(let value):
+                literal += value
+                continue
+            case .argument(let token, _, _) where seen.insert(token.name).inserted:
+                if seen.count > 1, let label = connectingLabel(literal, maximumWords: maximumWords) {
+                    words[token.name] = label
+                }
+            default:
+                break
+            }
+            literal = ""
+        }
+        return words
+    }
+
+    /// Edge punctuation goes (`~~~ to ` reads `to`); a long run keeps the words nearest the field.
+    private static func connectingLabel(_ literal: String, maximumWords: Int) -> String? {
+        let edges = CharacterSet.letters.union(.decimalDigits).inverted
+        let words = literal.trimmingCharacters(in: edges)
+            .split(whereSeparator: \.isWhitespace)
+        guard !words.isEmpty else { return nil }
+        guard words.count > maximumWords else { return words.joined(separator: " ") }
+        return "…" + words.suffix(maximumWords).joined(separator: " ")
+    }
+
     private static func result(of expansion: Expansion) -> ExpansionResult {
         ExpansionResult(
             text: expansion.text,
