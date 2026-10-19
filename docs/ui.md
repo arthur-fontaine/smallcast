@@ -837,6 +837,13 @@ whole catalog. Three surfaces draw it:
 `SymbolMenu` searches through `PopoverMenuContent.search` rather than row titles, so a palette
 search matches the catalog's search terms exactly as the grid's does.
 
+A chosen glyph must sit in its row like the shipped ones, but a catalog symbol can be far bigger than
+anything Smallcast picked itself: `translate` covers an ink box of 33×24 pt where the launcher's own
+glyphs have a median of about 21×21. So `IconCache.symbolIcon` measures the ink box and draws any glyph
+past `glyphInkAreaLimit` (540 pt², about the 95th percentile of the shipped glyphs) down to it by area.
+The four widest shipped glyphs — AI Chat's two bubbles among them — shrink a little; the rest are
+untouched. `icon-cache-test` pins both sides.
+
 `Tests/symbols-test.swift` compiles the real source and asserts those invariants against this machine's
 CoreGlyphs (shapes and rules, not counts — those move every release).
 
