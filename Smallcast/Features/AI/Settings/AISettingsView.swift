@@ -6,6 +6,7 @@ struct AISettingsView: View {
     @Environment(AppSettings.self) private var appSettings
     @Environment(ChatGPTSubscriptionManager.self) private var subscription
     @Environment(InstalledAIManager.self) private var installedAI
+    @Environment(QuickPromptCoordinator.self) private var quickPrompts
 
     @State private var providersPresented = false
 
@@ -34,6 +35,7 @@ struct AISettingsView: View {
             Group {
                 defaultModelSection
                 chatSection
+                QuickPromptsSettingsSection()
                 conversationsSection
                 systemPromptSection
                 MCPSettingsSection()
@@ -44,6 +46,10 @@ struct AISettingsView: View {
         .settingsScrollTarget(.ai)
         .settingsEditorPanel(isPresented: $providersPresented) {
             AIProvidersPanel(onDone: { providersPresented = false })
+        }
+        // On the pane, not the section: a request can arrive before the section is laid out.
+        .settingsEditorPanel(item: quickPromptEditBinding) { request in
+            QuickPromptEditorPanel(request: request)
         }
         .onAppear {
             core.applyInstalledAILifecycle()
@@ -57,6 +63,10 @@ struct AISettingsView: View {
         .onChange(of: subscription.models) { syncSelection() }
         .onChange(of: subscription.phase) { syncSelection() }
         .onChange(of: installedAI.statuses) { syncSelection() }
+    }
+
+    private var quickPromptEditBinding: Binding<QuickPromptEditRequest?> {
+        Binding(get: { quickPrompts.editRequest }, set: { quickPrompts.editRequest = $0 })
     }
 
     private var defaultModelSection: some View {

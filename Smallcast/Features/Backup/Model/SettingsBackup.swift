@@ -7,6 +7,7 @@ struct SettingsBackup: Codable {
     var hotkeys: HotkeyBackup?
     var customCommands: [CustomCommand]?
     var quicklinks: [Quicklink]?
+    var quickPrompts: [QuickPrompt]?
     var windowLayouts: [WindowLayout]?
     var windowRooms: [Room]?
     var customWindowSizes: [CustomWindowSize]?
@@ -125,6 +126,7 @@ struct SettingsBackup: Codable {
         var pinnedEmoji = 0
         var customCommands = 0
         var quicklinks = 0
+        var quickPrompts = 0
         var windowLayouts = 0
         var windowRooms = 0
         var customWindowSizes = 0
@@ -255,6 +257,7 @@ extension SettingsBackup {
 
         backup.customCommands = core.customCommands.commands
         backup.quicklinks = core.quicklinks.quicklinks
+        backup.quickPrompts = core.quickPrompts.prompts
         backup.windowLayouts = core.windowLayouts.layouts
         backup.windowRooms = core.rooms.rooms
         backup.customWindowSizes = core.customWindowSizes.sizes
@@ -276,6 +279,9 @@ extension SettingsBackup {
         // Before the hotkeys, so a restored binding has its quicklink to attach to.
         if let quicklinks {
             summary.quicklinks = core.quicklinkCoordinator.replaceQuicklinks(quicklinks)
+        }
+        if let quickPrompts {
+            summary.quickPrompts = core.quickPromptCoordinator.replacePrompts(quickPrompts)
         }
         // Before the hotkeys too, for the same reason: a binding needs its layout to attach to.
         if let windowLayouts {

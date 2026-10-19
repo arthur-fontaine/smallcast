@@ -1,4 +1,4 @@
-// The fallback list's pure half: identity, stored order, and the section header's elision.
+// The fallback list's pure half: identity, stored order, the header's elision and preset filling.
 
 import Foundation
 
@@ -22,6 +22,7 @@ struct FallbackTests {
         ordering()
         headers()
         verbs()
+        presetFilling()
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
     }
@@ -47,6 +48,17 @@ struct FallbackTests {
             quicklink.id == Quicklink.entryIDPrefix + quicklinkID.uuidString.lowercased(),
             "got \(quicklink.id)")
         check("a quicklink round-trips", Fallback(id: quicklink.id) == quicklink)
+
+        let prompt = Fallback.quickPrompt(UUID())
+        check(
+            "a quick prompt's id is its entry id",
+            prompt.id.hasPrefix(QuickPrompt.entryIDPrefix), "got \(prompt.id)")
+        check("a quick prompt round-trips", Fallback(id: prompt.id) == prompt)
+
+        // A preset over a quicklink must not collide with that quicklink's own row.
+        let preset = Fallback.preset(quicklinkID)
+        check("a preset round-trips", Fallback(id: preset.id) == preset)
+        check("a preset is not its target's row", preset.id != quicklink.id)
 
         // Every built-in's id must be distinct, or one would silently take another's stored slot.
         let ids = Set(Fallback.Builtin.allCases.map { Fallback.builtin($0).id })
@@ -124,5 +136,52 @@ struct FallbackTests {
         verbs.append(Fallback.quicklink(UUID()).openVerb)
         check("every fallback names its own action", verbs.allSatisfy { !$0.isEmpty })
         check("the verbs are distinct", Set(verbs).count == verbs.count, "got \(verbs)")
+        check("a quick prompt says where it goes", !Fallback.quickPrompt(UUID()).openVerb.isEmpty)
+    }
+
+    // MARK: - Preset filling
+
+    static func presetFilling() {
+        let translate = SnippetTemplateEngine.declaredArguments(
+            in: "Translate ~~~{argument name=\"text\"}~~~ to {argument name=\"language\"}")
+
+        // The use case: a preset gives the language, so the query has to become the text.
+        let english = FallbackPreset.values(
+            filling: "bonjour", into: translate, given: ["language": "English"])
+        check(
+            "the query takes the argument the preset left open",
+            english == ["text": "bonjour", "language": "English"], "got \(english)")
+
+        let plain = FallbackPreset.values(filling: "bonjour", into: translate)
+        check("with nothing given it takes the first", plain == ["text": "bonjour"], "got \(plain)")
+
+        let reversed = FallbackPreset.values(
+            filling: "French", into: translate, given: ["text": "hello"])
+        check(
+            "giving the first argument moves the query to the next",
+            reversed == ["text": "hello", "language": "French"], "got \(reversed)")
+
+        // An empty given value is no answer, so it stays open for the query.
+        let blank = FallbackPreset.values(filling: "hi", into: translate, given: ["text": ""])
+        check("a blank given value is open", blank["text"] == "hi", "got \(blank)")
+
+        let all = FallbackPreset.values(
+            filling: "ignored", into: translate, given: ["text": "a", "language": "b"])
+        check(
+            "with everything given the query is unused", all == ["text": "a", "language": "b"],
+            "got \(all)")
+
+        // An owed argument beats an optional one, as the quicklink fallback always did.
+        let toned = SnippetTemplateEngine.declaredArguments(
+            in: "{argument name=\"tone\" default=\"calm\"} {argument name=\"topic\"}")
+        let topic = FallbackPreset.values(filling: "cats", into: toned)
+        check("an owed argument is preferred", topic == ["topic": "cats"], "got \(topic)")
+
+        let defaults = SnippetTemplateEngine.declaredArguments(
+            in: "{argument name=\"a\" default=\"1\"} {argument name=\"b\" default=\"2\"}")
+        check(
+            "with only optional arguments the first takes it",
+            FallbackPreset.values(filling: "x", into: defaults) == ["a": "x"])
+        check("no argument takes nothing", FallbackPreset.values(filling: "x", into: []).isEmpty)
     }
 }

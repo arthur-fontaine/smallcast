@@ -578,6 +578,9 @@ modifier rather than SwiftUI's `EventModifiers`, so the file stays Foundation-on
 `ai-provider-test` can pin the stored spellings — they ride settings backups, so renaming one would
 silently reset the setting. The chord is Smallcast's own; see [upstream.md](../upstream.md).
 
+A saved question with blanks to fill is a [quick prompt](quick-prompts.md): its own launcher row and
+fallback, expanded through the snippet engine and handed to the same `QuickAICoordinator.ask`.
+
 ## Palette integration
 
 Two palette modes carry Quick AI, and neither changes the shell's rules:

@@ -13,6 +13,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case windowLayout
         case windowRoom
         case quicklink
+        case quickPrompt
         case appleShortcut
         case extensionCommand
         case meeting
@@ -73,6 +74,11 @@ struct AppEntry: Identifiable, Hashable, Sendable {
                 return KindDescriptor(
                     label: "Quicklink", sectionTitle: "Quicklinks",
                     openVerb: "Open Quicklink", canHideFromSearch: false,
+                    canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 2)
+            case .quickPrompt:
+                return KindDescriptor(
+                    label: "Quick Prompt", sectionTitle: "Quick Prompts",
+                    openVerb: "Ask Quick AI", canHideFromSearch: false,
                     canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 2)
             case .appleShortcut:
                 // File-backed so every row draws the Shortcuts app's own icon.
@@ -200,7 +206,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return AppleShortcut.id(fromEntryID: id).map { .appleShortcut(id: $0) }
         case .snippet:
             return StoredSnippet.id(fromEntryID: id).map { .snippet(id: $0) }
-        case .extensionCommand, .meeting:
+        // A prompt still owing arguments has no surface to land on outside root search.
+        case .quickPrompt, .extensionCommand, .meeting:
             return nil
         }
     }
@@ -224,6 +231,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     private var kindSymbol: String {
         switch kind {
         case .quicklink: return Quicklink.sfSymbol
+        case .quickPrompt: return QuickPrompt.sfSymbol
         case .snippet: return "text.quote"
         case .customCommand: return CustomCommand.sfSymbol
         case .command: return CommandCatalog.command(for: self)?.sfSymbol ?? "questionmark"
@@ -305,6 +313,14 @@ extension AppEntry {
             bundleID: nil, kind: .quicklink,
             symbolName: quicklink.iconSymbol
                 ?? QuicklinkDestination.detect(quicklink.link)?.defaultSymbol)
+    }
+
+    /// The one row a prompt draws, wherever it is offered from.
+    init(_ prompt: QuickPrompt) {
+        self.init(
+            id: prompt.entryID, name: prompt.name,
+            url: URL(string: "smallcast://quick-prompt/" + prompt.id.uuidString)!,
+            bundleID: nil, kind: .quickPrompt, symbolName: prompt.iconSymbol)
     }
 
     /// No bundle id: that would key every shortcut's alias and ranking to the Shortcuts app.
@@ -399,6 +415,7 @@ final class AppIndex {
     private var windowLayoutEntries: [AppEntry] = []
     private var windowRoomEntries: [AppEntry] = []
     private var quicklinkEntries: [AppEntry] = []
+    private var quickPromptEntries: [AppEntry] = []
     private var appleShortcutEntries: [AppEntry] = []
     private var customQuickActionEntries: [AppEntry] = []
     private var extensionEntries: [AppEntry] = []
@@ -486,6 +503,14 @@ final class AppIndex {
             .map(AppEntry.init)
         guard entries != quicklinkEntries else { return }
         quicklinkEntries = entries
+        publishEntries()
+    }
+
+    /// Replaces the prompt slice; the store already publishes display order.
+    func setQuickPrompts(_ prompts: [QuickPrompt]) {
+        let entries = prompts.filter { $0.isEnabled && $0.showsInRootSearch }.map(AppEntry.init)
+        guard entries != quickPromptEntries else { return }
+        quickPromptEntries = entries
         publishEntries()
     }
 
@@ -675,7 +700,8 @@ final class AppIndex {
         let updated =
             Self.named(meetingEntries) + discoveredEntries
             + Self.named(
-                extensionEntries + quicklinkEntries + appleShortcutEntries + snippetEntries
+                extensionEntries + quicklinkEntries + quickPromptEntries + appleShortcutEntries
+                    + snippetEntries
                     + Self.systemActionEntries + windowLayoutEntries + windowRoomEntries
                     + windowCommandEntries
                     + customWindowSizeEntries + customCommandEntries + quickActionEntries

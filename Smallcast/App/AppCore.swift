@@ -11,6 +11,7 @@ final class AppCore {
     let appIndex: AppIndex
     let customCommands = CustomCommandStore()
     let quicklinks = QuicklinkStore()
+    let quickPrompts = QuickPromptStore()
     let windowLayouts = WindowLayoutStore()
     let customWindowSizes = CustomWindowSizeStore()
     let rooms = RoomStore()
@@ -193,7 +194,14 @@ final class AppCore {
         calendarCoordinator: calendarCoordinator,
         core: self)
     @ObservationIgnored private(set) lazy var fallbackCoordinator = FallbackCoordinator(
-        store: fallbacks, quicklinks: quicklinks, settings: settings, visibility: visibility,
+        store: fallbacks, quicklinks: quicklinks, prompts: quickPrompts, settings: settings,
+        visibility: visibility, core: self)
+    @ObservationIgnored private(set) lazy var quickPromptCoordinator = QuickPromptCoordinator(
+        store: quickPrompts, settings: settings, appIndex: appIndex, injector: textInjector,
+        favorites: favorites, visibility: visibility, ranking: launcherRanking, aliases: aliases,
+        windowController: windowController, paletteCoordinator: paletteCoordinator,
+        settingsCoordinator: settingsCoordinator,
+        clipboardHistory: { [unowned self] in self.snippetCoordinator.clipboardHistoryForExpansion() },
         core: self)
     @ObservationIgnored private(set) lazy var clipboardCoordinator = ClipboardCoordinator(
         clipboardStore: clipboardStore, clipboardManager: clipboardManager, settings: settings,
@@ -331,7 +339,14 @@ final class AppCore {
             roomCoordinator.recoverParkedWindows()
             quicklinks.onChange = { [weak self] _ in
                 self?.quicklinkCoordinator.applyQuicklinksPresence()
+                // Deferred: a backup's replace empties the table before refilling it.
+                Task { self?.fallbackCoordinator.prunePresets() }
             }
+            quickPrompts.onChange = { [weak self] _ in
+                self?.quickPromptCoordinator.applyPresence()
+                Task { self?.fallbackCoordinator.prunePresets() }
+            }
+            quickPromptCoordinator.applyPresence()
             // Before `hotKeys.start` even when off: the prune reads it. docs/features/quicklinks.md
             quicklinks.load()
             quicklinkCoordinator.applyQuicklinksPresence()
@@ -703,6 +718,7 @@ final class AppCore {
             })
         track({ _ = $0.notesEnabled }, reproject: { $0.notesCoordinator.applyEnabled() })
         track({ _ = $0.aiEnabled }, reproject: { $0.aiChatCoordinator.applyEnabled() })
+        track({ _ = $0.aiEnabled }, reproject: { $0.quickPromptCoordinator.applyPresence() })
         track(
             { _ = $0.dictationIdleRelease },
             reproject: {

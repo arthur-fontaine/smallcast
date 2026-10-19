@@ -134,7 +134,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `dictation-volume-test` | Volume recovery across fade steps, user changes, output switching, failed writes and cancellation; injected audio controls only |
 | `dictation-inference-test` | Dictation byte BPE, Fourier/mel features and non-overlapping audio chunks; no downloaded models |
 | `dictation-worker-test` | Dictation's framed channel, worker reuse/switching, removal, cancellation and broken pipes with a fixture helper |
-| `fallback-test` | `Launcher/Model/Fallback.swift`, plus the `CommandID` and `Quicklink` ids it is built from |
+| `fallback-test` | `Launcher/Model/Fallback.swift` and `FallbackPreset.swift`, plus the `CommandID`, `Quicklink` and `QuickPrompt` ids it is built from |
 | `dictionary-test` | `Dictionary/Model/DictionaryEntry.swift`, `DictionaryMarkup.swift` — a real XHTML record and the plain-text fallback, read into page blocks |
 | `callout-test` | `DesignSystem/Theme.swift`, `HotKeys/UI/CalloutPlacement.swift` |
 | `system-action-test` | `SystemActions/Model/SystemAction.swift` |
@@ -146,6 +146,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `custom-command-test` | Command storage and execution, editor drafts, argument identities and dynamic keyboard focus |
 | `custom-command-list-test` | Browser result snapshots, observation, row actions and empty-library messages |
 | `uninstall-test` | all five pure files in `Uninstall/Model/` |
+| `quick-prompt-test` | `QuickPrompts/Model/QuickPrompt.swift` — validation, order, persistence, backup replace |
 | `quicklink-test` | all of `Quicklinks/Model/`, plus editor drafts and placeholder selection |
 | `quicklink-coordinator-test` | Opening and requested arguments, launcher editing, current enabled-state preservation, deletion during editing and feature gates; no platform effects or on-screen focus checks |
 | `apple-shortcut-test` | all of `AppleShortcuts/Model/` — the `shortcuts list` parser and entry ids |

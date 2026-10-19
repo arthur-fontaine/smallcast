@@ -8,6 +8,8 @@ struct InlineArgument: Equatable {
     var options: [String] = []
     /// Never marked as owed: leaving it empty is an answer.
     var isOptional = false
+    /// Template words drawn before the field, so the strip reads as the sentence it fills.
+    var leadingText: String?
 }
 
 /// The inline argument fields beside the search field, one per argument the row declares.
@@ -35,6 +37,13 @@ struct InlineArgumentFields: View {
             }
             ForEach(arguments, id: \.id) { argument in
                 let isOwed = !argument.isOptional && visited.contains(argument.id)
+                if let leadingText = argument.leadingText {
+                    Text(leadingText)
+                        .font(metrics.typography.rowTrailing)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
                 if argument.options.isEmpty {
                     ArgumentField(
                         argument: argument, text: value(argument.id),
@@ -66,8 +75,16 @@ struct InlineArgumentFields: View {
         for arguments: [InlineArgument], hasIcon: Bool, metrics: InterfaceMetrics
     ) -> CGFloat {
         let fields = arguments.reduce(0) { $0 + fieldWidth(for: $1, metrics: metrics) }
-        let gaps = CGFloat(arguments.count + (hasIcon ? 0 : -1)) * metrics.spacing.xs
-        return fields + gaps + (hasIcon ? height(metrics) : 0)
+        let labels = arguments.compactMap(\.leadingText)
+        let labelWidth = labels.reduce(0) { $0 + labelWidth(for: $1, metrics: metrics) }
+        let gaps = CGFloat(arguments.count + labels.count + (hasIcon ? 0 : -1)) * metrics.spacing.xs
+        return fields + labelWidth + gaps + (hasIcon ? height(metrics) : 0)
+    }
+
+    /// Measured in the font the label draws in, so the search field gives up exactly that much.
+    private static func labelWidth(for text: String, metrics: InterfaceMetrics) -> CGFloat {
+        let font = metrics.typography.textNSFont(.callout)
+        return (text as NSString).size(withAttributes: [.font: font]).width.rounded(.up) + 1
     }
 
     static func fieldWidth(for argument: InlineArgument, metrics: InterfaceMetrics) -> CGFloat {

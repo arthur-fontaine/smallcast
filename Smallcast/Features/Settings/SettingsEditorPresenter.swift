@@ -424,6 +424,8 @@ extension View {
             .environment(core.snippetCoordinator)
             .environment(core.quicklinks)
             .environment(core.quicklinkCoordinator)
+            .environment(core.quickPrompts)
+            .environment(core.quickPromptCoordinator)
             .environment(core.windowLayouts)
             .environment(core.rooms)
             .environment(core.roomCoordinator)

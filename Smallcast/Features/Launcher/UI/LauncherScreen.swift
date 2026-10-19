@@ -58,8 +58,8 @@ struct LauncherScreen: PaletteScreen {
         self.scrollToFollow = scrollToFollow
 
         // Listed even when hidden from search: the shortcut that opened it still has to be answered.
-        let pinned = vm.argumentEntryID.flatMap(core.customCommands.command(entryID:))
-            .map(AppEntry.init).flatMap { $0.name == vm.query ? $0 : nil }
+        let pinned = vm.argumentEntryID.flatMap { Self.argumentEntry(id: $0, core: core) }
+            .flatMap { $0.name == vm.query ? $0 : nil }
         let ordered =
             pinned.map { AppIndex.Results(entries: [$0], matchCount: 1) }
             ?? appIndex.orderedResults(
@@ -146,7 +146,7 @@ struct LauncherScreen: PaletteScreen {
         case .meeting(let meeting):
             return meeting.link == nil ? "Open in Calendar" : "Join Meeting"
         case .entry(let app): return app.kind.descriptor.openVerb
-        case .fallback(let fallback, _): return fallback.openVerb
+        case .fallback(let fallback, _): return core.fallbackCoordinator.openVerb(for: fallback)
         case .file(let result): return result.isDirectory ? "Open Folder" : "Open File"
         case .moreFiles: return "Show More Results"
         case nil: return "Open Application"
@@ -170,6 +170,14 @@ struct LauncherScreen: PaletteScreen {
                 quicklink: quicklink(for: entry), core: core, vm: vm, focus: focus,
                 placement: .afterQuery, onOpenOptions: openArgumentOptions,
                 onSubmit: { activate(at: selection) })
+        }
+        if entry.kind == .quickPrompt {
+            guard let prompt = core.quickPrompts.prompt(entryID: entry.id) else { return nil }
+            return TemplateArgumentsAccessory.make(
+                template: prompt.template, entryID: prompt.entryID, symbol: prompt.symbol,
+                metrics: core.settings.interfaceSize.metrics, vm: vm, focus: focus,
+                placement: .afterQuery, readsAsSentence: true,
+                onOpenOptions: openArgumentOptions, onSubmit: { activate(at: selection) })
         }
         if entry.kind == .customCommand {
             return CustomCommandArgumentsAccessory.make(
@@ -199,12 +207,23 @@ struct LauncherScreen: PaletteScreen {
             guard let command = core.customCommands.command(entryID: entry.id) else { return [:] }
             return CustomCommandArgumentsAccessory.values(for: command, vm: vm)
         }
+        if entry.kind == .quickPrompt {
+            guard let prompt = core.quickPrompts.prompt(entryID: entry.id) else { return [:] }
+            return TemplateArgumentsAccessory.values(
+                template: prompt.template, entryID: prompt.entryID, vm: vm)
+        }
         var values: [String: String] = [:]
         for argument in core.extensionCoordinator.commandArguments(for: entry) ?? [] {
             let typed = vm.commandArguments[PaletteState.argumentKey(entry.id, argument.name)] ?? ""
             if !typed.isEmpty { values[argument.name] = typed }
         }
         return values
+    }
+
+    /// The row a run with values missing lands on, listed even when hidden from root search.
+    private static func argumentEntry(id: String, core: AppCore) -> AppEntry? {
+        if let command = core.customCommands.command(entryID: id) { return AppEntry(command) }
+        return core.quickPrompts.prompt(entryID: id).map(AppEntry.init)
     }
 
     private func quicklink(for entry: AppEntry) -> Quicklink? {
@@ -380,6 +399,9 @@ struct LauncherScreen: PaletteScreen {
         case .customCommand:
             guard let command = core.customCommands.command(entryID: entry.id) else { return false }
             core.customCommandCoordinator.editCustomCommand(command)
+        case .quickPrompt:
+            guard let prompt = core.quickPrompts.prompt(entryID: entry.id) else { return false }
+            core.quickPromptCoordinator.edit(prompt)
         default: return false
         }
         return true
@@ -447,6 +469,8 @@ struct LauncherScreen: PaletteScreen {
             core.quicklinkCoordinator.setQuicklinkShowsInRootSearch(false, id: id)
         } else if let id = CustomCommand.id(fromEntryID: app.id) {
             core.customCommandCoordinator.setCustomCommandShowsInRootSearch(false, id: id)
+        } else if let id = QuickPrompt.id(fromEntryID: app.id) {
+            core.quickPromptCoordinator.setShowsInRootSearch(false, id: id)
         } else if app.canHideFromSearch {
             visibility.setItemVisible(false, for: app)
         } else {

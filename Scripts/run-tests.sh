@@ -301,6 +301,7 @@ run palette-tab-test       Smallcast/Palette/PaletteMode.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Smallcast/Features/CustomCommands/Model/CustomCommand.swift
 run fallback-test          Smallcast/Features/Launcher/Model/Fallback.swift \
+                           Smallcast/Features/Launcher/Model/FallbackPreset.swift \
                            Smallcast/Features/Launcher/Model/CommandID.swift \
                            Smallcast/Features/HotKeys/Model/HotKeyAction.swift \
                            Smallcast/Features/QuickActions/Model/QuickAction.swift \
@@ -310,7 +311,9 @@ run fallback-test          Smallcast/Features/Launcher/Model/Fallback.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Smallcast/Features/SystemActions/Model/SystemAction.swift \
                            Smallcast/Features/WindowManagement/Model/WindowCommand.swift \
-                           Smallcast/Features/Snippets/Model/Snippet.swift
+                           Smallcast/Features/Snippets/Model/Snippet.swift \
+                           Smallcast/Features/Snippets/Model/SnippetTemplateEngine.swift \
+                           Smallcast/Features/QuickPrompts/Model/QuickPrompt.swift
 run dictionary-test        Smallcast/Features/Dictionary/Model/DictionaryEntry.swift \
                            Smallcast/Features/Dictionary/Model/DictionaryMarkup.swift
 run dictation-test         Smallcast/Features/Dictation/Model/DictationModel.swift Smallcast/Features/Dictation/Model/DictationIdleRelease.swift Smallcast/Features/Dictation/Model/DictationTextFormatter.swift
@@ -473,6 +476,9 @@ run uninstall-test         Smallcast/Features/Uninstall/Model/UninstallTarget.sw
                            Smallcast/Features/Uninstall/Model/UninstallRules.swift \
                            Smallcast/Features/Uninstall/Model/UninstallProtection.swift \
                            Smallcast/Features/Uninstall/Model/UninstallPlan.swift
+run quick-prompt-test      Smallcast/Features/QuickPrompts/Model/QuickPrompt.swift \
+                           Smallcast/Features/Snippets/Model/Snippet.swift \
+                           Smallcast/Features/Snippets/Model/SnippetTemplateEngine.swift
 run quicklink-test         Smallcast/Features/Quicklinks/Model/Quicklink.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkStore.swift \
@@ -486,6 +492,8 @@ run quicklink-coordinator-test Smallcast/Features/Quicklinks/Model/Quicklink.swi
                            Smallcast/Features/Quicklinks/UI/QuicklinkCoordinator.swift \
                            Smallcast/Features/Quicklinks/UI/QuicklinkEditorSession.swift \
                            Smallcast/Features/Quicklinks/UI/QuicklinkArgumentsAccessory.swift \
+                           Smallcast/Features/Launcher/UI/TemplateArgumentsAccessory.swift \
+                           Smallcast/Features/Launcher/Model/FallbackPreset.swift \
                            Smallcast/Features/Snippets/Model/Snippet.swift \
                            Smallcast/Features/Snippets/Model/SnippetTemplateEngine.swift
 run slow snippets-test     Smallcast/Platform/NotificationToken.swift \

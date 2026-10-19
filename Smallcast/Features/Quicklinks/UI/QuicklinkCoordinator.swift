@@ -98,10 +98,7 @@ final class QuicklinkCoordinator {
     func openQuicklink(id: UUID, filling seed: String) {
         guard let quicklink = store.quicklink(id: id) else { return }
         let arguments = SnippetTemplateEngine.declaredArguments(in: quicklink.link)
-        guard let target = arguments.first(where: { !$0.isOptional }) ?? arguments.first else {
-            return openQuicklink(id: id)
-        }
-        openQuicklink(id: id, values: [target.name: seed])
+        openQuicklink(id: id, values: FallbackPreset.values(filling: seed, into: arguments))
     }
 
     private func openableQuicklink(id: UUID) -> Quicklink? {

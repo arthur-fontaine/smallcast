@@ -145,6 +145,12 @@ final class LauncherCoordinator {
             quicklinkCoordinator.openQuicklink(id: id, values: arguments)
             return
         }
+        // Quick AI takes the palette over, so it must not hide first; an unfilled prompt asks.
+        if app.kind == .quickPrompt {
+            guard let id = QuickPrompt.id(fromEntryID: app.id) else { return }
+            core.quickPromptCoordinator.run(id: id, values: arguments)
+            return
+        }
         if app.kind == .appleShortcut {
             guard let id = AppleShortcut.id(fromEntryID: app.id) else { return }
             core.appleShortcutCoordinator.run(id: id)
@@ -162,7 +168,7 @@ final class LauncherCoordinator {
             guard let snippetID = StoredSnippet.id(fromEntryID: app.id) else { return }
             snippetCoordinator.expandSnippet(id: snippetID, target: previous)
         case .command, .quickAction, .customCommand, .systemAction, .windowCommand, .windowLayout,
-            .windowRoom, .quicklink, .appleShortcut, .extensionCommand, .meeting:
+            .windowRoom, .quicklink, .quickPrompt, .appleShortcut, .extensionCommand, .meeting:
             break  // handled above
         }
     }
@@ -254,6 +260,8 @@ final class LauncherCoordinator {
             core.roomCoordinator.createRoom()
         case .createQuicklink:
             quicklinkCoordinator.editQuicklink(nil)
+        case .createQuickPrompt:
+            core.quickPromptCoordinator.edit(nil)
         case .createCustomCommand:
             customCommandCoordinator.editCustomCommand(nil)
         case .searchCustomCommands:

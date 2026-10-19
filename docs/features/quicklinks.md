@@ -139,7 +139,9 @@ keyed by the quicklink it applies to.
 **A launcher fallback fills the first argument.** Declaring a placeholder is exactly what puts a
 quicklink in the `Use “…” with…` section (see [launcher.md](launcher.md#fallbacks));
 `openQuicklink(id:filling:)` assigns the query to the first argument still owed — the first declared
-one when every argument has a default — and opens at once when that was the only one owed.
+one when every argument has a default — and opens at once when that was the only one owed. A fallback
+**preset** gives some arguments up front under a name of its own, and the query takes the first one it
+leaves empty (see [launcher.md](launcher.md#fallbacks)).
 
 **Pass selected text as argument** (off by default) lets a quicklink's **own shortcut** fill its
 **first** argument with the trimmed selection, read through the same two tiers. It applies only when

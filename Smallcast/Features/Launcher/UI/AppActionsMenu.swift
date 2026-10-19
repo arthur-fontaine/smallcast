@@ -51,7 +51,7 @@ enum AppActionsMenu {
                 })
         }
         // These carry their own Show in root search switch rather than a pane checkbox.
-        let hidesFromRoot = app.kind == .quicklink || app.kind == .customCommand
+        let hidesFromRoot = [.quicklink, .customCommand, .quickPrompt].contains(app.kind)
         if isPersistent, app.canHideFromSearch || hidesFromRoot {
             let title = hidesFromRoot ? "Hide from Root Search" : "Hide from Search"
             items.append(
@@ -101,6 +101,15 @@ enum AppActionsMenu {
                     title: "Edit Quicklink", systemImage: "pencil", shortcut: "⌘E"
                 ) {
                     core.quicklinkCoordinator.editQuicklink(quicklink)
+                })
+        }
+        if app.kind == .quickPrompt, let prompt = core.quickPrompts.prompt(entryID: app.id) {
+            items.append(
+                PopoverMenuItem(
+                    title: "Edit Quick Prompt", systemImage: "pencil", startsSection: true,
+                    shortcut: "⌘E"
+                ) {
+                    core.quickPromptCoordinator.edit(prompt)
                 })
         }
         if app.kind == .extensionCommand {

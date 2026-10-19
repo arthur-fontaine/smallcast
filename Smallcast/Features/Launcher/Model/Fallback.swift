@@ -22,12 +22,17 @@ enum Fallback: Hashable, Sendable {
 
     case builtin(Builtin)
     case quicklink(UUID)
+    case quickPrompt(UUID)
+    /// A reader's own row over a quicklink or prompt: its own name, some arguments already given.
+    case preset(UUID)
 
     /// The row's `AppEntry` id, so a stored order outlives a rename and survives a reinstall.
     var id: String {
         switch self {
         case .builtin(let builtin): return builtin.command.rawValue
         case .quicklink(let id): return Quicklink.entryIDPrefix + id.uuidString.lowercased()
+        case .quickPrompt(let id): return QuickPrompt.entryIDPrefix + id.uuidString.lowercased()
+        case .preset(let id): return FallbackPreset.entryIDPrefix + id.uuidString.lowercased()
         }
     }
 
@@ -38,6 +43,10 @@ enum Fallback: Hashable, Sendable {
             self = .builtin(builtin)
         } else if let quicklink = Quicklink.id(fromEntryID: id) {
             self = .quicklink(quicklink)
+        } else if let prompt = QuickPrompt.id(fromEntryID: id) {
+            self = .quickPrompt(prompt)
+        } else if let preset = FallbackPreset.id(fromEntryID: id) {
+            self = .preset(preset)
         } else {
             return nil
         }
@@ -51,6 +60,8 @@ enum Fallback: Hashable, Sendable {
         case .builtin(.runShellCommand): return "Run Shell Command"
         case .builtin(.define): return "Define Word"
         case .quicklink: return "Open Quicklink"
+        case .quickPrompt: return "Ask Quick AI"
+        case .preset: return "Run Fallback"
         }
     }
 
