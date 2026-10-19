@@ -267,7 +267,8 @@ enum IconCache {
             let ink = tint == nil ? NSColor.srgbInk(plainInk, alpha: 0.85) : .white
             guard let symbol = glyph(named: name, tint: ink)
             else { return true }
-            let size = symbol.size
+            let scale = glyphScale(symbol)
+            let size = NSSize(width: symbol.size.width * scale, height: symbol.size.height * scale)
             symbol.draw(
                 in: NSRect(
                     x: (side - size.width) / 2, y: (side - size.height) / 2,
@@ -277,6 +278,49 @@ enum IconCache {
         let (icon, cost) = downsampled(image)
         cache.setObject(icon, forKey: key, cost: cost)
         return icon
+    }
+
+    /// The most ink box, in square points, a tile's glyph may cover: about the 95th percentile of
+    /// the launcher's own glyphs, so a wide and heavy one (`translate`) no longer outweighs its row.
+    static let glyphInkAreaLimit: CGFloat = 540
+
+    /// Below 1 only for a glyph whose ink box is past the limit, shrunk to it by area.
+    static func glyphScale(_ glyph: NSImage) -> CGFloat {
+        guard let ink = inkBox(of: glyph), ink.width * ink.height > glyphInkAreaLimit else { return 1 }
+        return (glyphInkAreaLimit / (ink.width * ink.height)).squareRoot()
+    }
+
+    /// The painted bounds at the glyph's own size, in points; the alignment box carries padding.
+    private static func inkBox(of glyph: NSImage) -> CGSize? {
+        let width = Int((glyph.size.width * 2).rounded(.up))
+        let height = Int((glyph.size.height * 2).rounded(.up))
+        guard width > 0, height > 0,
+            let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height, bitsPerSample: 8,
+                samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                bitmapFormat: [], bytesPerRow: 0, bitsPerPixel: 32),
+            let data = rep.bitmapData
+        else { return nil }
+        // Before the context exists: it reads the scale from here, or the glyph lands at 1×.
+        rep.size = glyph.size
+        guard let ctx = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = ctx
+        glyph.draw(in: NSRect(origin: .zero, size: glyph.size))
+        NSGraphicsContext.restoreGraphicsState()
+
+        var minX = width, maxX = -1, minY = height, maxY = -1
+        for y in 0..<height {
+            let row = data.advanced(by: y * rep.bytesPerRow)
+            for x in 0..<width where row[x * 4 + 3] >= 16 {
+                minX = min(minX, x)
+                maxX = max(maxX, x)
+                minY = min(minY, y)
+                maxY = max(maxY, y)
+            }
+        }
+        guard maxX >= 0 else { return nil }
+        return CGSize(width: CGFloat(maxX - minX + 1) / 2, height: CGFloat(maxY - minY + 1) / 2)
     }
 
     /// Symbols where they exist; the names SF Symbols lacks fall back to template assets.

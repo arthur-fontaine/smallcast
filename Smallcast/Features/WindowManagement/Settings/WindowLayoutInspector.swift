@@ -72,7 +72,7 @@ struct WindowLayoutInspector: View {
                 .popover(isPresented: $showingIconPicker, arrowEdge: .bottom) {
                     SymbolPicker(
                         selection: $draft.iconSymbol, fallback: WindowLayout.sfSymbol,
-                        symbols: Self.iconSymbols
+                        suggested: Self.iconSymbols
                     ) {
                         showingIconPicker = false
                     }

@@ -202,6 +202,25 @@ struct IconCacheTests {
         expect(symbol === IconCache.symbolIcon(named: "star"), "symbols use the existing rendering path")
     }
 
+    /// A wide, heavy glyph is drawn down to the launcher's norm; an ordinary one is left alone.
+    static func glyphFootprint() {
+        func scale(_ name: String) -> CGFloat {
+            let config = NSImage.SymbolConfiguration(pointSize: 21, weight: .medium)
+            guard
+                let glyph = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+                    .withSymbolConfiguration(config)
+            else { return .nan }
+            return IconCache.glyphScale(glyph)
+        }
+        for name in ["terminal", "sparkles", "book.closed", "link", "magnifyingglass"] {
+            expect(scale(name) == 1, "\(name) keeps its size, got \(scale(name))")
+        }
+        let chat = scale("bubble.left.and.bubble.right")
+        expect(chat < 1 && chat > 0.85, "a wide shipped glyph shrinks only a little, got \(chat)")
+        let translate = scale("translate")
+        expect(translate < 0.9 && translate > 0.75, "translate is drawn down to the norm, got \(translate)")
+    }
+
     static func main() async {
         var generation = IconCacheGeneration()
         let captured = generation.value
@@ -224,6 +243,7 @@ struct IconCacheTests {
         tintedTiles()
         restyling()
         styleFingerprint()
+        glyphFootprint()
 
         print(failures == 0 ? "Icon cache tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)

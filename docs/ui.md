@@ -807,6 +807,46 @@ The field fades on `Duration.voiceQuestion`, scoped to the field and the readout
 same animation would animate the chat arriving in the same transaction. Reduce Motion drops the
 fade and the transcribing effect.
 
+## Icon pickers
+
+Every icon choice offers **one catalog**, `Platform/SymbolCatalog`, so no surface has a smaller choice
+than another. It reads **the system's own catalog** at runtime from
+`/System/Library/CoreServices/CoreGlyphs.bundle` — the symbol order, each symbol's categories, and the
+extra search terms the SF Symbols app matches on, so "coffee" finds `cup.and.saucer`. Reading it beats
+bundling a name list: the offer always matches the OS, with nothing to regenerate per release.
+`SymbolCatalog.system` parses it once (~35 ms) and every picker shares the result.
+
+One filter applies: **locale renderings** (`.ar`, `.hi`, `.rtl`…), near-duplicates of a symbol already
+in the list. Apple's reserved marks (`symbol_restrictions.strings`: `translate`, iCloud, iPhone…) stay
+on offer — Smallcast is a personal build, and `translate` is the glyph a translation prompt wants.
+The app's own marks (`SymbolCatalog.bundledGlyphs`) lead, since they are what the system lacks.
+
+None of this is API, so every read is optional and `SymbolCatalog.fallback` — the curated set in
+`SymbolCatalog.suggested` — stands in if the bundle ever moves.
+
+A picker opens on a **short suggested set** — the caller's own, so a window layout opens on window
+shapes — since scrolling seven thousand icons is not a way to choose one, and a search reaches the
+whole catalog. Three surfaces draw it:
+
+| Surface | View | Used by |
+| --- | --- | --- |
+| a Settings popover | `DesignSystem/SymbolPicker` — search, category, grid, Automatic | custom quick actions, window layouts |
+| a palette form | `DesignSystem/SymbolMenu` — the searchable palette menu: Automatic, Suggested, All Symbols | quicklinks, custom commands |
+| an extension's appearance | `ExtensionAppearancePicker` — its own grid with tints | extensions |
+
+`SymbolMenu` searches through `PopoverMenuContent.search` rather than row titles, so a palette
+search matches the catalog's search terms exactly as the grid's does.
+
+A chosen glyph must sit in its row like the shipped ones, but a catalog symbol can be far bigger than
+anything Smallcast picked itself: `translate` covers an ink box of 33×24 pt where the launcher's own
+glyphs have a median of about 21×21. So `IconCache.symbolIcon` measures the ink box and draws any glyph
+past `glyphInkAreaLimit` (540 pt², about the 95th percentile of the shipped glyphs) down to it by area.
+The four widest shipped glyphs — AI Chat's two bubbles among them — shrink a little; the rest are
+untouched. `icon-cache-test` pins both sides.
+
+`Tests/symbols-test.swift` compiles the real source and asserts those invariants against this machine's
+CoreGlyphs (shapes and rules, not counts — those move every release).
+
 ## Dialog accessories
 
 A dialog carries at most one control beyond its buttons, and `DialogAccessory` makes that structural

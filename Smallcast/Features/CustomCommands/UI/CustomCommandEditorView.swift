@@ -116,6 +116,7 @@ struct CustomCommandEditorView: View {
         .formFieldChrome(focused: focusedField == .name || focusedField == .icon)
     }
 
+    /// What the icon menu opens on; a search reaches every system symbol.
     private static let iconSymbols = [
         "terminal", "hammer", "wrench", "gearshape", "bolt", "arrow.clockwise", "trash",
         "shippingbox", "cube", "server.rack", "externaldrive", "internaldrive", "cloud",
@@ -161,19 +162,10 @@ struct CustomCommandEditorView: View {
     }
 
     private func showIconMenu() {
-        let items =
-            [
-                PopoverMenuItem(title: "Automatic", systemImage: CustomCommand.sfSymbol) {
-                    editor.iconSymbol = nil
-                }
-            ]
-            + Self.iconSymbols.enumerated().map { index, symbol in
-                PopoverMenuItem(title: symbol, systemImage: symbol, startsSection: index == 0) {
-                    editor.iconSymbol = symbol
-                }
-            }
-        let selected = Self.iconSymbols.firstIndex { $0 == editor.iconSymbol }.map { $0 + 1 } ?? 0
-        openInputMenu(PopoverMenuContent(items: items), .belowControl(iconMenuFrame), selected)
+        let menu = SymbolMenu.content(
+            selection: editor.iconSymbol, automatic: CustomCommand.sfSymbol, suggested: Self.iconSymbols
+        ) { editor.iconSymbol = $0 }
+        openInputMenu(menu.content, .belowControl(iconMenuFrame), menu.selected)
     }
 
     private var workingDirectoryField: some View {

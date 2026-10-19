@@ -128,9 +128,7 @@ struct ExtensionAppearancePicker: View {
         .padding(Metrics.inset)
         .frame(width: Metrics.popoverWidth)
         .task {
-            // Only the fallback has a single category; don't re-read the real catalog.
-            guard catalog.categories.count == 1 else { return }
-            catalog = await Task.detached(priority: .userInitiated) { SymbolCatalog.load() }.value
+            catalog = await Task.detached(priority: .userInitiated) { SymbolCatalog.system }.value
         }
     }
 

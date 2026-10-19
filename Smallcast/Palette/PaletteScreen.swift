@@ -195,6 +195,13 @@ extension PopoverMenuContent {
         content: PopoverMenuContent, bestMatch: Int?
     ) {
         guard !query.isEmpty else { return (self, nil) }
+        if let search {
+            let matches = search(query.text)
+            return (
+                PopoverMenuContent(header: header, items: matches),
+                matches.firstIndex(where: \.isSelectable)
+            )
+        }
         var pendingSection = false
         var pendingTitle: String?
         var matches: [PopoverMenuItem] = []

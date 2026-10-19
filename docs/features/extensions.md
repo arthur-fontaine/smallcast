@@ -35,9 +35,6 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
   the installed set and clears the launcher rows;
   `refresh()` returns early while it is off, so nothing is scanned and nothing is held. Enabling is also
   consent to run third-party code, so it confirms first and never rides a settings backup.
-- **`SymbolCatalog` reads a system bundle, not API.** The list comes from `CoreGlyphs.bundle` at
-  runtime; every read stays optional and falls back to `SymbolCatalog.suggested`, and Apple's restricted
-  marks are never offered.
 
 ## How it works
 
@@ -139,7 +136,6 @@ Two host-call flavours:
 | `Model/RenderNode.swift`                      | the decoded render tree (`RenderTree` / `RenderNode` / `RenderValue`)                                      |
 | `Model/ExtensionAppearance.swift`             | the per-extension icon override and its tint palette                                                       |
 | `Service/ExtensionAppearanceStore.swift`      | where those overrides persist                                                                              |
-| `Service/SymbolCatalog.swift`                 | the SF Symbol list read from `CoreGlyphs.bundle`                                                           |
 | `UI/ExtensionScreen.swift`                    | flattens one screen into the palette's row order                                                           |
 | `UI/ExtensionCommandScreen.swift`             | that order adapted to `PaletteScreen`, so the flat selection indexes it                                    |
 | `UI/ExtensionCoordinator.swift`               | launching, leaving, and every host callback that touches a surface                                         |
@@ -961,21 +957,5 @@ stroke that appearance calls for.
 
 ### Where the symbols come from
 
-`SymbolCatalog` reads **the system's own catalog** at runtime from
-`/System/Library/CoreServices/CoreGlyphs.bundle` — the symbol order, each symbol's categories, and the
-extra search terms the SF Symbols app matches on, so "coffee" finds `cup.and.saucer`. Reading it beats
-bundling a name list: the offer always matches the OS, with nothing to regenerate per release.
-
-Two filters apply, leaving ~6,500 of the 8,302 names on macOS 26:
-
-- **Apple's reserved marks** (`symbol_restrictions.strings`, ~600 symbols: iCloud, iPhone, AirPlay…),
-  which may only refer to those products.
-- **Locale renderings** (`.ar`, `.hi`, `.rtl`…), near-duplicates of a symbol already in the list.
-
-None of this is API, so every read is optional and `SymbolCatalog.fallback` — the curated ~85 in
-`SymbolCatalog.suggested` — stands in if the bundle ever moves. That curated set is also what the picker
-opens on, since scrolling six thousand icons is not a way to choose one; a search reaches the whole
-catalog regardless of the selected category.
-
-`Tests/symbols-test.swift` compiles the real source and asserts those invariants against this machine's
-CoreGlyphs (shapes and rules, not counts — those move every release).
+The picker offers `Platform/SymbolCatalog`, the one catalog every icon picker in the app reads — see
+[ui.md](../ui.md#icon-pickers). Only the grid and its tints are the extension's own.

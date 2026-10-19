@@ -68,6 +68,8 @@ struct PopoverMenuItem {
 struct PopoverMenuContent {
     var header: String?
     let items: [PopoverMenuItem]
+    /// Replaces title matching for a menu whose rows answer to more than their titles.
+    var search: ((String) -> [PopoverMenuItem])?
 }
 
 /// The palette's own menu, hosted by `MenuPanelController` in a window of its own.
