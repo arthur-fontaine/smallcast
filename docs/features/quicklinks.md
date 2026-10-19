@@ -219,8 +219,9 @@ The settings Library keeps its existing enable, alias, hotkey and deletion contr
 
 The form contains only the existing link, name, icon, Open With, root-search and pin options. Insert
 stays beside the destination and writes plain placeholder text at the selection; there is no token
-markup or tag field. Insert, the icon selector and Open With use the palette's searchable menu with
-their existing choices, including Automatic for icons and Default app for the application.
+markup or tag field. Insert, the icon selector and Open With use the palette's searchable menu,
+with Automatic for icons and Default app for the application; the icon menu is `SymbolMenu`, which
+offers every system symbol (see [ui.md](../ui.md#icon-pickers)).
 Tab/Shift-Tab walk the form;
 the link wraps but stays one line, so Return adds no line break. ⌘↵ saves, and Escape or the back
 chevron discards the draft.

@@ -11,6 +11,7 @@ struct SymbolCategory: Identifiable, Hashable, Sendable {
 }
 
 /// Read from `CoreGlyphs.bundle` at runtime; every read is optional, with a curated fallback.
+/// Every icon picker offers this one catalog, so no surface has a smaller choice than another.
 struct SymbolCatalog: Sendable {
     let symbols: [String]
     let categories: [SymbolCategory]
@@ -37,6 +38,10 @@ struct SymbolCatalog: Sendable {
             // Status & power
             "bolt.fill", "cup.and.saucer.fill", "moon.fill", "sun.max.fill", "power", "battery.100",
             "eye.fill", "bell.fill", "sparkles", "wand.and.stars",
+            // Language & AI
+            "translate", "character.bubble.fill", "text.bubble.fill", "quote.bubble.fill",
+            "character.book.closed.fill", "textformat", "pencil.and.scribble", "lightbulb.fill",
+            "magnifyingglass",
             // Time
             "calendar", "clock.fill", "timer", "hourglass", "alarm.fill",
             // Text & documents
@@ -74,6 +79,9 @@ struct SymbolCatalog: Sendable {
         byCategory: [:],
         searchTerms: [:])
 
+    /// Loaded once and shared; the first read parses ~700 KB of plists, so warm it off-main.
+    nonisolated static let system = load()
+
     /// Reads and filters the system catalog. Off the main actor: it parses ~700 KB of plists.
     nonisolated static func load() -> SymbolCatalog {
         let base = URL(
@@ -91,13 +99,11 @@ struct SymbolCatalog: Sendable {
         guard let order = plist("symbol_order.plist", as: [String].self), !order.isEmpty else {
             return fallback
         }
-        // Apple reserves ~600 for its own products; labelling with one misuses the mark.
-        let restricted = Set(
-            (plist("symbol_restrictions.strings", as: [String: String].self) ?? [:]).keys)
         let categoriesBySymbol = plist("symbol_categories.plist", as: [String: [String]].self) ?? [:]
         let search = plist("symbol_search.plist", as: [String: [String]].self) ?? [:]
 
-        let systemSymbols = order.filter { !restricted.contains($0) && !isLocaleVariant($0) }
+        // Apple's reserved marks stay: a personal build may label a translation with `translate`.
+        let systemSymbols = order.filter { !isLocaleVariant($0) }
         guard !systemSymbols.isEmpty else { return fallback }
         // The app's own marks lead, so what the system lacks is the first thing offered.
         let symbols = bundledGlyphs + systemSymbols

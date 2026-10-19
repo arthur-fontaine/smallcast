@@ -31,11 +31,11 @@ struct SymbolTests {
             "bundled marks name nothing the system already has", colliding.isEmpty,
             "got \(colliding)")
 
-        // Apple's reserved marks must not be on offer.
-        for reserved in ["icloud", "applelogo", "airplayvideo"] where catalog.symbols.contains(reserved) {
-            fail("reserved symbol offered", detail: reserved)
-        }
-        check("reserved marks are filtered", !catalog.symbols.contains("icloud"))
+        // Apple's reserved marks are offered: the translation glyph is the one people look for.
+        check("reserved marks are offered", catalog.symbols.contains("translate"))
+        check(
+            "'translate' finds the translation glyph",
+            catalog.search("translate", in: .all).contains("translate"))
 
         // Locale variants are near-duplicates of a symbol that's already listed.
         let locale = catalog.symbols.filter { $0.hasSuffix(".ar") || $0.hasSuffix(".rtl") }

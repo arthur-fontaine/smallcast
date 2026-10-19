@@ -590,7 +590,7 @@ run backup-archive-test    Smallcast/Platform/AppPaths.swift \
                            Smallcast/Features/Backup/Model/BackupManifest.swift \
                            Smallcast/Features/Backup/Service/BackupStaging.swift
 E=Smallcast/Features/Extensions
-run symbols-test           $E/Service/SymbolCatalog.swift
+run symbols-test           Smallcast/Platform/SymbolCatalog.swift
 run ext-cleanup-test       $E/Service/ExtensionCleanup.swift \
                            $E/Service/ExtensionCatalog.swift \
                            Smallcast/Platform/AppDisplayName.swift \

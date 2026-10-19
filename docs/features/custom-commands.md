@@ -268,8 +268,8 @@ same way.
 A command may carry its own SF Symbol; without one it draws `CustomCommand.sfSymbol`, the shared
 terminal glyph. `CustomCommand.symbol` is the one place that fallback lives, and every surface reads
 it — the launcher row, the Settings list, the confirmation and failure dialogs, and the output
-window's header. The editor supplies its existing symbol list to the palette's searchable input menu;
-the choices stay local to Custom Commands rather than being shared with another feature.
+window's header. The editor's icon menu is `SymbolMenu`: it opens on a terminal-flavoured
+suggested set and searches every system symbol (see [ui.md](../ui.md#icon-pickers)).
 
 ### Needs confirmation
 

@@ -166,12 +166,13 @@ struct QuicklinkEditorView: View {
         .formFieldChrome(focused: focusedField == .name || focusedField == .icon)
     }
 
+    /// What the icon menu opens on; a search reaches every system symbol.
     private static let iconSymbols = [
         "globe", "folder", "doc.text", "link", "star", "bookmark", "magnifyingglass", "cart",
         "envelope", "message", "calendar", "clock", "checklist", "chart.bar", "hammer", "wrench",
         "ladybug", "terminal", "chevron.left.forwardslash.chevron.right", "cloud", "server.rack",
         "lock", "person.2", "building.2", "graduationcap", "book", "music.note", "play.rectangle",
-        "photo", "paintbrush", "creditcard", "map"
+        "photo", "paintbrush", "creditcard", "map", "translate"
     ]
 
     private var iconMenu: some View {
@@ -206,19 +207,10 @@ struct QuicklinkEditorView: View {
     }
 
     private func showIconMenu() {
-        let items =
-            [
-                PopoverMenuItem(title: "Automatic", systemImage: Quicklink.sfSymbol) {
-                    editor.iconSymbol = nil
-                }
-            ]
-            + Self.iconSymbols.enumerated().map { index, symbol in
-                PopoverMenuItem(title: symbol, systemImage: symbol, startsSection: index == 0) {
-                    editor.iconSymbol = symbol
-                }
-            }
-        let selected = Self.iconSymbols.firstIndex { $0 == editor.iconSymbol }.map { $0 + 1 } ?? 0
-        openInputMenu(PopoverMenuContent(items: items), .belowControl(iconMenuFrame), selected)
+        let menu = SymbolMenu.content(
+            selection: editor.iconSymbol, automatic: Quicklink.sfSymbol, suggested: Self.iconSymbols
+        ) { editor.iconSymbol = $0 }
+        openInputMenu(menu.content, .belowControl(iconMenuFrame), menu.selected)
     }
 
     private func menuChevron(for frame: CGRect) -> some View {
