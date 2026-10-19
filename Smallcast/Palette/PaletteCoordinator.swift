@@ -64,6 +64,29 @@ final class PaletteCoordinator {
 
     var isVisible: Bool { windowController.isVisible }
 
+    /// The bar's buttons are out now, so whatever replaces the bar should let them fuse back first.
+    var spotlightButtonsAreOut: Bool {
+        isVisible && showsSpotlightButtons && paletteIsCollapsed && palette.mode == .launcher
+    }
+
+    /// When this summon's buttons have finished coming out: the last glyph's fade ends it.
+    var spotlightButtonsLandAt: ContinuousClock.Instant {
+        let reveal =
+            Theme.LiquidGlass.railRevealDelay + Theme.LiquidGlass.railGlyphDelay
+            + railStagger + Theme.LiquidGlass.railGlyphFade
+        return palette.landedAt + .seconds(reveal)
+    }
+
+    /// Until the last button is home: they go back in one after another, so the stagger counts.
+    var spotlightButtonsFuseDuration: TimeInterval {
+        Theme.LiquidGlass.railHideSettle + railStagger
+    }
+
+    private var railStagger: TimeInterval {
+        let staggered = max(0, settings.availableSpotlightButtons.count - 1)
+        return Theme.LiquidGlass.railStagger * Double(staggered)
+    }
+
     var panelFrame: CGRect? { windowController.visibleFrame }
 
     /// The palette's own view, for AppKit UI anchored to it — a sharing picker, say.

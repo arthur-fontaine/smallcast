@@ -4,22 +4,25 @@ import SwiftUI
 struct PaletteVoiceField: ViewModifier {
     let font: Font
     @Environment(AppCore.self) private var core
+    @Environment(PaletteState.self) private var vm
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
-        let question = core.dictationCoordinator.question
+        let question = vm.holdsVoiceQuestion ? nil : core.dictationCoordinator.question
+        // The search text leaves with the buttons; the readout waits for Quick AI, once they fuse.
+        let readout = vm.mode == .ai ? question : nil
         let fade: Animation? = reduceMotion ? nil : .easeOut(duration: Theme.Duration.voiceQuestion)
         content
             .animation(fade) { $0.opacity(question == nil ? 1 : 0) }
             .overlay {
                 // Scoped to the readout: on the field, it would animate the answer's screen arriving.
                 ZStack {
-                    if let question {
-                        VoiceReadout(state: question, font: font)
+                    if let readout {
+                        VoiceReadout(state: readout, font: font)
                             .transition(.opacity)
                     }
                 }
-                .animation(fade, value: question != nil)
+                .animation(fade, value: readout != nil)
             }
     }
 }

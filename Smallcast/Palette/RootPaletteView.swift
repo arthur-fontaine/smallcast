@@ -861,7 +861,8 @@ struct RootPaletteView: View {
     /// Out on every summon, once the surface has arrived, and back in as soon as anything is typed.
     private var railRevealed: Bool {
         // A dictated question collapses Quick AI too, and its buttons fuse back in for it.
-        guard !spotlightButtons.isEmpty, isCollapsed, vm.mode == .launcher, mergingButton == nil
+        guard !spotlightButtons.isEmpty, isCollapsed, vm.mode == .launcher, mergingButton == nil,
+            vm.holdsVoiceQuestion || !core.paletteCoordinator.isAskingByVoice()
         else { return false }
         // Leaving, the bar fades whole, as Spotlight's does, rather than pulling its buttons in.
         if vm.presentation == .exiting { return true }

@@ -785,10 +785,18 @@ theme. The palette never stays in search while a question is dictated. It draws 
 beyond system symbols:
 
 - **Compact mode keeps the bar.** `paletteIsCollapsed` holds for Quick AI while
-  `isAskingByVoice()`, so the card stays a capsule. The bar's buttons fuse back in, since
-  `railRevealed` needs the launcher, and the magnifier turns into Quick AI's sparkles with a symbol
-  replace. The bar grows into the chat only once the question is asked. Without compact mode, the
-  card shows Quick AI's empty screen under the same header.
+  `isAskingByVoice()`, so the card stays a capsule. The bar grows into the chat only once the
+  question is asked. Without compact mode, the card shows Quick AI's empty screen under the same
+  header.
+- **The bar's buttons land, fuse, and only then does Quick AI listen.** The press that starts the
+  hold also brings the buttons out, and the 400 ms hold fires mid-reveal. Recording starts at once,
+  but `PaletteState.holdsVoiceQuestion` keeps the bar as it is until `spotlightButtonsLandAt`: the
+  palette's `landedAt` plus the reveal's last glyph fade. Then `railRevealed` turns off, so the
+  buttons fuse back and the search text fades with them. Quick AI opens after
+  `spotlightButtonsFuseDuration`, which is `railHideSettle` plus the stagger, last button first. The
+  magnifier then turns into Quick AI's sparkles with a symbol replace, and the readout fades in. It
+  navigates rather than calling `showPalette` on the open palette, since showing it again cut the
+  fuse short. Reduce Motion skips both waits.
 - **`PaletteVoiceField`** fades the field out, keeping it mounted, and puts **Listening…** in its
   place. A trailing `waveform` symbol takes the loudest band as its variable value. Transcribing,
   the text reads **Transcribing…** and the symbol runs the system's iterative variable-colour effect.
