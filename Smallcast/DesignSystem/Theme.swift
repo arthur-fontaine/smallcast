@@ -354,7 +354,7 @@ enum Theme {
         static let roomCardExit: TimeInterval = 0.18
         static let roomSettle: TimeInterval = 0.25
         /// The field giving way to a question being dictated, and coming back after it.
-        static let voiceQuestion: TimeInterval = 0.2
+        static let voiceQuestion: TimeInterval = 0.14
     }
 
     /// The Liquid Glass theme's own values; the Smallcast theme never reads them.
@@ -398,8 +398,6 @@ enum Theme {
         static let railReveal = Animation.spring(response: 0.44, dampingFraction: 0.62)
         /// Quick and barely bouncy: typing fuses the buttons back before the card grows below.
         static let railHide = Animation.spring(response: 0.3, dampingFraction: 0.82)
-        /// When `railHide` has come to rest, for a step that must wait until the buttons are home.
-        static let railHideSettle: TimeInterval = 0.32
         /// The window holds its height this long, so the card grows at full width, not beside them.
         static let expandDelay: TimeInterval = 0.1
         /// The buttons barely overshoot: the last rests on the window's edge, which would clip it.

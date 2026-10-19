@@ -9,7 +9,7 @@ struct PaletteVoiceField: ViewModifier {
 
     func body(content: Content) -> some View {
         let question = vm.holdsVoiceQuestion ? nil : core.dictationCoordinator.question
-        // The search text leaves with the buttons; the readout waits for Quick AI, once they fuse.
+        // Keyed on Quick AI too, so the readout and the sparkles arrive together, not one by one.
         let readout = vm.mode == .ai ? question : nil
         let fade: Animation? = reduceMotion ? nil : .easeOut(duration: Theme.Duration.voiceQuestion)
         content
