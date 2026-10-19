@@ -510,6 +510,7 @@
 		8AF19E753C88A6C1B0624133 /* ExtensionImageSize.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EA97AAA74B14531B9D83316 /* ExtensionImageSize.swift */; };
 		8B7791B3A42FEF2CC1BE715A /* ArmedHover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BB33A1184A8408E953D7911 /* ArmedHover.swift */; };
 		8B8D6EF9BE333C25DBA6743B /* QuickActionRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49A36364C16AB47D401FA49 /* QuickActionRunner.swift */; };
+		8BC244B5EFE0430D170DB72F /* PaletteVoiceQuestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4730453DB776D1B4818C1A33 /* PaletteVoiceQuestion.swift */; };
 		8C1106FCA6857E1A53B91935 /* TerminalLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F73A2A9B7FF1BFE1F96384BA /* TerminalLogView.swift */; };
 		8C54579496574874D682A913 /* RoomPickerList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 275E96CA1AFC95C19EA6D1C9 /* RoomPickerList.swift */; };
 		8C8352B4BDBA21F23181F736 /* FileIndexCrawler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17AB33A701F413E2005DA8BD /* FileIndexCrawler.swift */; };
@@ -1152,6 +1153,7 @@
 		45DBC7F3C8C554AE3DC04218 /* MathFormula.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathFormula.swift; sourceTree = "<group>"; };
 		467B2AFC2A94DA4F7C081F28 /* FolderPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderPicker.swift; sourceTree = "<group>"; };
 		4727FC1D2F60E72DE7D03759 /* PopoverMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverMenu.swift; sourceTree = "<group>"; };
+		4730453DB776D1B4818C1A33 /* PaletteVoiceQuestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteVoiceQuestion.swift; sourceTree = "<group>"; };
 		47334D43A1F65FBB188DC4B6 /* RoomWindowMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomWindowMatcher.swift; sourceTree = "<group>"; };
 		4752B8D2E6083B1903422403 /* MCPOAuthRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPOAuthRequest.swift; sourceTree = "<group>"; };
 		47E634C65F942CA9EC84CB85 /* ChatChoices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatChoices.swift; sourceTree = "<group>"; };
@@ -3206,6 +3208,7 @@
 				A98B898B5F55A6DFDCE6B2A0 /* PaletteState.swift */,
 				57967BA9F955B2AB16DE0047 /* PaletteSurface.swift */,
 				49DA8C8C22352714884A2D47 /* PaletteTabAction.swift */,
+				4730453DB776D1B4818C1A33 /* PaletteVoiceQuestion.swift */,
 				801213455F72B5CFB3CFB780 /* PaletteWindowController.swift */,
 				CBE879165C9F37272CBE9421 /* RootPaletteView.swift */,
 				1BA76A3C12464E13CC1900E6 /* SpotlightButton.swift */,
@@ -4653,6 +4656,7 @@
 				080371B005769B1933421FCC /* PaletteTabAction.swift in Sources */,
 				3DB457B259FE0F77EFB73AD5 /* PaletteTheme.swift in Sources */,
 				0B88E22C0BCCFADC58334B6B /* PaletteThemePreview.swift in Sources */,
+				8BC244B5EFE0430D170DB72F /* PaletteVoiceQuestion.swift in Sources */,
 				3A370C2555AA47AFA3C96F9F /* PaletteWindowController.swift in Sources */,
 				763F1784714ED105163F9C43 /* PanelTransition.swift in Sources */,
 				62EF7E6C6D8C4D11A5D301B1 /* PasteSequence.swift in Sources */,

@@ -339,6 +339,9 @@ final class AppCore {
             paletteCoordinator.onLauncherShown = { [weak self] in
                 self?.appleShortcutCoordinator.refresh()
             }
+            paletteCoordinator.isAskingByVoice = { [weak self] in
+                self?.dictationCoordinator.question != nil
+            }
             paletteCoordinator.onScreenOpening = { [weak self] mode in
                 switch mode {
                 case .menuSearch: self?.menuSearchCoordinator.load()

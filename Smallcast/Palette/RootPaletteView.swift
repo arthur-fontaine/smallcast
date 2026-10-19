@@ -601,6 +601,11 @@ struct RootPaletteView: View {
             }
             .onKeyPress(.escape) {
                 if menuPanel.isClosing { return .handled }
+                // A question still being dictated is the deepest thing open, so it goes first.
+                if core.dictationCoordinator.question != nil {
+                    core.dictationCoordinator.cancelHandoff()
+                    return .handled
+                }
                 // An open control list owns Escape before the palette beneath it.
                 if vm.isControlListOpen { return .ignored }
                 switch PaletteEscapeAction.resolve(
@@ -714,13 +719,16 @@ struct RootPaletteView: View {
             // Matches the list rows and section headers' own indent below.
             headerGutter(width: metrics.spacing.md * 2)
             // Every sub-screen leaves the same way, so the slot reads the same on all of them.
-            if vm.mode != .launcher {
+            if vm.mode != .launcher, !core.paletteCoordinator.isAskingByVoice() {
                 HeaderBackButton(help: backHelp, action: goBack)
             } else {
+                // One glyph across a dictated question, so the magnifier turns into sparkles in place.
                 Image(systemName: vm.mode.systemImage)
                     .font(metrics.typography.headerIcon)
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.secondary)
+                    .contentTransition(.symbolEffect(.replace))
+                    .animation(reduceMotion ? nil : .default, value: vm.mode)
                     .frame(width: metrics.size.headerIconSlot)
                     .windowDraggable(settings.paletteDraggable, onBegan: beginDrag, onEnded: endDrag)
             }
@@ -852,7 +860,9 @@ struct RootPaletteView: View {
 
     /// Out on every summon, once the surface has arrived, and back in as soon as anything is typed.
     private var railRevealed: Bool {
-        guard !spotlightButtons.isEmpty, isCollapsed, mergingButton == nil else { return false }
+        // A dictated question collapses Quick AI too, and its buttons fuse back in for it.
+        guard !spotlightButtons.isEmpty, isCollapsed, vm.mode == .launcher, mergingButton == nil
+        else { return false }
         // Leaving, the bar fades whole, as Spotlight's does, rather than pulling its buttons in.
         if vm.presentation == .exiting { return true }
         return vm.isVisible && vm.presentation == .shown
@@ -926,6 +936,7 @@ struct RootPaletteView: View {
             .opacity(hidesSearchField ? 0 : 1)
             .allowsHitTesting(!hidesSearchField)
             .accessibilityHidden(hidesSearchField)
+            .modifier(PaletteVoiceField(font: searchFieldFont))
             // The frame it publishes is where the panel puts an I-beam; hidden, it owns nowhere.
             .onChange(of: hidesSearchField) { _, hidden in
                 if hidden { vm.searchFieldFrame = .zero }

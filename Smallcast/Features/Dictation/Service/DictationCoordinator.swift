@@ -23,10 +23,12 @@ final class DictationCoordinator {
     @ObservationIgnored private var stopTask: Task<Void, Never>?
     @ObservationIgnored private var finishWhenStarted = false
     @ObservationIgnored private var target: InjectionTarget?
-    /// Receives the transcript in place of any field or the clipboard; nil for an insertion.
-    @ObservationIgnored private var handoff: ((String) -> Void)?
+    /// Receives the transcript in place of any field or the clipboard, or nil when none comes.
+    @ObservationIgnored private var handoff: ((String?) -> Void)?
     /// The field a mic button is dictating into; nil for a shortcut's session.
     private(set) var field: DictationField?
+    /// A handoff's readout, drawn by the palette it was asked from instead of by the capsule.
+    private(set) var question: DictationDisplayState?
 
     init(
         settings: AppSettings, hotKeys: HotKeyManager, models: DictationModelStore,
@@ -126,11 +128,14 @@ final class DictationCoordinator {
 
     /// Held rather than toggled whatever the mode setting: `releaseHandoff()` is what finishes it.
     @discardableResult
-    func listen(handingOffTo handoff: @escaping (String) -> Void) -> Bool {
+    func listen(handingOffTo handoff: @escaping (String?) -> Void) -> Bool {
         guard settings.dictationEnabled, phase == .idle else { return false }
         self.handoff = handoff
         begin(target: nil)
-        return phase != .idle
+        guard phase != .idle else { return false }
+        panel.state.reset()
+        question = panel.state
+        return true
     }
 
     /// Scoped like `cancel(in:)`: the launcher's chord must not end a shortcut's own session.
@@ -174,7 +179,8 @@ final class DictationCoordinator {
                     return
                 }
                 phase = .listening
-                panel.show()
+                // The capsule would take key from the palette, which hides when it loses key.
+                if handoff == nil { panel.show() }
                 if finishWhenStarted { accept() }
             } catch {
                 guard token == current else { return }
@@ -215,8 +221,9 @@ final class DictationCoordinator {
                 guard token == current else { return }
                 if let handoff {
                     let text = DictationTextFormatter.format(transcript, context: nil)
+                    self.handoff = nil
                     reset(cancelTranscription: false)
-                    if !text.isEmpty { handoff(text) }
+                    handoff(text.isEmpty ? nil : text)
                     return
                 }
                 // A mic belongs to its field: the text goes in there, never to the clipboard.
@@ -293,9 +300,13 @@ final class DictationCoordinator {
         phase = .idle
         target = nil
         field = nil
+        let abandoned = handoff
         handoff = nil
+        question = nil
         panel.close()
         audioDucker.end()
+        // Last, so whatever it navigates to already sees the session over.
+        abandoned?(nil)
     }
 }
 

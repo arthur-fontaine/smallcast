@@ -36,11 +36,15 @@ compilation of its 2-bit weights; Ultra's encoder and both variants' decoder/joi
   its transcript is inserted whatever the destination setting, never copied.
   Switching chats or closing the composer cancels only the session targeting that editor, including
   one started by a shortcut. The session token is checked again when queued insertion runs.
-- Holding the App Launcher chord starts a handoff session through `listen(handingOffTo:)`. It hides
-  the palette, which the capsule would dismiss by taking key. Releasing the chord finishes it,
-  whatever the mode setting. The trimmed transcript goes to Quick AI's `ask(_:)`, never to a field
-  or the clipboard. `releaseHandoff()` and `cancelHandoff()` end only a handoff session, and a hold
-  never takes over a session already running.
+- Holding the App Launcher chord starts a handoff session through `listen(handingOffTo:)`. The
+  palette switches to Quick AI, reopening if the press closed it, and the capsule never shows: it
+  would take key, and the palette hides when it loses key. The session publishes `question` instead,
+  set before capture starts and cleared by `reset()`, and the palette draws it — see
+  [ui.md](../ui.md#asking-ai-by-voice). Releasing the chord finishes it, whatever the mode setting.
+  The trimmed transcript goes to Quick AI, never to a field or the clipboard. A session that ends
+  without one hands off `nil` exactly once, from `reset()`, so Quick AI can leave the empty chat it
+  opened. Escape in the palette, or the palette hiding, cancels it. `releaseHandoff()` and
+  `cancelHandoff()` end only a handoff session, and a hold never takes over a session already running.
 - The nonactivating panel preserves the target app. Text insertion reuses `TextInjector`, including
   its temporary clipboard ownership, focus, secure-input and protected-target checks. Copy-only
   writes the plain transcript without reading the caret; paste-and-copy writes the persistent copy
