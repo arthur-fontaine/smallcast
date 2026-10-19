@@ -171,10 +171,15 @@ final class PaletteCoordinator {
         windowController.popToRootNow()
     }
 
-    /// True for the slim compact bar: compact on, launcher root, empty, not overflowed.
+    /// Whether a held App Launcher chord is dictating a question right now.
+    var isAskingByVoice: () -> Bool = { false }
+
+    /// True for the slim compact bar: compact on, launcher root, empty, not overflowed — or Quick
+    /// AI while a question is dictated, which grows into the chat only once it is asked.
     var paletteIsCollapsed: Bool {
-        settings.compactMode
-            && !palette.forceExpanded
+        guard settings.compactMode else { return false }
+        if palette.mode == .ai { return isAskingByVoice() }
+        return !palette.forceExpanded
             && palette.mode == .launcher
             && palette.query.trimmingCharacters(in: .whitespaces).isEmpty
     }

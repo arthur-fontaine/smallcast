@@ -134,36 +134,50 @@ struct DictationFieldTest {
         for releasesWhileStarting in [false, true] {
             let fixture = Fixture()
             let copies = Paster.copies.count
-            var questions: [String] = []
+            var questions: [String?] = []
             let started = fixture.coordinator.listen(handingOffTo: { questions.append($0) })
             expect(started, "A hold reports that it started listening")
-            if !releasesWhileStarting { try await wait { fixture.panel.isVisible } }
+            expect(fixture.coordinator.question != nil, "A hold shows its readout before capture starts")
+            if !releasesWhileStarting { try await wait { fixture.capture.isRecording } }
+            expect(!fixture.panel.isVisible, "A hold never shows the capsule over the palette")
             fixture.coordinator.releaseHandoff()
             try await wait { fixture.models.pending != nil }
             fixture.models.finish("  What time is it in Tokyo?  ")
             try await wait { !questions.isEmpty }
             expect(questions == ["What time is it in Tokyo?"], "A hold hands its trimmed transcript off")
             expect(Paster.copies.count == copies, "A handoff never touches the clipboard")
-            expect(!fixture.panel.isVisible, "The capsule closes once the question is handed off")
+            expect(fixture.coordinator.question == nil, "The readout goes once the question is handed off")
         }
 
         let fixture = Fixture()
-        var questions: [String] = []
+        var questions: [String?] = []
         fixture.coordinator.listen(handingOffTo: { questions.append($0) })
         try await wait { fixture.capture.isRecording }
         fixture.coordinator.cancelHandoff()
+        expect(fixture.coordinator.question == nil, "A cancelled hold drops its readout")
+        expect(questions == [nil], "A cancelled hold tells its asker nothing is coming")
         try await wait { !fixture.capture.isRecording }
         expect(fixture.models.pending == nil, "A cancelled hold is never transcribed")
-        expect(questions.isEmpty, "A cancelled hold asks nothing")
+
+        let silent = Fixture()
+        var answers: [String?] = []
+        silent.coordinator.listen(handingOffTo: { answers.append($0) })
+        try await wait { silent.capture.isRecording }
+        silent.coordinator.releaseHandoff()
+        try await wait { silent.models.pending != nil }
+        silent.models.finish("   ")
+        try await wait { !answers.isEmpty }
+        expect(answers == [nil], "A hold that heard nothing hands off nothing, exactly once")
     }
 
     private static func testHandoffScope() async throws {
         let fixture = Fixture()
         let editor = ComposerTextView()
         try await fixture.start(into: editor)
-        var questions: [String] = []
+        var questions: [String?] = []
         let started = fixture.coordinator.listen(handingOffTo: { questions.append($0) })
         expect(!started, "A refused hold reports that it never started")
+        expect(fixture.coordinator.question == nil, "A refused hold shows no readout")
         fixture.coordinator.releaseHandoff()
         fixture.coordinator.cancelHandoff()
         expect(fixture.capture.isRecording, "The launcher's chord cannot end a field's session")
@@ -344,6 +358,7 @@ final class DictationPanelController {
     final class State {
         var phase = Phase.listening
         var levels: [Float] = []
+        func reset() { phase = .listening }
     }
     static weak var latest: DictationPanelController?
     let state = State()
@@ -354,6 +369,8 @@ final class DictationPanelController {
     func show() { isVisible = true }
     func close() { isVisible = false }
 }
+
+typealias DictationDisplayState = DictationPanelController.State
 
 @MainActor
 final class DictationAudioDucker {

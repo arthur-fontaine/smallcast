@@ -147,7 +147,8 @@ Holding the App Launcher chord asks AI by voice when Dictation, AI and Settings 
 “Hold App Launcher shortcut to ask AI” are all on. The press still toggles the palette at once, so a
 tap costs nothing. Carbon repeats a held chord's press, so only the first press toggles until release; a press more
 than 2 s after the last one is a new press, since a lost release would otherwise jam the chord.
-After 400 ms still held, `onLauncherHeld` fires and the release finishes the recording.
+After 400 ms still held, `onLauncherHeld` fires: the palette switches to Quick AI and listens,
+reopening if the press closed it, and the release finishes the recording.
 Pausing for a recorder, rebinding the chord or turning the feature off cancels it. A modifier-only
 App Launcher binding has no release, so it cannot hold.
 

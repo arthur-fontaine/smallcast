@@ -776,6 +776,28 @@ countdown and buttons around it are Smallcast's own. Its buttons are a **deliber
 `DialogButton` rather than a share: the dialog owns its button, and a preview that had to move with
 it would couple two unrelated surfaces.
 
+## Asking AI by voice
+
+Source: `Palette/PaletteVoiceQuestion.swift`, `QuickAICoordinator.listenForQuestion()`.
+
+Holding the App Launcher chord puts the palette in Quick AI at once, on a fresh chat, in every
+theme. The palette never stays in search while a question is dictated. It draws nothing of its own
+beyond system symbols:
+
+- **Compact mode keeps the bar.** `paletteIsCollapsed` holds for Quick AI while
+  `isAskingByVoice()`, so the card stays a capsule. The bar's buttons fuse back in, since
+  `railRevealed` needs the launcher, and the magnifier turns into Quick AI's sparkles with a symbol
+  replace. The bar grows into the chat only once the question is asked. Without compact mode, the
+  card shows Quick AI's empty screen under the same header.
+- **`PaletteVoiceField`** fades the field out, keeping it mounted, and puts **Listening…** in its
+  place. A trailing `waveform` symbol takes the loudest band as its variable value. Transcribing,
+  the text reads **Transcribing…** and the symbol runs the system's iterative variable-colour effect.
+- The back chevron stays hidden while listening, so the sparkles hold the slot.
+
+The field fades on `Duration.voiceQuestion`, scoped to the field and the readout. On the header, the
+same animation would animate the chat arriving in the same transaction. Reduce Motion drops the
+fade and the transcribing effect.
+
 ## Dialog accessories
 
 A dialog carries at most one control beyond its buttons, and `DialogAccessory` makes that structural

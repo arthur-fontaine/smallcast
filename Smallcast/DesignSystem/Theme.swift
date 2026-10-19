@@ -353,6 +353,8 @@ enum Theme {
         static let roomCardEnter: TimeInterval = 0.2
         static let roomCardExit: TimeInterval = 0.18
         static let roomSettle: TimeInterval = 0.25
+        /// The field giving way to a question being dictated, and coming back after it.
+        static let voiceQuestion: TimeInterval = 0.2
     }
 
     /// The Liquid Glass theme's own values; the Smallcast theme never reads them.

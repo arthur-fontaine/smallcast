@@ -47,12 +47,24 @@ final class QuickAICoordinator {
         send(prompt)
     }
 
-    /// The App Launcher chord held: dictate a question, asked as soon as it is transcribed.
+    /// The App Launcher chord held: Quick AI listens at once, and asks when the words are in.
     func listenForQuestion() {
         guard settings.aiEnabled else { return }
-        let started = core.dictationCoordinator.listen(handingOffTo: { [weak self] in self?.ask($0) })
-        // The capsule takes key on show, which would dismiss the palette under it anyway.
-        if started { paletteCoordinator.hidePalette(reason: .dismissed) }
+        guard core.dictationCoordinator.listen(handingOffTo: { [weak self] in self?.answer($0) })
+        else { return }
+        chat.startNewChat()
+        // Also reopens a palette the press closed. Compact, it stays a bar until the words are in.
+        paletteCoordinator.showPalette(mode: .ai)
+    }
+
+    private func answer(_ question: String?) {
+        guard let question else {
+            // Nothing was asked, so the empty chat it was meant for goes too.
+            guard palette.mode == .ai, chat.session.messages.isEmpty else { return }
+            if !palette.pop() { palette.prepare(mode: .launcher) }
+            return
+        }
+        if paletteCoordinator.isShowing(.ai) { send(question) } else { ask(question) }
     }
 
     /// Off leaves the screen too, so the palette never shows a feature that is gone.

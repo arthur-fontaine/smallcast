@@ -8,6 +8,11 @@ final class DictationDisplayState {
     enum Phase { case listening, transcribing }
     var phase: Phase = .listening
     var levels = [Float](repeating: 0, count: DictationSpectrum.barCount)
+
+    func reset() {
+        phase = .listening
+        levels = [Float](repeating: 0, count: DictationSpectrum.barCount)
+    }
 }
 
 private struct DictationWaveform: View {
@@ -128,8 +133,7 @@ final class DictationPanelController {
             NSPoint(
                 x: frame.midX - size.width / 2,
                 y: frame.minY + frame.height * 0.1 - size.height / 2))
-        state.phase = .listening
-        state.levels = [Float](repeating: 0, count: DictationSpectrum.barCount)
+        state.reset()
         panel.makeKeyAndOrderFront(nil)
     }
 
