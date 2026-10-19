@@ -728,7 +728,9 @@ struct RootPaletteView: View {
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.secondary)
                     .contentTransition(.symbolEffect(.replace))
-                    .animation(reduceMotion ? nil : .default, value: vm.mode)
+                    .animation(
+                        reduceMotion ? nil : .snappy(duration: Theme.Duration.voiceQuestion),
+                        value: vm.mode)
                     .frame(width: metrics.size.headerIconSlot)
                     .windowDraggable(settings.paletteDraggable, onBegan: beginDrag, onEnded: endDrag)
             }
@@ -969,6 +971,10 @@ struct RootPaletteView: View {
     }
 
     private var searchPrompt: String {
+        // The hold came from search, so its prompt is what fades out under the dictated question.
+        if vm.mode == .ai, core.paletteCoordinator.isAskingByVoice() {
+            return PaletteMode.launcher.placeholder
+        }
         // Squeezed to the caret, the field has no room for a prompt; beside one it keeps it.
         if headerAccessory?.placement == .afterQuery, vm.mode != .ai { return "" }
         // Inside a running command the search bar belongs to the extension.

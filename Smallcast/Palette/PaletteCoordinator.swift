@@ -77,11 +77,6 @@ final class PaletteCoordinator {
         return palette.landedAt + .seconds(reveal)
     }
 
-    /// Until the last button is home: they go back in one after another, so the stagger counts.
-    var spotlightButtonsFuseDuration: TimeInterval {
-        Theme.LiquidGlass.railHideSettle + railStagger
-    }
-
     private var railStagger: TimeInterval {
         let staggered = max(0, settings.availableSpotlightButtons.count - 1)
         return Theme.LiquidGlass.railStagger * Double(staggered)

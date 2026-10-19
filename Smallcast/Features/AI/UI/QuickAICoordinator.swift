@@ -63,12 +63,11 @@ final class QuickAICoordinator {
             guard let self else { return }
             try? await Task.sleep(until: paletteCoordinator.spotlightButtonsLandAt, clock: .continuous)
             palette.holdsVoiceQuestion = false
-            guard paletteCoordinator.isAskingByVoice() else { return }
-            try? await Task.sleep(for: .seconds(paletteCoordinator.spotlightButtonsFuseDuration))
-            // Answered, abandoned or dismissed while the buttons went home: nothing is left to open.
+            // Answered, abandoned or dismissed while the buttons landed: nothing is left to open.
             guard paletteCoordinator.isAskingByVoice(), paletteCoordinator.isVisible,
                 palette.mode == .launcher
             else { return }
+            // The same turn: the buttons fuse while the search text crossfades into the question.
             openForQuestion()
         }
     }

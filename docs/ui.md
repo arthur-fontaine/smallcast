@@ -791,12 +791,13 @@ beyond system symbols:
 - **The bar's buttons land, fuse, and only then does Quick AI listen.** The press that starts the
   hold also brings the buttons out, and the 400 ms hold fires mid-reveal. Recording starts at once,
   but `PaletteState.holdsVoiceQuestion` keeps the bar as it is until `spotlightButtonsLandAt`: the
-  palette's `landedAt` plus the reveal's last glyph fade. Then `railRevealed` turns off, so the
-  buttons fuse back and the search text fades with them. Quick AI opens after
-  `spotlightButtonsFuseDuration`, which is `railHideSettle` plus the stagger, last button first. The
-  magnifier then turns into Quick AI's sparkles with a symbol replace, and the readout fades in. It
-  navigates rather than calling `showPalette` on the open palette, since showing it again cut the
-  fuse short. Reduce Motion skips both waits.
+  palette's `landedAt` plus the reveal's last glyph fade. Then, in one turn, `railRevealed` turns
+  off and Quick AI opens: the buttons fuse back while the search text crossfades into the readout
+  and the magnifier turns into Quick AI's sparkles with a symbol replace, all on
+  `Duration.voiceQuestion`. Waiting for the fuse to come to rest instead left the bar empty for
+  0.4 s, since the spring looks done long before it settles. It navigates rather than calling
+  `showPalette` on the open palette, since showing it again cut the fuse short. Reduce Motion skips
+  the wait.
 - **`PaletteVoiceField`** fades the field out, keeping it mounted, and puts **Listening…** in its
   place. A trailing `waveform` symbol takes the loudest band as its variable value. Transcribing,
   the text reads **Transcribing…** and the symbol runs the system's iterative variable-colour effect.
