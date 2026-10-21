@@ -120,18 +120,15 @@ struct FileSearchRow: View {
                 .truncationMode(.middle)
                 .layoutPriority(1)
             if showsLocation {
+                // A long name is cut before the location is: the folder is what tells two apart.
                 Text(result.parentPath)
                     .font(metrics.typography.rowTrailing)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                    .frame(minWidth: metrics.scaled(90), alignment: .leading)
             }
             Spacer(minLength: 0)
-            if showsLocation {
-                Text(result.excerpt != nil ? "Contents" : result.isDirectory ? "Folder" : "File")
-                    .font(metrics.typography.rowTrailing)
-                    .foregroundStyle(.secondary)
-            }
         }
         .padding(.horizontal, metrics.spacing.md)
         .padding(.vertical, metrics.spacing.sm)
