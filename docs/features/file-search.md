@@ -39,9 +39,9 @@ design follows [fsearch](https://github.com/noahdunnagan/fsearch).
   the session, so it observes nothing.
 - **A superseded query never publishes.** The session runs one search at a time, keeps only the newest
   pending request, and checks its revision before publishing.
-- **Names come from the index, contents from DigUp.** With the [Name and content engine](#engine),
-  DigUp's strong matches lead every list, from an index DigUp builds and owns, and never wait on it:
-  the names are on screen first.
+- **Names come from the index, contents from DigUp, and one [ranking](#ranking) orders both.** With
+  the [Name and content engine](#engine), a file named what was typed always leads, and DigUp's index
+  is its own to build. Names never wait on DigUp longer than `contentPatience` (400 ms).
 - **Share is the one system popover, and the palette stays up under it.** `AGENTS.md` keeps Smallcast's
   own dialogs because a question or a report is Smallcast's to word. A share sheet is neither: it is
   AirDrop, Mail and Messages, and re-drawing it would mean re-implementing the transports and losing
@@ -284,9 +284,14 @@ keystroke and when the launcher becomes the mode, and `applyLauncherFiles` re-ru
 changes. `cancel()` returns early on an idle session, so with the section off a keystroke publishes
 nothing.
 
+DigUp's answer lands after the section is drawn. Once the selection is off the first row, the session
+holds what is drawn ([Engine](#engine)), and `launcherFiles(for:selection:firstRow:)` keeps the section
+from growing while the selection is below it, so no row ever appears above the selection.
+
 A Files row is not an `AppEntry`: no `Kind`, no ranking, favorite, alias or Hide from Search. It is
 `LauncherScreen.Row.file`, id-prefixed `file-` because an application's entry id is its bundle path. It
-draws `FileSearchRow` with its location — name, dimmed parent path, then File or Folder — and answers
+draws `FileSearchRow` with its location — name, dimmed parent path, then File, Folder, or Contents for a
+file DigUp found by what it says — and answers
 the screen's own row actions: ↵ opens, ⌘↵ reveals, the copy, paste and trash chords run
 `FileSearchActionsMenu.perform`, and a row drags out as a copy. Row icons come from the same transient
 fitted cache, purged when the palette hides.
@@ -294,12 +299,12 @@ fitted cache, purged when the palette hides.
 ## Engine
 
 Settings ▸ File Search ▸ Engine picks how File Search finds files, everywhere it answers — the Search
-Files command and its hotkey, root search and its Show More row alike:
+Files command and its hotkey, and root search's Files section alike:
 
 | Find files by | Answers with |
 | --- | --- |
 | Name (default) | the filename index, as described above |
-| Name and content | [DigUp](https://github.com/ARahim3/DigUp)'s strong matches, then the index's name matches, then DigUp's weaker ones |
+| Name and content | the index's names and [DigUp](https://github.com/ARahim3/DigUp)'s matches, [ranked together](#ranking) |
 
 DigUp finds a file by what is in it — a photo by what it shows, a PDF by a clause, a recording by what
 is said — with an on-device embedding model. Smallcast embeds none of it: it talks to the command-line
@@ -311,9 +316,8 @@ stay DigUp's.
   leaves the name search, the blank query still lists Recent, and the Folders and Archives filters
   still answer.
 - **A long tail never buries a name.** A meaning search returns a hundred-odd hits, of which DigUp marks
-  the leading `strong` ones as standing out — its own panel folds the rest away. So
-  `DigUpSearchPolicy.merged` lists the strong hits, then every name match, then the weaker hits, each
-  file once.
+  the leading `strong` ones as standing out — its own panel folds the rest away. The weaker ones rank
+  below every name that starts a word and every strong match ([Ranking](#ranking)).
 - **One search service, kept warm.** `DigUpSearchService` runs `digup search-service` (DigUp 0.6.1+)
   once, on the first search, and keeps it: the index stays open and the query encoder loaded, so a
   search costs DigUp 3–20 ms instead of the ~550 ms a `digup search` launch paid for every keystroke.
@@ -321,17 +325,23 @@ stay DigUp's.
   reply is dropped. Both lists share it through `DigUpState`, which starts it only while File Search
   is on with Name and content chosen, and stops it otherwise. The service lets its encoder go after
   five idle minutes, and leaves on EOF if Smallcast does.
-- **Names first, contents as they come.** Names cost milliseconds and are published the moment they
-  land — unless DigUp is still out, in which case they wait up to `contentGrace` (80 ms) so a warm
-  answer draws the list once. Opening the screen sends `prewarm`, so the model loads while the first
+- **A sure name is drawn at once; an unsure one waits for DigUp.** Names cost milliseconds and are
+  published the moment they land unless DigUp is still out. If their top row is a name no content
+  match can outrank (`FileSearchRanking.isConfident`), they wait only `contentGrace` (80 ms), so a warm
+  answer still draws the list once and a late one joins below that row, unless its own name is the
+  query. Otherwise the order is DigUp's to settle, and they wait up to `contentPatience` (400 ms, the Doherty threshold), the previous
+  rows staying on screen meanwhile. Opening the screen sends `prewarm`, so the model loads while the first
   word is typed; with the encoder still cold, each query asks for keywords first (`meaning: false`,
-  the last word as a prefix) and then for meaning. When DigUp's rows land above names already shown,
-  `onRepublish` lets `FileSearchCoordinator` keep the selection on the same file — unless it was on
-  the first row, which then stays on the new first row.
+  the last word as a prefix) and then for meaning.
+- **Rows never move under a reader.** Once the selection is off the first row (`holdsOrder`), a later
+  answer to the same query no longer re-ranks: `FileSearchRanking.holding` keeps every drawn row in
+  its place, even one a later pass dropped, and adds new rows after them, so ↑ always lands where it
+  did. `heldCount` records how many rows were drawn when the hold began. Back on the first row, the
+  next answer ranks in full again; a new query holds nothing.
 - **Loading says so, late.** While DigUp reads, the list's header shows "Searching contents" and,
   with no name match at all, the screen says "Searching inside your files…" — both only after
-  `progressDelay` (300 ms), so a warm search never flashes them. Root search's Files header waits the
-  same way. An empty result says DigUp found nothing either.
+  `progressDelay` (300 ms), so a warm search never flashes them. Root search's Files section says
+  nothing while it waits. An empty result says DigUp found nothing either.
 - **File Search's scopes bound DigUp's answers.** DigUp indexes the folders chosen in its own app;
   `DigUpSearchPolicy.admits` then keeps a hit only under one of File Search's scopes and with no
   ignored folder on its way down, as the crawl would have. The service itself is started on DigUp's
@@ -372,10 +382,37 @@ stay DigUp's.
   `FileSearchResult.excerpt`, and the preview shows it above Information as Why It Matched. Opening at
   the page or the moment that matched (Preview's search, QuickTime's position) is not done yet.
 
-`digup-test` covers the requests, the decoding, the scopes, the fold and the excerpt, then runs a
-`/bin/sh` stand-in for the service: replies matched by id, a cancelled search's late reply dropped,
-a crash survived, an old helper marked unsupported, names published before a slow DigUp, a warm
-answer drawn once, and a cold encoder asked for keywords first.
+### Ranking
+
+`FileSearchRanking.ranked` puts both sources on one scale, each file scored by its best evidence:
+
+| Evidence | Score |
+| --- | --- |
+| The name is the query, extension aside | 100 |
+| The name starts with the query | 92 |
+| Every term starts a word of the name | 84 |
+| One of DigUp's strong matches | 80, 4 less per rank, down to 50 |
+| A term found mid-word | 40 |
+| One of DigUp's weaker matches | 35, 1 less per rank, down to 10 |
+
+- **Names keep the index's order.** A name loses 2 per rank (at most 30, or 20 mid-word) and never
+  scores above the name before it, since the index also weighs where a file lives. A name the index
+  found always counts at least as mid-word, whatever this re-check makes of it.
+- **A word-start name outranks DigUp's first strong match.** That is what lets a typed name lead and
+  be drawn before DigUp answers.
+- **A file found both ways takes its better score plus 2**, a name's step per rank, so it can tie the
+  name above it but never pass it. It keeps DigUp's copy, which carries the passage.
+- **Neither source is shut out of the best five.** If the top five hold no name, or no strong match,
+  that source's best takes the fifth place. File Search heads those five Best Matches and the rest
+  Other Results (`FileSearchSession.bestCount`), and root search's Files section is the same five.
+- **No content match, no re-ranking.** The index's list comes back untouched, so the Name engine and
+  the Folders and Archives filters never see this.
+
+`digup-test` covers the requests, the decoding, the scopes, the fold, the excerpt and the ranking, then
+runs a `/bin/sh` stand-in for the service: replies matched by id, a cancelled search's late reply
+dropped, a crash survived, an old helper marked unsupported, a sure name published before a slow
+DigUp, an unsure one waiting past the grace, a warm answer drawn once, and a cold encoder asked for
+keywords first.
 
 ## Invocation
 

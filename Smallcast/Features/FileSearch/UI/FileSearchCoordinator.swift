@@ -28,20 +28,8 @@ final class FileSearchCoordinator {
         self.core = core
         indexer.onIndexChanged = { [weak session] in session?.refresh() }
         indexer.onRecentChanged = { [weak session] in session?.refreshRecent() }
-        session.onRepublish = { [palette] old, new in
-            Self.keepSelection(on: palette, from: old, to: new)
-        }
-    }
-
-    /// DigUp's rows land above the names a moment later; the selection stays on the same file.
-    private static func keepSelection(
-        on palette: PaletteState, from old: [FileSearchResult], to new: [FileSearchResult]
-    ) {
-        guard palette.mode == .fileSearch, palette.selection > 0,
-            old.indices.contains(palette.selection),
-            let index = new.firstIndex(where: { $0.id == old[palette.selection].id })
-        else { return }
-        palette.selection = index
+        // Off the first row the reader is going somewhere, so a late answer must not move the rows.
+        session.holdsOrder = { [palette] in palette.selection > 0 }
     }
 
     func applyEnabled() {
@@ -91,9 +79,15 @@ final class FileSearchCoordinator {
     }
 
     /// Checks the switch before reading the session, so with it off the launcher observes nothing.
-    func launcherFiles(for query: String) -> [FileSearchResult] {
+    /// `firstRow` is where the section starts, which tells whether the selection is below it.
+    func launcherFiles(for query: String, selection: Int, firstRow: Int) -> [FileSearchResult] {
         guard showsFilesInLauncher, FileSearchQuery.answersLauncher(query) else { return [] }
-        return Array(session.results.prefix(FileSearchQuery.launcherLimit))
+        let rows = session.results.prefix(FileSearchQuery.launcherLimit)
+        guard let held = session.heldCount.map({ min($0, FileSearchQuery.launcherLimit) }) else {
+            return Array(rows)
+        }
+        // Below the section, a row it gained would land above the selection.
+        return Array(selection >= firstRow + held ? rows.prefix(held) : rows)
     }
 
     func applyLauncherFiles() {

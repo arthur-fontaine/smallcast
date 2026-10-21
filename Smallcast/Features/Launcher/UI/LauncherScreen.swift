@@ -76,7 +76,12 @@ struct LauncherScreen: PaletteScreen {
             ? CalcMemo.evaluate(vm.query, rates: currencyRates.rates, format: core.calcNumberFormat) : nil
         // After the calculator: `#FF5733` is never arithmetic, so the two can't both answer.
         let color = calc == nil && pinned == nil ? ColorValue.parse(vm.query) : nil
-        let files = pinned == nil ? core.fileSearchCoordinator.launcherFiles(for: vm.query) : []
+        let files =
+            pinned == nil
+            ? core.fileSearchCoordinator.launcherFiles(
+                for: vm.query, selection: vm.selection,
+                firstRow: results.count + (calc != nil || color != nil ? 1 : 0))
+            : []
         let fallbacks = core.fallbackCoordinator.entries(for: vm.query)
         let entries =
             results.map(Row.entry) + files.map(Row.file)
