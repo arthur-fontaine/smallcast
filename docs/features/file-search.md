@@ -271,8 +271,9 @@ delay old, since the reset clears its session.
 ## In the launcher
 
 **Show in launcher** (`fileSearchShowInLauncher`, under the feature switch) adds a **Files** section to
-root search, between the ranked results and the `Use "…" with` fallbacks, so ↵ on a typed app name never
-opens a file. It lists the top five hits (`FileSearchQuery.launcherLimit`) once the trimmed query has
+root search, by default between the ranked results and the `Use "…" with` fallbacks, so ↵ on a typed
+app name never opens a file; Settings › Search can move it first or last
+([launcher.md](launcher.md#section-order)). It lists the top five hits (`FileSearchQuery.launcherLimit`) once the trimmed query has
 three characters (`launcherMinimumLength`), the threshold category search uses. Shorter cancels the
 query and releases its rows.
 

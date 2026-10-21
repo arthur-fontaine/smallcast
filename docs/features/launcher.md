@@ -335,16 +335,28 @@ can't say what it acts on.
 ### Files
 
 With File Search on and its **Show in launcher** switch set, a query of three characters or more adds a
-**Files** section of up to five hits between the ranked results and the fallbacks. Like a fallback it is
+**Files** section of up to five hits, by default between the ranked results and the fallbacks. Like a fallback it is
 query-driven and not an `AppEntry`: `LauncherScreen.Row.file` carries the `FileSearchResult`, and
 `LauncherList.FileSection` draws it. Nothing about a file row is learned, pinned, aliased or hidden, and it
 adds no `Kind` or `VisibilityStore` category; the switch is its only gate. See
 [file-search.md](file-search.md#in-the-launcher).
 
+### Section order
+
+Below the lead card, root search lists three blocks — **Results**, **Files** and **Fallbacks** — in the
+order `AppSettings.launcherSectionOrder` gives, which Settings › Search reorders with the same chevrons as
+Settings › Fallbacks. The lead card always stays first. `LauncherSection.normalize` keeps each section
+exactly once, so a stored list missing one puts it back at the end. `LauncherScreen` and `LauncherList`
+both read the order — the screen builds the flat rows, the list draws them — and `LauncherSection.start`
+is where a click on a file or fallback row finds its flat index, since neither section is the tail any
+more. The order rides in settings backups and `settings.json` (`search.sectionOrder`);
+`launcher-section-test` covers the normalization and the offsets.
+
 ### Fallbacks
 
 A **fallback** is the other half of the query-driven idea: a command the query is the input for,
-offered under a `Use “…” with…` header **below every result**, whatever the query says. A contextual
+offered under a `Use “…” with…` header **below every result** unless [Section order](#section-order)
+moves it, whatever the query says. A contextual
 row leads because it recognised the query; a fallback trails because nothing did.
 
 `Fallback` (`Launcher/Model/`) is the whole vocabulary — `.builtin(Builtin)` for the four shipped

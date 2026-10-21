@@ -21,8 +21,10 @@ struct LauncherList: View {
     let onActions: (AppEntry) -> Void
     let onDropped: () -> Void
     var files: FileSection?
-    /// The `Use "…" with` section, always last; nil when nothing is typed.
+    /// The `Use "…" with` section; nil when nothing is typed.
     var fallbacks: FallbackSection?
+    /// Must be the screen's own order, or a row would draw away from the index it activates.
+    var sectionOrder = LauncherSection.defaultOrder
     @Environment(RunningAppsMonitor.self) private var runningApps
 
     /// What the fallback section draws and where its rows go, addressed by position.
@@ -85,7 +87,15 @@ struct LauncherList: View {
     }
 
     private var firstRowSelected: Bool {
-        card != nil ? cardSelected : selectedRowID != nil && selectedRowID == results.first?.id
+        guard card == nil else { return cardSelected }
+        let first = sectionOrder.lazy.compactMap { section -> String? in
+            switch section {
+            case .results: return self.results.first?.id
+            case .files: return self.files?.results.first.map { "file-" + $0.id }
+            case .fallbacks: return self.fallbacks?.entries.first.map { "fallback-" + $0.id }
+            }
+        }.first
+        return selectedRowID != nil && selectedRowID == first
     }
 
     private var fileRows: [Row] {
@@ -94,7 +104,6 @@ struct LauncherList: View {
             + files.results.enumerated().map { Row.file($1, index: $0) }
     }
 
-    /// Every row the fallback section contributes, always after the results.
     private var fallbackRows: [Row] {
         guard let fallbacks else { return [] }
         return [.fallbackHeader(fallbacks.title)]
@@ -102,8 +111,19 @@ struct LauncherList: View {
     }
 
     private var rows: [Row] {
+        let lead: [Row] = card.map { [.header($0.sectionTitle), .card($0)] } ?? []
+        return lead
+            + sectionOrder.flatMap { section -> [Row] in
+                switch section {
+                case .results: return resultRows
+                case .files: return fileRows
+                case .fallbacks: return fallbackRows
+                }
+            }
+    }
+
+    private var resultRows: [Row] {
         var rows: [Row] = []
-        if let card { rows = [.header(card.sectionTitle), .card(card)] }
         let favorites = results.prefix(favoriteCount)
         let meetings = results.dropFirst(favoriteCount).prefix(meetingCount)
         let suggestions = results.dropFirst(favoriteCount + meetingCount).prefix(suggestionCount)
@@ -147,7 +167,7 @@ struct LauncherList: View {
             grouped.keys.allSatisfy(kinds.contains),
             "kind missing from the launcher's section order: "
                 + grouped.keys.filter { !kinds.contains($0) }.map(\.rawValue).joined(separator: ", "))
-        return rows + fileRows + fallbackRows
+        return rows
     }
 
     var body: some View {

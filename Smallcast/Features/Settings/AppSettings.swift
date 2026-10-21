@@ -122,6 +122,15 @@ final class AppSettings {
         }
     }
 
+    /// Root search's results, files and fallbacks, in the order they are listed; each once.
+    var launcherSectionOrder: [LauncherSection] {
+        didSet {
+            let normalized = LauncherSection.normalize(launcherSectionOrder)
+            if normalized != launcherSectionOrder { launcherSectionOrder = normalized }
+            defaults.set(launcherSectionOrder.map(\.rawValue), forKey: Key.launcherSectionOrder.rawValue)
+        }
+    }
+
     /// How loose a fuzzy root-search hit may be and still show.
     var rootSearchSensitivity: SearchSensitivity {
         didSet {
@@ -795,6 +804,9 @@ final class AppSettings {
         launcherShowsSuggestions =
             defaults.object(forKey: Key.launcherShowsSuggestions.rawValue) == nil
             || defaults.bool(forKey: Key.launcherShowsSuggestions.rawValue)
+        launcherSectionOrder = LauncherSection.normalize(
+            (defaults.stringArray(forKey: Key.launcherSectionOrder.rawValue) ?? [])
+                .compactMap(LauncherSection.init))
         rootSearchSensitivity =
             defaults.string(forKey: Key.rootSearchSensitivity.rawValue)
             .flatMap(SearchSensitivity.init) ?? .default

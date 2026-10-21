@@ -3,6 +3,7 @@ import SwiftUI
 /// Settings › Search: what the launcher has learned from you, and how to forget it. The list is the
 /// learned order itself, so it doubles as an explanation of why a result sits where it does.
 struct SearchSettingsView: View {
+    @Environment(AppCore.self) private var core
     @Environment(AppIndex.self) private var appIndex
     @Environment(LaunchHistoryStore.self) private var launchHistory
     @Environment(LauncherRankingStore.self) private var ranking
@@ -38,6 +39,21 @@ struct SearchSettingsView: View {
         let learned = learned
         let peak = learned.map(\.record.score).max() ?? 1
         return Form {
+            Section {
+                let order = core.settings.launcherSectionOrder
+                ForEach(Array(order.enumerated()), id: \.element) { index, section in
+                    SectionOrderRow(
+                        section: section, index: index, count: order.count,
+                        subtitle: subtitle(for: section), move: { move(index, by: $0) })
+                }
+            } header: {
+                SettingsSectionHeader(.searchSections)
+            } footer: {
+                Text("The order root search lists its rows in, below a calculation or a meeting.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section {
                 SettingsRow(title: "Forget", subtitle: resetSubtitle(entries: learned.count)) {
                     Image(systemName: "arrow.counterclockwise")
@@ -81,6 +97,7 @@ struct SearchSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .settingsScrollTarget(.search)
         .confirmationDialog(
             "Forget \(range.title.lowercased())?", isPresented: $confirmingReset,
             titleVisibility: .visible
@@ -90,6 +107,26 @@ struct SearchSettingsView: View {
         } message: {
             Text("Smallcast will relearn your preferred results as you use the launcher.")
         }
+    }
+
+    private func subtitle(for section: LauncherSection) -> String {
+        switch section {
+        case .results: return String(localized: "Apps, commands and everything else it finds")
+        case .files:
+            let settings = core.settings
+            guard settings.fileSearchEnabled, settings.fileSearchShowInLauncher else {
+                return String(localized: "Off: turn on Show in launcher in File Search")
+            }
+            return String(localized: "The five best files, by name and contents")
+        case .fallbacks: return String(localized: "“Use … with” rows, as Fallbacks lists them")
+        }
+    }
+
+    private func move(_ index: Int, by delta: Int) {
+        var order = core.settings.launcherSectionOrder
+        guard order.indices.contains(index + delta) else { return }
+        order.swapAt(index, index + delta)
+        core.settings.launcherSectionOrder = order
     }
 
     private func resetSubtitle(entries: Int) -> String {
@@ -106,6 +143,36 @@ struct SearchSettingsView: View {
         let cutoff = range.cutoff(now: Date())
         launchHistory.reset(since: cutoff)
         ranking.reset(since: cutoff)
+    }
+}
+
+/// One of root search's sections, moved with the same chevrons as Settings › Fallbacks.
+private struct SectionOrderRow: View {
+    let section: LauncherSection
+    let index: Int
+    let count: Int
+    let subtitle: String
+    let move: (Int) -> Void
+
+    var body: some View {
+        SettingsRow(title: section.title, subtitle: subtitle) {
+            Image(systemName: section.symbol)
+        } trailing: {
+            Button {
+                move(-1)
+            } label: {
+                Image(systemName: "chevron.up")
+            }
+            .disabled(index == 0)
+            .accessibilityLabel("Move \(section.title) up")
+            Button {
+                move(1)
+            } label: {
+                Image(systemName: "chevron.down")
+            }
+            .disabled(index == count - 1)
+            .accessibilityLabel("Move \(section.title) down")
+        }
     }
 }
 
