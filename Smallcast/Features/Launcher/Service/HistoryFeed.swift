@@ -1,13 +1,15 @@
 import Foundation
 
-/// One row of the Recent list: something launched, or a calculation.
+/// One row of the Recent list: something launched, a file opened, or a calculation.
 enum HistoryItem: Identifiable, Equatable, Sendable {
     case entry(AppEntry, usedAt: Date)
+    case file(FileSearchResult, usedAt: Date)
     case calculation(CalcHistoryEntry)
 
     var id: String {
         switch self {
         case .entry(let app, _): return "entry:" + app.id
+        case .file(let result, _): return "file:" + result.id
         case .calculation(let entry): return "calc:" + entry.id.uuidString
         }
     }
@@ -15,7 +17,7 @@ enum HistoryItem: Identifiable, Equatable, Sendable {
     /// When it happened — the only thing that orders the feed.
     var date: Date {
         switch self {
-        case .entry(_, let usedAt): return usedAt
+        case .entry(_, let usedAt), .file(_, let usedAt): return usedAt
         case .calculation(let entry): return entry.createdAt
         }
     }
@@ -30,12 +32,15 @@ enum HistoryFeed {
 
     static func build(
         launches: [String: LaunchRecord], apps: [AppEntry], calculations: [CalcHistoryEntry],
-        query: String, sensitivity: SearchSensitivity
+        query: String, sensitivity: SearchSensitivity, homeDirectory: URL
     ) -> [HistoryItem] {
         let byKey = Dictionary(
             apps.map { ($0.preferenceKey, $0) }, uniquingKeysWith: { first, _ in first })
         // An app since uninstalled, or a command from a disabled feature, simply drops out.
         var items = launches.compactMap { key, record -> HistoryItem? in
+            if let file = FileSearchResult(historyKey: key, homeDirectory: homeDirectory) {
+                return .file(file, usedAt: record.lastUsed)
+            }
             guard let app = byKey[key] else { return nil }
             return .entry(app, usedAt: record.lastUsed)
         }
@@ -61,6 +66,8 @@ enum HistoryFeed {
                 [app], query: folded, sensitivity: sensitivity, limit: 1, profile: \.search,
                 signals: { LauncherOrder.Signals(alias: nil, usage: .unused, priority: 0, title: $0.name) }
             ).isEmpty
+        case .file(let result, _):
+            return result.name.localizedStandardContains(query)
         case .calculation(let entry):
             return entry.expression.localizedCaseInsensitiveContains(query)
                 || entry.result.localizedCaseInsensitiveContains(query)

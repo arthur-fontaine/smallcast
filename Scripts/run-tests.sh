@@ -124,7 +124,8 @@ run window-switch-test     $L/SearchRelevance.swift \
 run index file-search-performance $FS/Model/*.swift $FILE_INDEX
 run ranking-test           $L/SearchRelevance.swift $L/ScriptRomanization.swift \
                            $L/LauncherMatch.swift $L/LauncherRankingStore.swift
-run launch-history-test    $L/LaunchHistoryStore.swift
+run launch-history-test    $L/LaunchHistoryStore.swift $L/FileHistoryKey.swift \
+                           Smallcast/Features/FileSearch/Model/FileSearchResult.swift
 run scopes-test            $L/SearchScopes.swift
 run launcher-section-test  $L/LauncherSection.swift
 run app-name-test          Smallcast/Platform/AppDisplayName.swift \
@@ -187,6 +188,7 @@ run clipboard-coordinator-test Smallcast/Features/Clipboard/UI/ClipboardCoordina
                            Smallcast/Features/Clipboard/Model/*.swift \
                            Smallcast/Platform/Images/ImageDerivative.swift \
                            Smallcast/Palette/PaletteState.swift Smallcast/Palette/PaletteMode.swift \
+                           Smallcast/Features/FileSearch/Model/FileSearchResult.swift \
                            Smallcast/Features/Launcher/Model/AppCategory.swift \
                            Smallcast/Palette/SpotlightButton.swift \
                            Smallcast/Palette/HoverArming.swift \
@@ -304,6 +306,7 @@ run palette-escape-test    Smallcast/Palette/PaletteMode.swift \
                            Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Smallcast/Features/CustomCommands/Model/CustomCommand.swift
 run palette-navigation-test Smallcast/Palette/PaletteState.swift \
+                           Smallcast/Features/FileSearch/Model/FileSearchResult.swift \
                            Smallcast/Features/Launcher/Model/AppCategory.swift \
                            Smallcast/Palette/SpotlightButton.swift \
                            Smallcast/Palette/PaletteMode.swift \

@@ -847,7 +847,10 @@ no such menu item.
 ↑ from the empty launcher opens `PaletteMode.recent`: what you just did, newest first, under the same
 day headers the clipboard and calculator histories use. `LaunchHistoryStore` (`Launcher/Model/`) is
 the log and `HistoryFeed` (`Launcher/Service/`) merges it with the calculator history into one
-`HistoryItem` stream, so a remembered launch and a remembered calculation sort together. The screen
+`HistoryItem` stream, so a remembered launch, a file opened and a remembered calculation sort
+together. A file is a log key `FileHistoryKey.swift` reads back (`file:` or `folder:` and its path), drawn
+as the launcher's own file row, with File Search's menu minus Trash, plus Remove from History; it is
+not checked for on disk, so one since deleted fails when opened, as a File Search row would. The screen
 is pushed, so Escape and the back chevron return to the launcher.
 
 It is a separate log from `LauncherRankingStore` on purpose, and the two record on different rules.

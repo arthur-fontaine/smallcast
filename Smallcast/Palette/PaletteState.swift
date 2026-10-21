@@ -33,6 +33,8 @@ final class PaletteState {
     var appCategoryFilter: AppCategory?
     /// Nil means the configured default; zoom only overrides it for this picker session.
     var emojiGridColumnsOverride: EmojiGridColumns?
+    /// The file previewed over the list; the screen under it, query and selection, stays as it was.
+    var filePreview: FileSearchResult?
     /// Ordering out leaves the SwiftUI tree mounted, so a media preview needs this to stop playing.
     private(set) var isVisible = false
     /// Driven by `PaletteWindowController`, which also owns the window alpha that rides with it.
@@ -102,6 +104,8 @@ final class PaletteState {
 
     func noteVisible(_ visible: Bool) {
         isVisible = visible
+        // Ordering out leaves the tree mounted, and a preview must not outlive the window.
+        if !visible { filePreview = nil }
     }
 
     var canGoBack: Bool { !backStack.isEmpty }
@@ -166,6 +170,7 @@ final class PaletteState {
         argumentEntryID = nil
         clipboardFilter = .all
         fileSearchFilter = .all
+        filePreview = nil
         emojiCategoryFilter = .all
         appCategoryFilter = nil
         emojiGridColumnsOverride = nil

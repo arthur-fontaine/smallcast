@@ -16,10 +16,36 @@ struct LaunchHistoryTests {
         windowedReset()
         eviction()
         persistence()
+        fileKeys()
 
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         print("\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
+    }
+
+    // MARK: - Files
+
+    static func fileKeys() {
+        let home = URL(fileURLWithPath: "/Users/t")
+        let file = FileSearchResult(
+            url: URL(fileURLWithPath: "/Users/t/Documents/lease.pdf"), isDirectory: false, homeDirectory: home)
+        let folder = FileSearchResult(
+            url: URL(fileURLWithPath: "/Users/t/Projects"), isDirectory: true, homeDirectory: home)
+        let back = FileSearchResult(historyKey: file.historyKey, homeDirectory: home)
+        check("a file's key reads back as the same file",
+              back?.id == file.id && back?.name == "lease.pdf" && back?.isDirectory == false
+                  && back?.parentPath == "~/Documents")
+        let folderBack = FileSearchResult(historyKey: folder.historyKey, homeDirectory: home)
+        check("a folder's key reads back as a folder",
+              folderBack?.id == "/Users/t/Projects" && folderBack?.isDirectory == true)
+        check("an entry's key is no file", FileSearchResult(historyKey: "command:quit", homeDirectory: home) == nil)
+        check("a key without an absolute path is no file",
+              FileSearchResult(historyKey: "file:relative/a.pdf", homeDirectory: home) == nil)
+
+        let store = make { Date(timeIntervalSince1970: 1_000) }
+        store.record(itemKey: file.historyKey)
+        store.record(itemKey: file.historyKey)
+        check("opening a file twice counts in the same history as apps", store.count(itemKey: file.historyKey) == 2)
     }
 
     // MARK: - Recording

@@ -564,6 +564,7 @@ struct LauncherScreen: PaletteScreen {
             fallbacks: fallbackSection,
             sectionOrder: sectionOrder
         )
+        .filePreviewOverlay(selected: file(at: selection), vm: vm)
     }
 
     private var fileSection: LauncherList.FileSection? {

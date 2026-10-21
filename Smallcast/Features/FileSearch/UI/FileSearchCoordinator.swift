@@ -139,6 +139,7 @@ final class FileSearchCoordinator {
     }
 
     func open(_ result: FileSearchResult) {
+        core.launchHistory.record(itemKey: result.historyKey)
         paletteCoordinator.hidePalette(restoreFocus: false)
         Task {
             do {
@@ -154,6 +155,7 @@ final class FileSearchCoordinator {
     }
 
     func showInFinder(_ result: FileSearchResult) {
+        core.launchHistory.record(itemKey: result.historyKey)
         paletteCoordinator.hidePalette(restoreFocus: false)
         AppLauncher.showInFinder(result.url)
     }

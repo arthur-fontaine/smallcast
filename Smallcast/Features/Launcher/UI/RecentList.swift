@@ -85,6 +85,8 @@ private struct RecentRow: View {
         case .entry(let app, _):
             AppRow(
                 app: app, selected: selected, running: runningApps.isRunning(app), slot: nil)
+        case .file(let result, _):
+            FileSearchRow(result: result, selected: selected, showsLocation: true)
         case .calculation(let entry):
             CalcHistoryRow(entry: entry, selected: selected)
         }

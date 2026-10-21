@@ -521,6 +521,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         installPasteMonitor()
         panel.onEscape = { [weak self] in
             guard let self else { return false }
+            // A focused media preview answers Escape before the palette's own handler could.
+            if core.palette.filePreview != nil {
+                core.palette.filePreview = nil
+                return true
+            }
             if core.palette.mode == .customCommandEditor, !core.palette.isComposing {
                 core.customCommandCoordinator.cancelCustomCommandEditing()
                 return true

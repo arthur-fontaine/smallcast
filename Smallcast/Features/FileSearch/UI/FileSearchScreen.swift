@@ -94,6 +94,7 @@ struct FileSearchScreen: PaletteScreen {
                     .frame(width: Theme.Size.hairline)
                 FileSearchPreview(result: selected)
             }
+            .filePreviewOverlay(selected: selected, vm: vm)
         }
     }
 
@@ -140,14 +141,19 @@ enum FileSearchActionsMenu {
         result: FileSearchResult, core: AppCore, target: PasteTarget?
     ) -> PopoverMenuContent {
         let coordinator = core.fileSearchCoordinator
-        let items = [
+        let items: [PopoverMenuItem] = [
             PopoverMenuItem(
                 title: result.isDirectory ? String(localized: "Open Folder") : String(localized: "Open File"),
                 systemImage: result.isDirectory ? "folder" : "doc", shortcut: "↵"
             ) { coordinator.open(result) },
             PopoverMenuItem(
                 title: String(localized: "Show in Finder"), systemImage: "folder", shortcut: "⌘↵"
-            ) { coordinator.showInFinder(result) },
+            ) { coordinator.showInFinder(result) }
+        ] + (result.isDirectory ? [] : [
+            PopoverMenuItem(title: String(localized: "Preview"), systemImage: "eye", shortcut: "⌘Y") {
+                core.palette.filePreview = result
+            }
+        ]) + [
             PopoverMenuItem(title: String(localized: "Share…"), systemImage: "square.and.arrow.up") {
                 coordinator.share(result)
             },
@@ -184,6 +190,9 @@ enum FileSearchActionsMenu {
         case .pasteFile: coordinator.pasteFile(result)
         // Trashing is undoable, so it asks nothing first, as the clipboard's delete does.
         case .delete: coordinator.trash(result)
+        case .quickLook:
+            guard !result.isDirectory else { return false }
+            core.palette.filePreview = core.palette.filePreview == nil ? result : nil
         default: return false
         }
         return true

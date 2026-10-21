@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// What you just did: launches and calculations interleaved, newest first. Reached with ↑ on an
+/// What you just did: launches, files and calculations, newest first. Reached with ↑ on an
 /// empty search, which is the gesture a shell prompt already trained everyone to expect.
 struct RecentScreen: PaletteScreen {
     let launchHistory: LaunchHistoryStore
@@ -16,12 +16,15 @@ struct RecentScreen: PaletteScreen {
         HistoryFeed.build(
             launches: launchHistory.records, apps: appIndex.apps,
             calculations: calcHistory.entries, query: vm.query,
-            sensitivity: core.settings.rootSearchSensitivity)
+            sensitivity: core.settings.rootSearchSensitivity,
+            homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
     }
 
     var primaryActionTitle: String {
         switch item(at: vm.selection) {
         case .entry(let app, _): return String(localized: app.kind.descriptor.openVerb)
+        case .file(let result, _):
+            return result.isDirectory ? String(localized: "Open Folder") : String(localized: "Open File")
         case .calculation: return String(localized: "Copy Answer")
         case nil: return String(localized: "Open")
         }
@@ -30,6 +33,11 @@ struct RecentScreen: PaletteScreen {
     private func item(at selection: Int) -> HistoryItem? {
         let rows = rows
         return rows.indices.contains(selection) ? rows[selection] : nil
+    }
+
+    private func file(at selection: Int) -> FileSearchResult? {
+        guard case .file(let result, _) = item(at: selection) else { return nil }
+        return result
     }
 
     func actions(at selection: Int) -> PopoverMenuContent? {
@@ -42,12 +50,22 @@ struct RecentScreen: PaletteScreen {
     func activate(at selection: Int) {
         switch item(at: selection) {
         case .entry(let app, _): core.launcherCoordinator.launch(app)
+        case .file(let result, _): core.fileSearchCoordinator.open(result)
         case .calculation(let entry): core.calculatorCoordinator.copyHistoryEntry(entry)
         case nil: break
         }
     }
 
-    func secondary(at selection: Int) -> Bool { false }
+    func secondary(at selection: Int) -> Bool {
+        guard let file = file(at: selection) else { return false }
+        core.fileSearchCoordinator.showInFinder(file)
+        return true
+    }
+
+    func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
+        guard let file = file(at: selection) else { return false }
+        return FileSearchActionsMenu.perform(shortcut, result: file, core: core)
+    }
 
     private func isRunning(_ item: HistoryItem) -> Bool {
         guard case .entry(let app, _) = item else { return false }
@@ -74,7 +92,9 @@ struct RecentScreen: PaletteScreen {
                 onActions: { item in
                     if let index = rows.firstIndex(of: item) { vm.selection = index }
                     openActions()
-                }))
+                }
+            )
+            .filePreviewOverlay(selected: file(at: selection), vm: vm))
     }
 }
 
@@ -106,6 +126,16 @@ enum RecentActionsMenu {
                 items: content.items + [
                     forget, clearAll(launchHistory: launchHistory, calcHistory: calcHistory)
                 ])
+        case .file(let result, _):
+            let content = FileSearchActionsMenu.content(result: result, core: core, target: core.palette.pasteTarget)
+            let forget = PopoverMenuItem(
+                title: "Remove from History", systemImage: "trash", isDestructive: true
+            ) { launchHistory.reset(itemKey: result.historyKey) }
+            // Trash is the File Search screen's to offer; here the row is a memory, not the file.
+            let items = content.items.filter { !$0.isDestructive }
+            return PopoverMenuContent(
+                header: content.header,
+                items: items + [forget, clearAll(launchHistory: launchHistory, calcHistory: calcHistory)])
         case .calculation(let entry):
             let content = CalcHistoryActionsMenu.content(
                 entry: entry, core: core, calcHistory: calcHistory)

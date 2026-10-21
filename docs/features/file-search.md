@@ -232,8 +232,19 @@ a folder, whose preview is its icon. Information rows are the compact variant; t
 in a detached task, never in `body`, and a folder shows no Size — its own record is a few bytes, which is
 never what the row means.
 
-**There is no Quick Look action.** The pane already previews the selection, and ↵ opens the file in
-its default app. A system `QLPreviewPanel` would take key, and the palette hides on `windowDidResignKey`.
+**Preview** (⌘Y, and a row in every file menu) lays `FilePreviewOverlay` over the list: the same
+`FileSearchSurface` as the pane, larger, in a frosted card. Upstream removed its overlay (#1609) because
+this screen already has a pane; this fork brings it back because root search's Files rows and the Recent
+list have none. It is drawn inside the panel because a system `QLPreviewPanel` would take key, and the
+palette hides on `windowDidResignKey` — so the screen under it, its query and its selection, are never
+left. `PaletteState.filePreview` holds the file; a new selection moves the preview with it, and one that
+is no file closes it. Escape (taken at `panel.onEscape`, before a focused player can answer it), ⌘Y, the
+Close button or a click outside the card closes it, and so does hiding the palette or changing screen.
+Folders offer no Preview.
+
+**Every file opened or revealed is remembered.** `FileSearchCoordinator.open` and `showInFinder` record
+the file in `LaunchHistoryStore` under `FileSearchResult.historyKey` (`file:` or `folder:` and the
+path), so root search's Files rows, this screen and the Recent list all feed the Recent list.
 
 | Row | Chord | What it does |
 | --- | --- | --- |

@@ -340,6 +340,7 @@
 		565F3002DEBD841FE522AB72 /* ModifierTapMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89394A2B28E46664F97E527B /* ModifierTapMonitor.swift */; };
 		5665ECEC5AF3D09EAD922A47 /* HUDPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15EDCC66D76F77B66AA9E4C /* HUDPanel.swift */; };
 		56FBBDD445368D59BC25D2B0 /* FileSystemWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9240CF5C68DF4BEBC203FD8B /* FileSystemWatcher.swift */; };
+		570DF035C64E132DC1CAF9DF /* FilePreviewOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5731445AA0F9A29CE87F351 /* FilePreviewOverlay.swift */; };
 		57586B00DAB84229EF7A75AA /* FileSearchIgnoreList.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBEC00FED1BEB879AE3D8850 /* FileSearchIgnoreList.swift */; };
 		57884BA25484C585715E3AFB /* PaletteEscapeAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = E46B0D121150A2623CD2C0AC /* PaletteEscapeAction.swift */; };
 		57C6A4F9EAA4202B0BF87F2E /* BackupManifest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB447F4B5650AF66223503E2 /* BackupManifest.swift */; };
@@ -887,6 +888,7 @@
 		FC815C4B0CA6D86EBBBEBC0F /* MeetingDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8356192B7D8E050C11931A /* MeetingDetails.swift */; };
 		FCAC6059E1DC892A1F0F03AD /* PaletteDropGuideController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D641DC2A20C61D536C75D5 /* PaletteDropGuideController.swift */; };
 		FCB4266AD2F88AC8FE085049 /* CalcTimeZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 060031112940F4150E8E9E3B /* CalcTimeZone.swift */; };
+		FD237921CAEE82E0BC1278A0 /* FileHistoryKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9F9A76B23C092C04FBFF3A /* FileHistoryKey.swift */; };
 		FDA622FFE675EBD4B79F5360 /* PaletteRowIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = F064358538D30549C256596C /* PaletteRowIndex.swift */; };
 		FDC3F00526D181C429C5E47B /* SyntaxStructuredLexers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85A50C8B287398A0D9B968D0 /* SyntaxStructuredLexers.swift */; };
 		FE547A50F41ADACDC6F9D848 /* WindowLayoutCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C421A98005011851ED8C0E9 /* WindowLayoutCoordinator.swift */; };
@@ -1358,6 +1360,7 @@
 		7B6D02D51D43C4A749DFE899 /* Quicklink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Quicklink.swift; sourceTree = "<group>"; };
 		7B73694693187225CBB8B35A /* MCPTrustPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPTrustPolicy.swift; sourceTree = "<group>"; };
 		7B812E98578911190B097AE8 /* RoomStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomStore.swift; sourceTree = "<group>"; };
+		7B9F9A76B23C092C04FBFF3A /* FileHistoryKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHistoryKey.swift; sourceTree = "<group>"; };
 		7BA1A1F73919DA0012D46452 /* ExtensionGridLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionGridLayout.swift; sourceTree = "<group>"; };
 		7BA34F28189AE41C9362BD3F /* ExtensionFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionFetcher.swift; sourceTree = "<group>"; };
 		7CCB751178D46D4BC416F18B /* ExtensionArgumentsAccessory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionArgumentsAccessory.swift; sourceTree = "<group>"; };
@@ -1567,6 +1570,7 @@
 		B47C759E6844CBE807E4F4D6 /* BackupStaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupStaging.swift; sourceTree = "<group>"; };
 		B4DF5403EC745C410551B581 /* ExtensionLaunchType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionLaunchType.swift; sourceTree = "<group>"; };
 		B4FF8D498A54187993BA239E /* AIRequestBody.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIRequestBody.swift; sourceTree = "<group>"; };
+		B5731445AA0F9A29CE87F351 /* FilePreviewOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePreviewOverlay.swift; sourceTree = "<group>"; };
 		B64C76634B4B067540978793 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 		B65D4385052E445AFF267712 /* ShortcutCaptureSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutCaptureSession.swift; sourceTree = "<group>"; };
 		B68E1AEC937E23F3DE1B7A2A /* SettingsFileIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsFileIdentity.swift; sourceTree = "<group>"; };
@@ -2154,6 +2158,7 @@
 				2786162D47EC1B09F0E7D532 /* Fallback.swift */,
 				D5D53A5A0A9AABD9EA339743 /* FallbackPreset.swift */,
 				1C7974D29EF64CF31FFAF400 /* FavoriteSlots.swift */,
+				7B9F9A76B23C092C04FBFF3A /* FileHistoryKey.swift */,
 				F4975551225E6C4AE61B4895 /* LauncherFileFormat.swift */,
 				8397C554E04DE067D1401FB6 /* LauncherMatch.swift */,
 				BD81B63D0D8ECE59DF859E8E /* LauncherOrder.swift */,
@@ -3245,6 +3250,7 @@
 			isa = PBXGroup;
 			children = (
 				9743EEB770B6D4B00959FAB8 /* DigUpSearchViews.swift */,
+				B5731445AA0F9A29CE87F351 /* FilePreviewOverlay.swift */,
 				C3AC1365A287079F159E8E13 /* FileSearchCoordinator.swift */,
 				0C585D3DC3BFC8E8AB69F089 /* FileSearchList.swift */,
 				5B473F2EBE48B34654DB55C8 /* FileSearchMediaPlayer.swift */,
@@ -4524,11 +4530,13 @@
 				EDBC532FF5CFC8F856086B83 /* FavoriteSlots.swift in Sources */,
 				16133986466FC711D814CC66 /* FavoritesStore.swift in Sources */,
 				730E56A29497DD105C0CA4AA /* FeatureCommandsSection.swift in Sources */,
+				FD237921CAEE82E0BC1278A0 /* FileHistoryKey.swift in Sources */,
 				D008F0F6583FBCECF38BFDC3 /* FileIconStamp.swift in Sources */,
 				CC71D7227BBC7A05CA789747 /* FileIndex.swift in Sources */,
 				A3D7AC54E9D5663F310D1011 /* FileIndexCrawler.swift in Sources */,
 				0FFAE32CF52CACCBA4949B30 /* FileIndexSnapshot.swift in Sources */,
 				5B2E3CEEA820151FF771D89B /* FileIndexer.swift in Sources */,
+				570DF035C64E132DC1CAF9DF /* FilePreviewOverlay.swift in Sources */,
 				26BE5FAB84EE077889A73FD6 /* FilePreviewStage.swift in Sources */,
 				D018A2C1998835CE9DF6BC65 /* FilePreviewThumbnail.swift in Sources */,
 				DCD17598834440CECC522B1E /* FileSearchCoordinator.swift in Sources */,
