@@ -117,7 +117,8 @@ Clipboard text recognition runs outside the process. `AppCore` owns the indexer;
 the stateless `ClipboardTextWorker` runs one bundled `ClipboardTextHelper` per item, from
 `Contents/Helpers`, and reaps it before returning. Vision's and PDFKit's allocations therefore belong
 to a process that exits, and the helper — which has no database, clipboard or settings access — is
-handed an input path and answers with bounded text down a pipe.
+handed an input path and answers with bounded text down a pipe. Its `thumbnail` mode writes the
+clipboard's downscaled image copies, so a full-size decode stays out of the app unless that fails.
 
 Dictation similarly runs its model adapters in a bundled helper, with bounded in-memory audio and
 text over pipes. The coordinator keeps microphone capture, UI and insertion in Smallcast; the model
@@ -126,7 +127,8 @@ store starts the helper on demand and reaps it after the selected idle delay or 
 
 ## Entry points and windows
 
-`SmallcastApp` (`@main`) declares only two `MenuBarExtra` scenes — Smallcast's own item and the
+`SmallcastLaunch` (`@main`) pins the interface language, then runs `SmallcastApp`, which declares
+only two `MenuBarExtra` scenes — Smallcast's own item and the
 calendar's, each inserted by one preference and independent of the other; everything else visible is
 driven imperatively from AppKit. Extension menu extras are dynamic `NSStatusItem`s owned entirely by
 `Features/Extensions/`, through `ExtensionManager`, with no scene or lifecycle wiring in the core.

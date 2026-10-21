@@ -1,9 +1,5 @@
 #!/bin/bash
-# The test suite. There is no XCTest target: each harness compiles the shipped sources it guards,
-# so a harness that stops compiling means a decision leaked out of a pure layer. See docs/testing.md.
-#
-# Never join a compile and its run with `&&`: `set -e` ignores a failure in a non-final AND-OR list
-# member, which is how CI reported success over a harness that had not compiled since phase 10.
+# The test suite: each harness compiles the shipped sources it guards. See docs/testing.md.
 
 set -uo pipefail
 
@@ -32,7 +28,7 @@ if [ "${1:-}" = "--exec" ]; then
     fi
     { time "$BIN/$name" > "$BIN/$name.log" 2>&1; } 2> "$BIN/$name.time" &
     pid=$!
-    # macOS ships no `timeout`, so the worker polls; a wedged harness must fail, not stall the suite.
+    # macOS ships no `timeout`, so the worker polls; a wedged harness must fail, not stall.
     ticks=0
     while kill -0 "$pid" 2>/dev/null; do
         if [ "$ticks" -ge $((SMALLCAST_TEST_TIMEOUT * 5)) ]; then
@@ -60,9 +56,7 @@ failed=()
 ran=0
 only="${1:-}"
 
-# `--index` merges each harness's compile command into .compile instead of running anything.
-# xcodebuild never compiles the harnesses, so without this nothing in Tests/ resolves in an editor.
-# The source lists below are the only copy, which is why this lives here rather than in its own script.
+# `--index` feeds harness compile commands to .compile, as xcodebuild never compiles Tests/.
 emit_db=0
 DB="${TMPDIR:-/tmp}/smallcast-compile-db.json"
 if [ "$only" = "--index" ]; then
@@ -71,8 +65,7 @@ if [ "$only" = "--index" ]; then
     printf '[' > "$DB"
 fi
 
-# run [slow] [-O] [index] <name> <source...> — queue the harness. `slow` dispatches it in the first
-# wave; `index` claims editor flags for a harness that is compiled by hand rather than by the suite.
+# `slow` dispatches in the first wave; `index` only claims editor flags for a hand-run harness.
 run() {
     local opt=-Onone pri=1 index_only=0
     while :; do
@@ -89,8 +82,7 @@ run() {
     if [ "$index_only" -eq 1 ] && [ "$emit_db" -eq 0 ]; then return 0; fi
     ran=$((ran + 1))
 
-    # Absolute paths throughout: sourcekit-lsp resolves the command itself and does not apply
-    # `directory` to relative arguments, so a relative path there silently yields no index.
+    # Absolute paths: sourcekit-lsp ignores `directory` for relative arguments and indexes nothing.
     if [ "$emit_db" -eq 1 ]; then
         local sources=()
         for source in "$@" "Tests/$name.swift"; do sources+=("$PWD/$source"); done
@@ -98,9 +90,7 @@ run() {
         printf '{"directory":"%s","command":"swiftc -swift-version 6 -sdk %s' \
             "$PWD" "$(xcrun --show-sdk-path --sdk macosx)" >> "$DB"
         printf ' %s' "${sources[@]}" >> "$DB"
-        # Claim every file under `Tests/`: the harness and any helper compiled beside it. A shipped
-        # source stays unclaimed, because it would get this short command instead of the app's full
-        # one and `.compile` is last-wins — but the app never compiles anything in `Tests/`.
+        # Only `Tests/` files: `.compile` is last-wins, so a shipped source keeps the app's command.
         local claimed=""
         for source in "${sources[@]}"; do
             case "$source" in *"/Tests/"*) claimed="$claimed${claimed:+,}\"$source\"";; esac
@@ -140,6 +130,21 @@ run app-name-test          Smallcast/Platform/AppDisplayName.swift \
                            Smallcast/Platform/BundleLocalization.swift \
                            $L/SearchRelevance.swift
 run favorites-test         $L/FavoriteSlots.swift
+run app-installation-test  $L/SearchRelevance.swift $L/ScriptRomanization.swift \
+                           $L/LauncherMatch.swift $L/EntryNaming.swift $L/LauncherOrder.swift \
+                           $L/LauncherRankingStore.swift $L/LauncherSuggestions.swift $L/SearchScopes.swift \
+                           Smallcast/Features/Launcher/Service/AppIndex.swift \
+                           Smallcast/Features/Launcher/Model/AppCategory.swift \
+                           Smallcast/Features/Launcher/Service/AppLauncher.swift \
+                           Smallcast/Features/Launcher/Service/RunningAppsMonitor.swift \
+                           Smallcast/Features/Launcher/Service/FavoritesStore.swift \
+                           Smallcast/Features/Launcher/Service/AliasStore.swift \
+                           Smallcast/Features/Launcher/Service/VisibilityStore.swift \
+                           Smallcast/Features/Launcher/Service/BundleNameCache.swift \
+                           Smallcast/Platform/AppDisplayName.swift Smallcast/Platform/BundleLocalization.swift \
+                           Smallcast/Platform/SystemLanguages.swift \
+                           Smallcast/Platform/Images/FileIconStamp.swift Smallcast/Platform/Memo.swift \
+                           Smallcast/Platform/Signposts.swift Smallcast/Platform/NotificationToken.swift
 run launcher-file-test     $L/LauncherFileFormat.swift \
                            Smallcast/Features/Settings/Model/SettingsFileJSON.swift
 run launcher-settings-file-test \
@@ -171,22 +176,46 @@ run index calc-performance Smallcast/Features/Calculator/Model/*.swift
 run calendar-test          Smallcast/Features/Calendar/Model/*.swift \
                            Smallcast/Features/Calendar/UI/EventEditorSession.swift
 run clipboard-test         Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
+                           Smallcast/Platform/Images/ImageDerivative.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFileKind.swift \
                            Smallcast/Features/Clipboard/Model/ColorValue.swift \
                            Smallcast/Features/Clipboard/Model/ColorFormat.swift \
                            Smallcast/Features/Clipboard/Model/ColorSpaces.swift
+run clipboard-coordinator-test Smallcast/Features/Clipboard/UI/ClipboardCoordinator.swift \
+                           Smallcast/Features/Clipboard/Model/*.swift \
+                           Smallcast/Platform/Images/ImageDerivative.swift \
+                           Smallcast/Palette/PaletteState.swift Smallcast/Palette/PaletteMode.swift \
+                           Smallcast/Features/Launcher/Model/AppCategory.swift \
+                           Smallcast/Palette/SpotlightButton.swift \
+                           Smallcast/Palette/HoverArming.swift \
+                           Smallcast/Features/Emoji/Model/EmojiCatalog.swift \
+                           Smallcast/Features/FileSearch/Model/FileSearchFilter.swift \
+                           Smallcast/Features/Quicklinks/Model/Quicklink.swift \
+                           Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift \
+                           Smallcast/Features/CustomCommands/Model/CustomCommand.swift
+run clipboard-thumbnail-test Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
+                           Smallcast/Platform/Images/ImageDerivative.swift \
+                           Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
+                           Smallcast/Features/Clipboard/Model/ClipboardFileKind.swift \
+                           Smallcast/Features/Clipboard/Model/ColorValue.swift \
+                           Smallcast/Features/Clipboard/Model/ColorFormat.swift \
+                           Smallcast/Features/Clipboard/Model/ColorSpaces.swift \
+                           Smallcast/Platform/ProcessExit.swift \
+                           Smallcast/Platform/Images/ImageThumbnail.swift \
+                           Smallcast/Platform/Images/ThumbnailCache.swift
 # `Q` is the URL detector a drag payload builds its link with, rather than a second one.
 Q=Smallcast/Features/Quicklinks/Model/QuicklinkDestination.swift
-run clipboard-search-test  Smallcast/Features/Clipboard/Model/*.swift $Q
-run paste-sequence-test    Smallcast/Features/Clipboard/Model/*.swift $Q
-run clipboard-text-test    Smallcast/Features/Clipboard/Model/*.swift $Q \
+run clipboard-search-test  Smallcast/Features/Clipboard/Model/*.swift Smallcast/Platform/Images/ImageDerivative.swift $Q
+run paste-sequence-test    Smallcast/Features/Clipboard/Model/*.swift Smallcast/Platform/Images/ImageDerivative.swift $Q
+run clipboard-text-test    Smallcast/Features/Clipboard/Model/*.swift Smallcast/Platform/Images/ImageDerivative.swift $Q \
                            Smallcast/Features/Clipboard/Service/ClipboardTextExtractor.swift \
                            Smallcast/Features/Clipboard/Service/ClipboardTextIndexer.swift \
                            Smallcast/Features/Clipboard/Service/ClipboardTextWorker.swift \
                            Smallcast/Platform/ProcessExit.swift
 run pasteboard-test        Smallcast/Platform/PasteboardFiles.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
+                           Smallcast/Platform/Images/ImageDerivative.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFileKind.swift \
                            Smallcast/Features/Clipboard/Model/ColorValue.swift \
@@ -197,12 +226,18 @@ run pasteboard-test        Smallcast/Platform/PasteboardFiles.swift \
 run index clipboard-file-performance \
                            Smallcast/Platform/PasteboardFiles.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
+                           Smallcast/Platform/Images/ImageDerivative.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFileKind.swift \
                            Smallcast/Features/Clipboard/Model/ColorValue.swift \
                            Smallcast/Features/Clipboard/Model/ColorFormat.swift \
                            Smallcast/Features/Clipboard/Model/ColorSpaces.swift \
                            Smallcast/Features/Clipboard/Service/ClipboardManager.swift
+run index clipboard-thumbnail-performance \
+                           Smallcast/Platform/ProcessExit.swift \
+                           Smallcast/Platform/Images/ImageThumbnail.swift \
+                           Smallcast/Platform/Images/ImageDerivative.swift \
+                           Smallcast/Platform/Images/ThumbnailCache.swift
 run emoji-test             Smallcast/Features/Emoji/Model/EmojiCatalog.swift \
                            Smallcast/Features/Emoji/Model/EmojiGridGeometry.swift \
                            Smallcast/Features/Emoji/Model/EmojiData.generated.swift
@@ -233,6 +268,8 @@ run appearance-test        Smallcast/Platform/Appearance.swift \
                            Smallcast/DesignSystem/InterfaceMetrics.swift \
                            Smallcast/Features/Settings/AppAppearance.swift \
                            Smallcast/Features/Settings/PaletteTheme.swift
+run language-test          Smallcast/Features/Settings/AppLanguage.swift
+run relaunch-test          Smallcast/App/AppDelegate.swift Smallcast/Platform/RelaunchRunner.swift
 run interface-size-test    Smallcast/Platform/Appearance.swift \
                            Smallcast/DesignSystem/Theme.swift \
                            Smallcast/DesignSystem/InterfaceMetrics.swift \
@@ -257,6 +294,7 @@ run form-input-test        Smallcast/Platform/Appearance.swift \
 run scroll-reveal-test     Smallcast/DesignSystem/Scrolling/SelectionReveal.swift
 run redaction-test         Smallcast/DesignSystem/RedactedPlaceholder.swift
 run keyboard-focus-test    Smallcast/DesignSystem/Interaction/KeyboardFocus.swift
+run command-escape-tap-test Smallcast/Palette/CommandEscapeTap.swift
 run palette-escape-test    Smallcast/Palette/PaletteMode.swift \
                            Smallcast/Palette/PaletteEscapeAction.swift \
                            Smallcast/Palette/CommandEscapeTap.swift \
@@ -271,6 +309,7 @@ run palette-navigation-test Smallcast/Palette/PaletteState.swift \
                            Smallcast/Palette/HoverArming.swift \
                            Smallcast/Features/Emoji/Model/EmojiCatalog.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
+                           Smallcast/Platform/Images/ImageDerivative.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFileKind.swift \
                            Smallcast/Features/FileSearch/Model/FileSearchFilter.swift \
@@ -316,8 +355,9 @@ run fallback-test          Smallcast/Features/Launcher/Model/Fallback.swift \
                            Smallcast/Features/QuickPrompts/Model/QuickPrompt.swift
 run dictionary-test        Smallcast/Features/Dictionary/Model/DictionaryEntry.swift \
                            Smallcast/Features/Dictionary/Model/DictionaryMarkup.swift
-run dictation-test         Smallcast/Features/Dictation/Model/DictationModel.swift Smallcast/Features/Dictation/Model/DictationIdleRelease.swift Smallcast/Features/Dictation/Model/DictationTextFormatter.swift
+run dictation-test         Smallcast/Features/Dictation/Model/DictationModel.swift Smallcast/Features/Dictation/Model/DictationIdleRelease.swift Smallcast/Features/Dictation/Model/DictationLanguage.swift Smallcast/Features/Dictation/Model/DictationTextFormatter.swift
 run dictation-field-test   Smallcast/Features/Dictation/Model/DictationModel.swift \
+                           Smallcast/Features/Dictation/Model/DictationAudioChunks.swift \
                            Smallcast/Features/Dictation/Model/DictationMode.swift \
                            Smallcast/Features/Dictation/Model/DictationDestination.swift \
                            Smallcast/Features/Dictation/Model/DictationTextFormatter.swift \
@@ -471,6 +511,8 @@ run custom-command-test    Smallcast/Platform/PseudoTerminal.swift \
                            Smallcast/Features/CustomCommands/Service/ShellCommandRunner.swift
 run custom-command-list-test Smallcast/Features/CustomCommands/Model/CustomCommand.swift \
                              Smallcast/Features/CustomCommands/UI/CustomCommandListScreen.swift
+run uninstall-coordinator-test Smallcast/Features/Uninstall/Model/*.swift \
+                           Smallcast/Features/Uninstall/UI/UninstallCoordinator.swift
 run uninstall-test         Smallcast/Features/Uninstall/Model/UninstallTarget.swift \
                            Smallcast/Features/Uninstall/Model/UninstallSearchRoot.swift \
                            Smallcast/Features/Uninstall/Model/UninstallRules.swift \
@@ -515,6 +557,7 @@ run notes-editor-test      Smallcast/Platform/Signposts.swift \
                            Smallcast/Platform/NotificationToken.swift \
                            Smallcast/Features/TextInjection/Service/InjectableTextView.swift \
                            Smallcast/Features/Notes/Model/NoteDocument.swift \
+                           Smallcast/Features/Notes/Model/NoteTitle.swift \
                            Smallcast/Features/Notes/Model/NoteMarkdown.swift \
                            Smallcast/Features/Notes/Model/NoteMarkdownParser.swift \
                            Smallcast/Features/Notes/Model/NoteInlineScanner.swift \
@@ -541,6 +584,7 @@ run -O index notes-editor-performance \
                            Smallcast/Platform/NotificationToken.swift \
                            Smallcast/Features/TextInjection/Service/InjectableTextView.swift \
                            Smallcast/Features/Notes/Model/NoteDocument.swift \
+                           Smallcast/Features/Notes/Model/NoteTitle.swift \
                            Smallcast/Features/Notes/Model/NoteMarkdown.swift \
                            Smallcast/Features/Notes/Model/NoteMarkdownParser.swift \
                            Smallcast/Features/Notes/Model/NoteInlineScanner.swift \
@@ -565,6 +609,7 @@ run slow -O raycast-test   Smallcast/Features/Backup/Model/RaycastImportError.sw
                            Smallcast/Platform/Compression/Zlib.swift \
                            Smallcast/Features/Clipboard/Model/RaycastClipboardImport.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardStore.swift \
+                           Smallcast/Platform/Images/ImageDerivative.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFilter.swift \
                            Smallcast/Features/Clipboard/Model/ClipboardFileKind.swift \
                            Smallcast/Features/Clipboard/Model/ColorValue.swift \
@@ -691,6 +736,7 @@ run ai-provider-test       Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/AI/Settings/AISettingsStore.swift
 run ai-chat-test           Smallcast/Features/AI/Model/AIRequest.swift \
                            Smallcast/Features/AI/Model/AIConnection.swift \
+                           Smallcast/Features/AI/Model/AIConversationOpenPolicy.swift \
                            Smallcast/Features/AI/Model/AppleIntelligence.swift \
                            Smallcast/Features/AI/Model/AIAttachmentPolicy.swift \
                            Smallcast/Features/AI/Model/AIRetention.swift \
@@ -732,12 +778,18 @@ run chat-markdown-test     Smallcast/Platform/Appearance.swift \
                            Smallcast/Features/AI/Model/MathFormula.swift \
                            Smallcast/Features/AI/Model/MathNode.swift \
                            Smallcast/Features/AI/Model/MathSymbolCatalog.swift \
+                           Smallcast/Features/AI/Model/SyntaxGrammar.swift \
+                           Smallcast/Features/AI/Model/SyntaxHighlighter.swift \
+                           Smallcast/Features/AI/Model/SyntaxStructuredLexers.swift \
                            Smallcast/Features/AI/UI/ChatTextHighlight.swift \
                            Smallcast/Features/AI/UI/ChatMarkdownRenderer.swift \
                            Smallcast/Features/AI/UI/MathAttachmentCell.swift \
                            Smallcast/Features/AI/UI/MathBox.swift \
                            Smallcast/Features/AI/UI/MathFont.swift \
                            Smallcast/Features/AI/UI/MathLayoutEngine.swift
+run syntax-highlight-test  Smallcast/Features/AI/Model/SyntaxGrammar.swift \
+                           Smallcast/Features/AI/Model/SyntaxHighlighter.swift \
+                           Smallcast/Features/AI/Model/SyntaxStructuredLexers.swift
 run mcp-test               Smallcast/Features/Settings/AppSettingsKey.swift \
                            Smallcast/Features/AI/Model/AIConnection.swift \
                            Smallcast/Features/AI/Model/AppleIntelligence.swift \

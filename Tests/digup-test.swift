@@ -157,7 +157,9 @@ struct DigUpTests {
     static func scopes() {
         let home = URL(filePath: "/Users/t", directoryHint: .isDirectory)
         let policy = FileSearchPolicy(
-            scopes: ["~/Documents", "~/Downloads"], ignorePatterns: ["~/Documents/private", "*.tmp"],
+            scopes: ["~/Documents", "~/Downloads"],
+            ignorePatterns: FileSearchIgnoreList.patterns(
+                added: ["~/Documents/private", "*.tmp"], removedDefaults: []),
             homeDirectory: home)
         func admits(_ path: String) -> Bool { DigUpSearchPolicy.admits(path, policy: policy) }
         expect(admits("/Users/t/Documents/lease.pdf"), "a file in a scope is shown")

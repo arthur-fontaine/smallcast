@@ -29,17 +29,9 @@ final class FallbackCoordinator {
     /// The launcher's rows. An empty query is nobody's input, so it earns no section at all.
     func entries(for query: String) -> [(fallback: Fallback, entry: AppEntry)] {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
-        let replaced: Fallback? = digUpReplacesSearchFiles ? .builtin(.searchFiles) : nil
-        return available.filter { store.isEnabled($0) && $0 != replaced }.compactMap { fallback in
+        return available.filter(store.isEnabled).compactMap { fallback in
             entry(for: fallback).map { (fallback, $0) }
         }
-    }
-
-    /// DigUp's rows stand in for this row, wherever the reader ordered or switched it.
-    var digUpReplacesSearchFiles: Bool {
-        settings.fileSearchEnabled && settings.fileSearchEngine == .nameAndContent
-            && core.digUpState.helper != nil
-            && available.contains(.builtin(.searchFiles)) && store.isEnabled(.builtin(.searchFiles))
     }
 
     /// Nil for a quicklink, prompt or preset deleted since the order was stored.
@@ -92,8 +84,6 @@ final class FallbackCoordinator {
         }
         return Self.fallback(for: preset.target).openVerb
     }
-
-    /// The one funnel; each destination takes the query as the input it was already asking for.
     func run(_ fallback: Fallback, query: String) {
         switch fallback {
         case .builtin(.quickAI): core.quickAICoordinator.ask(query)

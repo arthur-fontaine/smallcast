@@ -10,6 +10,7 @@ final class FileSearchCoordinator {
     private let paletteCoordinator: PaletteCoordinator
     private let windowController: PaletteWindowController
     private var sharePicker: NSSharingServicePicker?
+    private var launcherAnswers = false
     private unowned let core: AppCore
 
     init(
@@ -26,6 +27,7 @@ final class FileSearchCoordinator {
         self.windowController = windowController
         self.core = core
         indexer.onIndexChanged = { [weak session] in session?.refresh() }
+        indexer.onRecentChanged = { [weak session] in session?.refreshRecent() }
         session.onRepublish = { [palette] old, new in
             Self.keepSelection(on: palette, from: old, to: new)
         }
@@ -53,7 +55,7 @@ final class FileSearchCoordinator {
     func applyPolicy() {
         let policy = FileSearchPolicy(
             scopes: settings.fileSearchScopes,
-            ignorePatterns: settings.fileSearchIgnorePatterns,
+            ignorePatterns: settings.fileSearchEffectiveIgnorePatterns,
             homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
         indexer.apply(policy)
         // DigUp indexes its own folders; what File Search may show is still File Search's to say.
@@ -68,6 +70,35 @@ final class FileSearchCoordinator {
         core.digUpState.setEnabled(
             settings.fileSearchEnabled && settings.fileSearchEngine == .nameAndContent,
             customPath: settings.fileSearchDigUpPath)
+    }
+
+    var showsFilesInLauncher: Bool {
+        settings.fileSearchEnabled && settings.fileSearchShowInLauncher
+    }
+
+    /// Borrows the screen's session, so Search Files then opens on the request already answered.
+    func searchFromLauncher(_ query: String) {
+        guard showsFilesInLauncher, FileSearchQuery.answersLauncher(query) else {
+            launcherAnswers = false
+            session.cancel()
+            return
+        }
+        // The query just became long enough: when to catch up with DigUp's indexing.
+        if !launcherAnswers { core.digUpState.prepare(prewarming: false) }
+        launcherAnswers = true
+        session.digUp = core.digUpState.search(limit: DigUpSearchPolicy.panelLimit)
+        session.search(query)
+    }
+
+    /// Checks the switch before reading the session, so with it off the launcher observes nothing.
+    func launcherFiles(for query: String) -> [FileSearchResult] {
+        guard showsFilesInLauncher, FileSearchQuery.answersLauncher(query) else { return [] }
+        return Array(session.results.prefix(FileSearchQuery.launcherLimit))
+    }
+
+    func applyLauncherFiles() {
+        guard palette.mode == .launcher else { return }
+        searchFromLauncher(palette.query)
     }
 
     func rebuildIndex() {
@@ -121,7 +152,7 @@ final class FileSearchCoordinator {
                     result.url, configuration: NSWorkspace.OpenConfiguration())
             } catch {
                 await core.showNotice(
-                    title: "Couldn’t Open \(result.name)",
+                    title: String(localized: "Couldn’t Open \(result.name)"),
                     message: error.localizedDescription,
                     symbol: result.isDirectory ? "folder" : "doc", tone: .danger)
             }
@@ -148,18 +179,18 @@ final class FileSearchCoordinator {
 
     func copyPath(_ result: FileSearchResult) {
         Paster.copyPlainText(result.id)
-        core.showMessage("Copied path")
+        core.showMessage(String(localized: "Copied path"))
     }
 
     func copyName(_ result: FileSearchResult) {
         Paster.copyPlainText(result.name)
-        core.showMessage("Copied name")
+        core.showMessage(String(localized: "Copied name"))
     }
 
     /// The file itself rather than its path, so Finder and Mail paste a copy of it.
     func copyFile(_ result: FileSearchResult) {
         PasteboardFiles.write(result.url, to: .general)
-        core.showMessage("Copied file")
+        core.showMessage(String(localized: "Copied file"))
     }
 
     /// Into whichever app the palette was summoned over, which is what the row's title names.
@@ -176,10 +207,10 @@ final class FileSearchCoordinator {
                     try FileManager.default.trashItem(at: result.url, resultingItemURL: nil)
                 }.value
                 session.remove(result)
-                core.showMessage("Moved to Trash")
+                core.showMessage(String(localized: "Moved to Trash"))
             } catch {
                 await core.showNotice(
-                    title: "Couldn’t Move \(result.name) to Trash",
+                    title: String(localized: "Couldn’t Move \(result.name) to Trash"),
                     message: error.localizedDescription,
                     symbol: "trash", tone: .danger)
             }

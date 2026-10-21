@@ -22,6 +22,7 @@ final class CurrencyRateStore {
 
     /// The newest snapshot, nil until the first one lands and always nil without consent.
     private(set) var rates: CurrencyRates?
+    private(set) var isRefreshing = false
 
     private static let consentKey = "currencyRatesEnabled"
     private let defaults = UserDefaults.standard
@@ -84,6 +85,17 @@ final class CurrencyRateStore {
         return await fetchAndStore()
     }
 
+    /// The pump re-measures age from `completedAt` when it wakes, so its schedule needs no reset.
+    func refresh() {
+        guard isEnabled, !isRefreshing else { return }
+        isRefreshing = true
+        Task {
+            await fetchAndStore()
+            isRefreshing = false
+        }
+    }
+
+    @discardableResult
     private func fetchAndStore() async -> Bool {
         guard isEnabled else { return false }
         guard let result = await Self.fetch() else { return false }

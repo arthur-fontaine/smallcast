@@ -21,9 +21,9 @@ struct RecentScreen: PaletteScreen {
 
     var primaryActionTitle: String {
         switch item(at: vm.selection) {
-        case .entry(let app, _): return app.kind.descriptor.openVerb
-        case .calculation: return "Copy Answer"
-        case nil: return "Open"
+        case .entry(let app, _): return String(localized: app.kind.descriptor.openVerb)
+        case .calculation: return String(localized: "Copy Answer")
+        case nil: return String(localized: "Open")
         }
     }
 

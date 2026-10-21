@@ -64,10 +64,6 @@ struct DigUpFolders: Equatable, Sendable {
 
 /// How File Search asks DigUp's search service and reads its answer. See file-search.md#engine.
 enum DigUpSearchPolicy {
-    /// Root search shows this many, and asks for one more to learn whether "Show More" earns a row.
-    static let rootRowLimit = 5
-    /// Asked of DigUp for root search: scopes and ignore rules drop hits after it answers.
-    static let rootRequestLimit = 40
     /// DigUp returns only matches that stand out, so this caps a long tail rather than paging it.
     static let panelLimit = 500
     /// Names wait this long for DigUp's answer, so a warm search redraws the list once, not twice.
