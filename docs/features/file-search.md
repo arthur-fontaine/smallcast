@@ -291,8 +291,8 @@ from growing while the selection is below it, so no row ever appears above the s
 
 A Files row is not an `AppEntry`: no `Kind`, no ranking, favorite, alias or Hide from Search. It is
 `LauncherScreen.Row.file`, id-prefixed `file-` because an application's entry id is its bundle path. It
-draws `FileSearchRow` with its location — name, dimmed parent path, then File, Folder, or Contents for a
-file DigUp found by what it says — and answers
+draws `FileSearchRow` with its location — name, then the dimmed parent path, which keeps a minimum width
+so a long name is cut first; no kind tag, since every row is a file or a folder — and answers
 the screen's own row actions: ↵ opens, ⌘↵ reveals, the copy, paste and trash chords run
 `FileSearchActionsMenu.perform`, and a row drags out as a copy. Row icons come from the same transient
 fitted cache, purged when the palette hides.
