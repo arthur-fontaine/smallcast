@@ -40,7 +40,7 @@ enum TemplateArgumentsAccessory {
                 return menu(for: argument, value: value(id))
             },
             placement: placement,
-            // Identity per row, so "which fields were left unanswered" starts clean on the next one.
+            // Identity per row, so which fields were left unanswered resets on the next one.
             view: AnyView(
                 InlineArgumentFields(
                     arguments: arguments, symbol: symbol, value: value, focused: focus,

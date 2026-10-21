@@ -47,10 +47,11 @@ enum CustomQuickActionError: Error, LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .emptyName: return "Give the action a name."
-        case .emptyInstructions: return "Tell the model what the action should do."
-        case .invalidCharacter: return "The name contains a character Smallcast can't store."
-        case .storageUnavailable: return "Smallcast couldn't save to its actions file."
+        case .emptyName: return String(localized: "Give the action a name.")
+        case .emptyInstructions: return String(localized: "Tell the model what the action should do.")
+        case .invalidCharacter:
+            return String(localized: "The name contains a character Smallcast can't store.")
+        case .storageUnavailable: return String(localized: "Smallcast couldn't save to its actions file.")
         }
     }
 }

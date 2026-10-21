@@ -1,6 +1,5 @@
 import Foundation
 
-/// What the Mac will let Smallcast read of the user's calendar.
 enum CalendarAccess: Sendable {
     case notDetermined
     case granted

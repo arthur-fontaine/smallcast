@@ -1,9 +1,10 @@
 # Search Files
 
 Search Files is a palette screen for opening any file or folder on the disk. It searches Smallcast's own
-filename index, built from a whole-disk crawl and kept current from FSEvents. Spotlight is not involved.
-It is reached from the built-in Search Files launcher command, or its own global shortcut, after the
-feature is enabled in Settings. The design follows [fsearch](https://github.com/noahdunnagan/fsearch).
+filename index, built by crawling the search scopes and kept current from FSEvents. Spotlight is not
+involved. It is reached from the built-in Search Files launcher command, or its own global shortcut, after the
+feature is enabled in Settings; with **Show in launcher** on, root search lists the top hits too. The
+design follows [fsearch](https://github.com/noahdunnagan/fsearch).
 
 ## Invariants
 
@@ -13,7 +14,9 @@ feature is enabled in Settings. The design follows [fsearch](https://github.com/
 - **Full Disk Access is required, and nothing is indexed without it.** `Permissions.hasFullDiskAccess()`
   probes a TCC-guarded file, which never prompts. The pane and the palette both say how to grant it.
 - **Scopes are the crawl roots.** Only what lies under a scope is indexed or searched; a scope inside
-  another folds into it, and a cleared list indexes nothing. The default is the whole disk (`/`).
+  another stays listed but folds into it at crawl time, and a cleared list indexes nothing. The default
+  is home (`~`): dotfiles are user files, the rest of the disk is the system's, and apps are the
+  launcher's.
 - **A matching ignore pattern skips a folder and everything in it at crawl time.** Changing either list
   rebuilds the index, debounced by a second; the old index serves until the new one maps.
 - **Hidden files and bundle contents are indexed.** They rank last instead (see Ranking), and the ignore
@@ -25,8 +28,15 @@ feature is enabled in Settings. The design follows [fsearch](https://github.com/
   duplicate or an event that races a rebuild changes nothing twice.
 - **File Search is off by default, and off means no index on disk.** Disabling stops the watcher, cancels
   any build and deletes `Application Support/<bundle id>/FileIndex/`.
-- **The shipped ignore rules are compiled in and never persisted.** `fileSearchIgnorePatterns` stores only
-  what the user added, so changing `FileSearchIgnoreList.defaults` reaches installs that already ran.
+- **The shipped ignore rules are compiled in and never persisted.** `fileSearchIgnorePatterns` stores
+  only what the user added and `fileSearchRemovedDefaultPatterns` only the shipped rules they removed,
+  so changing `FileSearchIgnoreList.defaults` reaches installs that already ran. Every row can be
+  removed, and **Restore Defaults** clears both lists. Scopes are one stored list that `defaultScopes`
+  only seeds.
+- **The launcher's Files section is on by default here, and off costs nothing.** Upstream ships it
+  off; this fork listed DigUp's files in root search before the switch existed, so an absent key reads
+  as on. With it off a keystroke never reaches the index, and `LauncherScreen` reads the switch before
+  the session, so it observes nothing.
 - **A superseded query never publishes.** The session runs one search at a time, keeps only the newest
   pending request, and checks its revision before publishing.
 - **Names come from the index, contents from DigUp.** With the [Name and content engine](#engine),
@@ -90,8 +100,15 @@ word or camel-case boundary +1000, terms typed in order +1500, first term ending
 `~/Library` and anything inside a bundle.
 
 An empty query lists **Recent**: the 20 newest files with prior 2, by modification date. The session
-keeps those rows across closes and computes them whenever the index is swapped in, so the screen opens
-on them at once and refreshes them in the background.
+keeps those rows across closes and recomputes them in the background whenever the index is swapped in
+or a live update reaches a file Recent can list, so the screen opens on current rows at once. That
+recompute never touches the published results, so a list on screen holds still. Each run is stamped,
+and one that finishes after a newer one is dropped.
+
+Search results follow **Pop to Root Search**: closing with **Immediately** clears the session at once.
+With a delay, results stay with the preserved query until the reset fires; reopening before it fires
+keeps them. Live updates never re-run a published query, so a file removed meanwhile still lists and
+reports the failure when opened. Icons and previews are still purged on close.
 
 The 2026-10-13 benchmark (`Tests/file-search-performance.swift`, `/System /Applications /Library /usr`,
 844,911 entries) crawled in 5.2 s with a 103 MB helper peak and wrote a 16.6 MB index, down from 40 MB
@@ -100,10 +117,13 @@ optimization, queries took 0.3–2.7 ms and single letters 3.4 ms.
 
 ## Live updates
 
-`FileSystemWatcher` streams folder-level FSEvents for the roots from the snapshot's event id, with fsearch's
-10 ms latency on a user-initiated queue, so a rename shows within a few tens of milliseconds and the
-stream never falls behind. A batch that changes the item count asks the main actor to redraw it at most
-once a second; any other batch never leaves the events queue. For each
+`FileSystemWatcher` streams folder-level FSEvents for the roots from the snapshot's event id on a utility
+queue, with a one-second latency and `NoDefer`: a lone change lands at once, and a folder that keeps
+changing is relisted about once a second instead of once per event. fsearch's 10 ms latency relisted a
+5,000-entry folder written 100 times a second about 58 times a second, a sixth of a core (#1599). A batch
+that changes the item count, or adds, removes or re-dates a file Recent can list, asks the main actor to
+redraw the count and recompute Recent at most once a second; any other batch never leaves the events
+queue. `FileIndex.recentRevision` is how a batch tells: it moves only for those files. For each
 event `FileIndex.apply(folder:)` acts only if the path is an indexed folder; any other event is in an
 ignored subtree, or it belongs to a new folder that its parent's event will find. The folder is relisted
 through one reused `FileIndexCrawler.Lister` and merged against its block: both sides are sorted by name
@@ -113,6 +133,8 @@ overlay (a new folder is walked whole), and a new mtime replaces the base row fr
 are compared only for files Recent can list, so cache and log churn elsewhere costs nothing. This
 matters on macOS 27, where malloc keeps freed small blocks dirty: replaying a launch's backlog through
 per-row Strings left about 30 MB behind, and the merge keeps a cold start level with Spotlight's.
+The diff reads a copy of the state that is released before its result is written, so writing never
+copies the overlay: holding that copy across the write cost 1.7 ms per change at 30,000 overlay entries.
 `MustScanSubDirs` rescans a folder recursively. History loss at or above a root, a moved root or more
 than 100,000 changes since the snapshot trigger a background rebuild.
 
@@ -142,9 +164,23 @@ somewhere on another; `/` is shown as the startup volume's name. The helper reso
 | no `/`, has `*` `?` `[` | the entry name, via `fnmatch` | `*.tmp` |
 | contains `/`, or starts with `~/` | the whole absolute path, via `fnmatch` | `~/Movies`, `**/[Cc]ache/**` |
 
+The defaults skip what a search for one's own files never wants: build output and dependency
+folders (`node_modules`, `.git`, `build`, `DerivedData`, `.venv`, …), the Photos library, the Trash,
+the `~/.cache` and `~/.npm` caches, and the noisy parts of `~/Library` — `Application Support`,
+`Caches`, `Containers`, `Developer`, `Group Containers` and `Mail`. Together they hold most of a home
+folder's entries and most of its churn: one browser's cache alone rewrites tens of thousands of files
+on every page load. `Preferences`, `LaunchAgents` and the cloud drives stay indexed. `/Library/Caches`
+and `/private/var/folders` cover a scope added outside home.
+
+The pane lists `FileSearchIgnoreList.patterns(added:removedDefaults:)`: the defaults the user kept,
+then what they added. Adding a removed default takes it off the removed list rather than storing it
+twice, and a default repeated in `fileSearchIgnorePatterns` is ignored, so a shipped rule has one
+switch.
+
 `fnmatch` runs with `FNM_CASEFOLD` and without `FNM_PATHNAME`, so `*` spans `/`. Name patterns read the
-NUL-terminated name straight out of the `getattrlistbulk` buffer; a path is only built when a path
-pattern exists. **Add Folder…** stores the chosen folder as a `~`-relative path pattern.
+NUL-terminated name straight out of the `getattrlistbulk` buffer. Literal path patterns first check the
+entry name, so an unrelated entry builds no path; wildcard and escaped paths keep the full-path match.
+**Add Folder…** stores the chosen folder as a `~`-relative path pattern.
 
 ## Palette and actions
 
@@ -180,9 +216,8 @@ The extension decides without touching the disk, except where it cannot: an unde
 off the main actor once per selection — no NUL and valid UTF-8 is text, anything else falls back to
 what the extension declares. `PlainTextSurface` copies QuickLook's own text preview (fixed-pitch 11pt,
 3pt inset, unselectable), so a `.jsx` reads like a `.swift`.
-**Only the ⌘Y overlay autoplays.** `autoplays` is the surface's one parameter and the pane leaves it
-off: arrow-keying a list must not start a movie, while opening Quick Look on one is the ask itself.
-The player view is `KeyboardFocusRefusing` either way, so clicking its transport leaves the caret in
+**Nothing autoplays**: arrow-keying a list must not start a movie.
+The player view is `KeyboardFocusRefusing`, so clicking its transport leaves the caret in
 the search field; see [palette.md](palette.md#the-keyboard-belongs-to-the-search-field).
 The player is File Search's own, deliberately: the clipboard's preview is a separate surface with its own
 sizing, and copying forty lines of `AVPlayerView` teardown is the cheaper trade.
@@ -192,27 +227,18 @@ sizing, and copying forty lines of `AVPlayerView` teardown is the cheaper trade.
 measured against the real machinery inside a panel shaped like the palette's — borderless, floating,
 non-activating — a swap paints in about 8 ms, and the first load in a process in about 130 ms. Nothing
 about that is worth debouncing, and the debounce that was there only made a click feel slow. The surface
-is torn down by not being mounted: when the palette is ordered out, when the ⌘Y overlay covers it, or on
+is torn down by not being mounted: when the palette is ordered out, or on
 a folder, whose preview is its icon. Information rows are the compact variant; their disk reads happen once per selection
 in a detached task, never in `body`, and a folder shows no Size — its own record is a few bytes, which is
 never what the row means.
 
-Quick Look (⌘Y) draws **inside the panel**: the palette hides itself on `windowDidResignKey` and the panel
-is non-activating, so a system `QLPreviewPanel` would take key and close the palette under itself.
-`FileSearchQuickLook` hosts the same two surfaces the pane does, following the selection. **Escape is
-answered by `PalettePanel.onEscape`**, not by the palette's own key handler: a focused `AVPlayerView`
-takes the key window's Escape first, and `sendEvent` is the one place ahead of it. **Only the margin
-around the card dismisses on a click** — a tap over the preview belongs to the preview's own transport,
-and a dismissing gesture laid over the whole overlay swallowed the play button — so the Close button is
-the pointer's way out. Its corners are concentric, each radius the one outside it less its own inset, and
-the overlay is cleared whenever the palette is ordered out: the tree stays mounted, and a preview must
-not outlive the window.
+**There is no Quick Look action.** The pane already previews the selection, and ↵ opens the file in
+its default app. A system `QLPreviewPanel` would take key, and the palette hides on `windowDidResignKey`.
 
 | Row | Chord | What it does |
 | --- | --- | --- |
 | Open File / Open Folder | ↵ | `NSWorkspace`'s asynchronous configuration API; hides the palette without restoring focus, and reports a failure through the dialog controller |
 | Show in Finder | ⌘↵ | reveals and dismisses |
-| Quick Look | ⌘Y | the in-panel overlay above |
 | Share… | — | `NSSharingServicePicker`, anchored to the palette's trailing edge so the row it was opened from stays visible beside it. Escape or a click elsewhere dismisses it, and the palette is never hidden, so the flow returns to the same row. There is no chord: the destinations are the system's, and it is the only place a system popover is right |
 | Copy File | ⇧⌘C | the file itself on the pasteboard through `PasteboardFiles.write`, which declares `.fileURL` and the path as `.string` |
 | Copy Name | ⌥⌘C | through `Paster`, palette stays open |
@@ -239,8 +265,31 @@ a mail being written — through the same `onRowClick(drag:)` the clipboard uses
 explains. Copy matters more here than there: every result is the user's own file, and on the boot
 volume a plain file-URL drag would default to moving it. The image is the row's fitted tile, already
 warm by the time a pointer can reach it; a landed drop hides the palette through
-`PaletteCoordinator.dragLanded()`. There is no stat first: a result is seconds old, and its session is
-cleared whenever the palette hides.
+`PaletteCoordinator.dragLanded()`. There is no stat first: a result is at most the Pop to Root Search
+delay old, since the reset clears its session.
+
+## In the launcher
+
+**Show in launcher** (`fileSearchShowInLauncher`, under the feature switch) adds a **Files** section to
+root search, between the ranked results and the `Use "…" with` fallbacks, so ↵ on a typed app name never
+opens a file. It lists the top five hits (`FileSearchQuery.launcherLimit`) once the trimmed query has
+three characters (`launcherMinimumLength`), the threshold category search uses. Shorter cancels the
+query and releases its rows.
+
+The launcher borrows this screen's `FileSearchSession` rather than keeping its own. Only one palette
+mode shows at a time, so nothing is held twice. An index swap or a trashed row updates both. And the
+Search Files fallback opens on the request the launcher just answered, with its rows already listed.
+`FileSearchCoordinator.searchFromLauncher` is the one entry point: `RootPaletteView` calls it per
+keystroke and when the launcher becomes the mode, and `applyLauncherFiles` re-runs it when the switch
+changes. `cancel()` returns early on an idle session, so with the section off a keystroke publishes
+nothing.
+
+A Files row is not an `AppEntry`: no `Kind`, no ranking, favorite, alias or Hide from Search. It is
+`LauncherScreen.Row.file`, id-prefixed `file-` because an application's entry id is its bundle path. It
+draws `FileSearchRow` with its location — name, dimmed parent path, then File or Folder — and answers
+the screen's own row actions: ↵ opens, ⌘↵ reveals, the copy, paste and trash chords run
+`FileSearchActionsMenu.perform`, and a row drags out as a copy. Row icons come from the same transient
+fitted cache, purged when the palette hides.
 
 ## Engine
 
@@ -289,9 +338,9 @@ stay DigUp's.
   own `roots`, `excludedFolders` and `excludedTypes`, read from its defaults and never written, as
   its app does. The section warns when none of DigUp's folders lies in a scope.
 - **Its index is reloaded when DigUp wrote it.** The service keeps vectors in memory, and DigUp's app
-  re-indexes on its own. Before the screen opens or root search's first letter, `DigUpState.prepare`
-  compares `index.sqlite` and its write-ahead log against the last modification seen and sends
-  `reload` when they moved.
+  re-indexes on its own. Before the screen opens or root search's Files section first answers,
+  `DigUpState.prepare` compares `index.sqlite` and its write-ahead log against the last modification
+  seen and sends `reload` when they moved.
 - **Choosing it is not having it.** Like Dictation's models, Name and content can be picked before
   DigUp is installed; the section then says DigUp is not installed, offers Get DigUp… and Check Again,
   and File Search keeps finding by name until `DigUpState` finds the helper. `DigUpLocator` takes the
@@ -306,19 +355,14 @@ stay DigUp's.
   offers Open DigUp; it re-reads when Smallcast becomes active again. Smallcast never downloads the
   model or indexes a folder itself: DigUp keeps its index current only while it runs, so setting it up
   is DigUp's to do.
-- **In root search it takes the Search Files fallback's place.** With File Search on, Name and content
-  in effect and the Search Files fallback offered and checked,
-  `FallbackCoordinator.digUpReplacesSearchFiles` drops that static row and `DigUpRootSection` adds up
-  to `DigUpSearchPolicy.rootRowLimit` (5) files **after every fallback**, then Show More Results, which
-  runs `FileSearchCoordinator.show(query:)` like the row it replaced. It asks DigUp for
-  `rootRequestLimit` (40), since the scopes thin the answer. Unchecking Search Files in Settings ▸
-  Fallbacks hides both.
-- **Its rows are the tail of `LauncherScreen.rows`**, the only rows that arrive after the query does.
-  Appended last, a late answer never moves a row the selection is already on; `fallbackRow(at:)`
-  subtracts `DigUpRootSection.rowCount`, since the fallbacks are no longer the last rows.
-- **The engine is read at every entry.** `show(query:)` sets `FileSearchSession.digUp` from it each
-  time, so a change in Settings applies to the next search without reaching into an open screen.
-  Root search keeps its own session, `AppCore.digUpPreview`, driven by `DigUpRootSearch`.
+- **In root search it fills the launcher's Files section.** Root search borrows the screen's session
+  ([In the launcher](#in-the-launcher)), so `searchFromLauncher` sets `FileSearchSession.digUp` before
+  it searches and the section's five rows are the same merged list the screen shows. The query
+  becoming long enough is when `DigUpState.prepare` catches up with DigUp's indexing; root search
+  never prewarms the meaning model, only the screen does.
+- **The engine is read at every entry.** `show(query:)` and `searchFromLauncher` set
+  `FileSearchSession.digUp` from it each time, so a change in Settings applies to the next search
+  without reaching into an open screen.
 - **No paging.** The screen asks once for up to `DigUpSearchPolicy.panelLimit` (500). The type filter
   maps to the request's `kinds`.
 - **A moved index still answers.** DigUp keeps a moved index or model folder in its own defaults
@@ -336,7 +380,7 @@ answer drawn once, and a cold encoder asked for keywords first.
 ## Invocation
 
 Settings ▸ File Search owns the `fileSearchEnabled` switch, which is off when its preference is absent,
-along with the Full Disk Access status, the index status and **Rebuild Index**, the scope list, the
+the **Show in launcher** switch beneath it, along with the Full Disk Access status, the index status and **Rebuild Index**, the scope list, the
 ignore patterns and the Search Files command row. The lists are ordinary settings carried by Smallcast
 settings backups; importing them grants no permission.
 

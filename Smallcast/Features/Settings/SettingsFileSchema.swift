@@ -29,13 +29,15 @@ enum SettingsFileSchema {
 
         switch key {
         case .launcherShortcut:
-            return shortcuts.binding(for: key, action: .togglePalette, name: "App Launcher")
+            return shortcuts.binding(
+                for: key, action: .togglePalette, name: String(localized: "App Launcher"))
         case .showInMenuBar: return bind(settings, \.showInMenuBar)
         case .automaticallyCheckForUpdates: return bind(settings, \.automaticallyCheckForUpdates)
         case .popToRootTimeout: return bind(settings, \.popToRootTimeout)
         case .escapeKeyBehavior: return bind(settings, \.escapeKeyBehavior)
         case .autoSwitchInputSource: return bind(settings, \.autoSwitchInputSourceID)
         case .supportReminders: return bind(settings, \.supportRemindersEnabled)
+        case .language: return bind(settings, \.language)
         case .appearance: return bind(settings, \.appearance)
         case .paletteTheme: return bind(settings, \.paletteTheme)
         case .spotlightButtons:
@@ -74,6 +76,7 @@ enum SettingsFileSchema {
         case .appleShortcutsEnabled: return bind(settings, \.appleShortcutsEnabled)
         case .aiEnabled: return bind(settings, \.aiEnabled)
         case .aiWebSearch: return bind(ai, \.webSearchEnabled)
+        case .aiChoices: return bind(ai, \.choicesEnabled)
         case .aiSystemPrompt: return bind(ai, \.systemPrompt)
         case .aiSystemPromptEnabled: return bind(ai, \.systemPromptEnabled)
         case .aiRetention: return bind(ai, \.retention)
@@ -87,6 +90,9 @@ enum SettingsFileSchema {
         case .fileSearchScopes: return bind(settings, \.fileSearchScopes)
         case .fileSearchIgnorePatterns: return bind(settings, \.fileSearchIgnorePatterns)
         case .fileSearchEngine: return bind(settings, \.fileSearchEngine)
+        case .fileSearchRemovedDefaultPatterns:
+            return bind(settings, \.fileSearchRemovedDefaultPatterns)
+        case .fileSearchShowInLauncher: return bind(settings, \.fileSearchShowInLauncher)
         case .fileSearchCommands: return launcher.commandsBinding(for: key, owner: .fileSearch)
         case .notesEnabled: return bind(settings, \.notesEnabled)
         case .notesRendersMarkdown: return bind(settings, \.notesRendersMarkdown)
@@ -95,12 +101,13 @@ enum SettingsFileSchema {
         case .notesCommands: return launcher.commandsBinding(for: key, owner: .notes)
         case .dictationMode: return bind(settings, \.dictationMode)
         case .dictationShortcut:
-            return shortcuts.binding(for: key, action: .dictation, name: "Dictation")
+            return shortcuts.binding(for: key, action: .dictation, name: String(localized: "Dictation"))
         case .dictationModel: return bind(settings, \.dictationModel)
         case .dictationMicrophone: return bind(settings, \.dictationMicrophone)
         case .dictationDestination: return bind(settings, \.dictationDestination)
         case .dictationAdaptsCapitalization: return bind(settings, \.dictationAdaptsCapitalization)
         case .dictationHoldLauncherAsksAI: return bind(settings, \.dictationHoldLauncherAsksAI)
+        case .dictationLiveInsertion: return bind(settings, \.dictationLiveInsertion)
         case .dictationIdleRelease: return bind(settings, \.dictationIdleRelease)
         case .dictationLanguage:
             return bind(settings, \.dictationLanguage) { language in
@@ -169,6 +176,7 @@ extension FileSearchEngine: SettingsFileRawValue {}
 extension AppAppearance: SettingsFileRawValue {}
 extension PaletteTheme: SettingsFileRawValue {}
 extension SpotlightButton: SettingsFileRawValue {}
+extension AppLanguage: SettingsFileRawValue {}
 extension InterfaceSize: SettingsFileRawValue {}
 extension HyperKeyPhysicalKey: SettingsFileRawValue {}
 extension HyperKeyQuickPress: SettingsFileRawValue {}

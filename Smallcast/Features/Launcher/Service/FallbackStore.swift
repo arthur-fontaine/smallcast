@@ -1,6 +1,5 @@
 import Foundation
 
-/// The reader's fallback list: which of them are offered, in what order, and their own presets.
 @MainActor
 @Observable
 final class FallbackStore {

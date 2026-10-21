@@ -11,7 +11,7 @@ final class SupportCoordinator {
     /// Environment injection and activity reads only — never for state this type owns.
     private unowned let core: AppCore
     private lazy var window = AppWindowController(
-        title: "Support Smallcast", contentSize: SupportWindowView.initialSize,
+        title: String(localized: "Support Smallcast"), contentSize: SupportWindowView.initialSize,
         activation: core.activationPolicy)
 
     init(store: SupportReminderStore, core: AppCore) {

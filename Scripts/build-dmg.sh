@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build a signed Smallcast.app into build/Smallcast-<version>.dmg. Usage: ./Scripts/build-dmg.sh [version]
+# Build a signed Smallcast.app into build/Smallcast-<version>.dmg. Usage: build-dmg.sh [version]
 set -euo pipefail
 
 cd "$(dirname "$0")/.." || exit 1

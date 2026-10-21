@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// The Search Quicklinks screen: the whole library, pinned entries first.
 struct QuicklinkList: View {
     @Environment(\.metrics) private var metrics
     let results: [Quicklink]
@@ -33,7 +32,7 @@ struct QuicklinkList: View {
         var rows: [Row] = []
         var currentTitle: String?
         for quicklink in results {
-            let title = quicklink.isPinned ? "Pinned" : "Quicklinks"
+            let title = quicklink.isPinned ? String(localized: "Pinned") : String(localized: "Quicklinks")
             if title != currentTitle {
                 rows.append(.header(title))
                 currentTitle = title
@@ -138,7 +137,6 @@ private struct QuicklinkRow: View {
     }
 }
 
-/// The detail pane beside the list, the way Search Snippets previews the snippet it highlights.
 struct QuicklinkPreview: View {
     @Environment(\.metrics) private var metrics
     let quicklink: Quicklink?
@@ -198,20 +196,22 @@ private struct QuicklinkInfoSection: View {
 
     private var rows: [InfoRow] {
         var rows = [
-            InfoRow(label: "Name", value: quicklink.name),
-            InfoRow(label: "Link", value: quicklink.link)
+            InfoRow(label: String(localized: "Name"), value: quicklink.name),
+            InfoRow(label: String(localized: "Link"), value: quicklink.link)
         ]
         if let bundleID = quicklink.openWithBundleID {
             rows.append(
                 InfoRow(
-                    label: "Open With",
+                    label: String(localized: "Open With"),
                     value: AppPresentation.resolve(bundleID: bundleID, in: appIndex).name))
         }
         if let keycaps = hotKeys.binding(for: .quicklink(id: quicklink.id))?.keycaps {
-            rows.append(InfoRow(label: "Shortcut", keycaps: keycaps))
+            rows.append(InfoRow(label: String(localized: "Shortcut"), keycaps: keycaps))
         }
         rows.append(
-            InfoRow(label: "Created", value: Self.createdFormatter.string(from: quicklink.createdAt)))
+            InfoRow(
+                label: String(localized: "Created"),
+                value: Self.createdFormatter.string(from: quicklink.createdAt)))
         return rows
     }
 

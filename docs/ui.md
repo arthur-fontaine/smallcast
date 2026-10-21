@@ -104,7 +104,7 @@ groups. See "Section headers" below.
 
 ### Radius (`Theme.Radius`)
 
-`panel 26` · `row 10` · `formField 12` · `card 10` · `dialog 20` · `dialogSymbol 16` · `menuPanel 16` · `menu 6` · `menuRow 10` · `barControl 8` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
+`panel 26` · `row 10` · `formField 12` · `card 10` · `codeBlock 14` · `dialog 20` · `dialogSymbol 16` · `menuPanel 16` · `menu 6` · `menuRow 10` · `barControl 8` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
 
 `formField` dresses the native Snippet, Quicklink, Event and Custom Command editor fields; it does not change settings controls
 or extension forms.
@@ -183,7 +183,7 @@ Notes adds `noteWindow 440×180` (opening size on a first run, and the floor), `
 
 AI Chat adds `aiChatWindow 960×660` (opening size), `aiChatWindowMinimum 680×440`, a sidebar of
 `aiChatSidebarMinimum 240`–`aiChatSidebarMaximum 340`, `aiChatDetailMinimum 440`,
-`aiChatReadingWidth 760` for the transcript and composer column, a composer of at most
+`aiChatReadingWidth 960` for the transcript and composer column, a composer of at most
 `aiChatComposerMaxLines 15` lines or `aiChatComposerHeightFraction 0.30` of the pane,
 `aiChatComposerControl 28` for every control on its row and `aiChatComposerGlyph 16` for their glyph
 slot, `chatContextGauge 14` for the composer's context ring, and `chatContextCard 300` for the card it
@@ -243,6 +243,10 @@ on the light one. `glassScrim` is the same inversion as `panelScrim`, faint enou
 does its own tinting.
 `brand`, `primaryAction`, `destructive`, `success` and `dropGuideArmed` are fixed hues and adapt on
 their own.
+`Theme.Colors.Syntax` holds the code-colouring palette AI Chat paints into a fenced block — `keyword`,
+`string`, `number`, `comment`, `type`, `function`, `constant`, `attribute`, `property`, `inserted`
+and `deleted`. Each is an `adaptive` pair, a bright hue on the dark surface and a deeper one on the
+light, and it is the only place a syntax colour is chosen.
 
 Beyond these, `.secondary`/`.tertiary` foreground styles are fine for SF Symbols (they resolve against
 the environment's appearance). **Selection always beats hover** when a row is both.
@@ -257,7 +261,7 @@ An extension's own surfaces live in `ExtensionColors` (`Features/Extensions/UI/`
 
 Source: `Palette/PalettePanel.swift`, `Palette/RootPaletteView.swift`.
 
-- **`PalettePanel`** is a borderless `NSPanel`: `isOpaque = false`, `backgroundColor = .clear`, `.palette` level (one above `.modalPanel`, so other apps' open panels never cover it), `hasShadow`, `animationBehavior = .none`. It hosts SwiftUI via `NSHostingView`. `PaletteWindowController` centers it slightly above screen center (`+8%`) and dismisses it on `windowDidResignKey`.
+- **`PalettePanel`** is a borderless `NSPanel`: `isOpaque = false`, `backgroundColor = .clear`, `.palette` level (one above `.modalPanel`, so other apps' open panels never cover it), `hasShadow`, `animationBehavior = .documentWindow`. It hosts SwiftUI via `NSHostingView`. `PaletteWindowController` centers it slightly above screen center (`+8%`) and dismisses it on `windowDidResignKey`.
 - **The results layer fills the whole panel.** The header and bottom bar attach via `.safeAreaInset(edge: .top/.bottom)` as transparent overlays that float _over_ the list. The list underlaps them and dissolves at the edges.
 - **Header** (`headerHeight 44`): a back-chevron _or_ mode glyph, then the plain `TextField` (no border/background). Sub-screens (Clipboard, Calculator History) show the back chevron; the launcher shows a magnifying glass. The search icon aligns horizontally with row content, and the query with the row titles.
 - **Compact keyboard entry:** pressing `↓` in the collapsed launcher expands the results and selects the first row without replacing or defocusing the shared search field.
@@ -362,12 +366,17 @@ a `controlSurface` fill at `Radius.barControl` under the pointer. Send is a soli
 The title bar keeps the system's own toolbar band, as any document window's does. The context card
 the gauge raises on hover is glass over a solid `windowBackgroundColor`, because it rises over
 transcript text, and sits in the transcript's own frame at its bottom edge, so no window size can
-push it off screen. A reply's choices are `.glass` capsules that rise out of the composer's top
-edge. Find marks words in `Colors.findMatch` / `findCurrent`, the system yellow, with
+push it off screen. A reply's choices are frosted capsules, centred, that rise out of the composer's
+top edge. Find marks words in `Colors.findMatch` / `findCurrent`, the system yellow, with
 `findCurrentInk` black on the solid one in both appearances. Transcript lines sit
-`spacing.chatLine 4` apart on both surfaces. The transcript itself is the palette's `ChatTranscriptView`
+`spacing.chatLine 4` apart on both surfaces. A source chip is a frosted capsule like a choice, led
+by a `chatSourceBadge 18` number disc. Jump to Latest is a `chatJumpToLatest 30` arrow disc at the
+transcript's bottom edge. The transcript itself is the palette's `ChatTranscriptView`
 with `surface: .window`, which leaves out `edgeDissolve` and `thinScrollbar` — both are measured
-against the palette's bars — and caps the column at `aiChatReadingWidth`, centred.
+against the palette's bars — and caps the column at `aiChatReadingWidth`, centred. Its gutter sits
+outside that cap, as the composer's does, so a reply, its code blocks and the composer share both
+edges; a window reply takes no inset of its own, while the palette keeps `spacing.sm` to line up
+with its header's chevron.
 
 ---
 
@@ -580,7 +589,7 @@ Glass is normally for floating controls. The dialog root is the one modal-surfac
 - **A menu's `width` is fixed, never intrinsic**, so it can't jitter as its rows change. Every header menu states its own at its `RootPaletteView.menuContent` case — `menuWidth 276`, or a token of its own where that reads too wide (`clipboardFilterMenuWidth`, `fileSearchFilterMenuWidth`, `emojiCategoryMenuWidth`) — so retuning one never moves another. Native footer menus add 30pt without changing those header widths; extension Actions owns its nearby 310pt width inside the feature.
 - **`PopoverMenu`** uses `glassEffect(.regular)` with `menuPanel 16` corners and **no hand-tuned shadow** — Tahoe glass carries its own elevation; adding a drop shadow reads heavy and non-native. A footer menu raises only its attached bottom corner to the controls' 18-point radius, so the two silhouettes meet exactly.
 - Its native search field is a row-height sibling of the scroller, above header menus or below footer menus. It uses an 18pt horizontal inset to align with the visible row glyphs. The top field stays vertically symmetric; the bottom field keeps its 1pt optical lift. Menus omit the adjacent edge dissolve and centre **No Results** in one row when their filtered rows are empty. The 8pt resting list inset belongs to the scroll content, so rows can reach the surface edges without shifting their initial position; hover fills keep the dedicated `menuRow 10` corner.
-- `PopoverMenuRow`: leading glyph, label, trailing shortcut glyph and `menuHover` fill on hover. Menus animate in with opacity and scale from the anchored corner, stretching briefly to 1.003 before settling; `Theme.MenuMotion` owns the entry, settle and exit timings.
+- `PopoverMenuRow`: leading glyph, label, trailing shortcut glyph and `menuHover` fill on hover. Menus open and close with AppKit's native `.documentWindow` animation.
 - The glyph is a `PopoverMenuIcon`: `.symbol` (SF Symbol, `monochrome`, `menuSymbol` — or **red** when `isDestructive`) `.file` (a real app icon via `IconCache`, used by the paste rows to show the paste target) or `.thumbnail` (a picture's own preview, cropped to the slot, used by the chat's staged-file rows). `PopoverMenuItem` keeps a `systemImage:` convenience init, so symbol rows read exactly as before.
 - **Every glyph kind shares one square `menuIcon` (20) slot**, which pins one row height. A native SF Symbol uses the dedicated 14pt Medium `menuSymbol` font; file and brand icons keep their own artwork sizing inside the same slot, and a thumbnail fills it.
 - Menu rows use the `md` icon→label gap; the fixed slot adds the remaining optical slack.
@@ -630,10 +639,9 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   `NSHostingView` layer to the same continuous radius, then lets AppKit draw the native window shadow;
   this avoids both the rectangular outline of an unshaped panel and the hard bounds of a SwiftUI blur.
   The launcher's root gains a `dialogDimming` overlay only when it remains visible behind the panel;
-  actions that hide the launcher first do no dimming work. Its fade follows `dialogEnter` / `dialogExit`
-  so both surfaces separate as one transition. Matte button fills come from `controlSurface` /
-  `selection`, while a destructive action uses the destructive tint. The **volume HUD** and **message
-  pill** keep the non-glass panel recipe.
+  actions that hide the launcher first do no dimming work. Its fade follows `dialogEnter` / `dialogExit`.
+  Matte button fills come from `controlSurface` / `selection`, while a destructive action uses the
+  destructive tint. The **volume HUD** and **message pill** keep the non-glass panel recipe.
 - **Layout.** Subject glyph in a low-opacity rounded tile, then title (`panelTitle`) + wrapped
   secondary message, optional accessory and full-width actions. Content uses a 22-point inset while
   the actions keep the tighter `dialogInset 18`. One action spans the row; two sit side by side with
@@ -645,25 +653,23 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   callout face; semantic roles change colour, never weight. `dialogButtonHeight 34` is shared by the
   actions and dialog text fields. The fields use the non-pill `row 10` radius.
 - **Keys.** `DialogPanel.sendEvent` intercepts Esc and ↵ directly instead of relying on SwiftUI
-  `onKeyPress`, so the keys work without anything inside the dialog holding focus. Buttons don't print
-  a key cap; after `tooltipDelay` of deliberate hover, `.tooltip(keyCap:)` fades in the shared
-  `Tooltip` tile holding an outlined `KeyCapChip` for the key the panel actually handles (`↵`, `⎋`).
-  Only those two keys are ever advertised, so a shown cap cannot drift from dialog behavior.
+  `onKeyPress`, so the keys work without anything inside the dialog holding focus. Buttons don't
+  print a key cap; after `tooltipDelay` of deliberate hover, `.tooltip(keyCaps:)` fades in the shared
+  `Tooltip` tile holding one outlined `KeyCapChip` per key the panel actually handles (`↵`, `esc`,
+  or `⌘` `↵`). Only those keys are ever advertised, so a shown cap cannot drift from dialog behavior.
   **↵ runs the dialog's primary action; Escape cancels**, on every dialog including destructive ones.
   Arrow keys walk the volume slider along the same 5% grid the volume commands use (`DialogPanel`
   reports `.increment` / `.decrement` and `DialogController` applies `VolumeLevel.stepped`, so the
-  panel never learns what a volume step is); click-away resolves as a dismissal.
+  panel never learns what a volume step is); click-away resolves as a dismissal. ↵ that commits an
+  input method's marked text never confirms, and a multi-line accessory takes ↵ as a line break, so
+  its dialog confirms on ⌘↵ and its default button advertises that instead.
 - **Async, not modal.** Presentation is `async` (`withCheckedContinuation`), so there is no nested run
   loop. A held hotkey can't stack dialogs: while one is up, a second request resolves immediately as a
-  dismissal — which is why the old `isConfirmingCommand` re-entrancy flag is gone. The guard is keyed
-  on the live continuation, not on the panel, so a dialog still fading out can't swallow the next one.
-- **Entrance and exit.** A dialog starts 3pt below its final position at 8% opacity. AppKit moves the
-  cached full-panel surface upward over `dialogEnter` (0.12s), with the alpha following the same curve
-  so the fade masks the window's whole-pixel movement and the native shadow travels with the glass.
-  There is no SwiftUI scale: scaling the content inside a full-size shadow produced a transient rim.
-  Exit is an interruptible `fadeOut` over `dialogExit` (0.10s); its handler hides the window only if
-  the alpha is still 0. The
-  continuation resumes **before** that fade, so confirming Restart is never held up by animation.
+  dismissal — which is why the old `isConfirmingCommand` re-entrancy flag is gone.
+- **Entrance and exit.** `DialogPanel` uses `animationBehavior = .documentWindow`, so a dialog opens
+  and closes with the same native bounce as Settings and the launcher. AppKit scales the whole window,
+  shadow included; a SwiftUI scale of the content inside the full-size shadow produced a transient rim.
+  The continuation resumes **before** `orderOut`, so confirming Restart is never held up by animation.
   Other borderless surfaces retain the shared `Duration.enter` / `Duration.exit` timings and
   `PanelTransition` behavior.
 - **Non-activating**, like the palette: the dialog takes key focus for its own keys without pulling app
@@ -850,16 +856,18 @@ CoreGlyphs (shapes and rules, not counts — those move every release).
 ## Dialog accessories
 
 A dialog carries at most one control beyond its buttons, and `DialogAccessory` makes that structural
-rather than a convention — `.volume` for the Set Volume prompt and `.snippetArguments` for a snippet's
-`{argument}` values. Text fields take `dialogTextField()`; inline enumerated arguments are `DialogChip`s.
-`DialogPanel.handlesArrowKeys` is set from `DialogAccessory.claimsArrowKeys`, so the slider steps on
-←/→ while snippet argument text fields keep their caret. Create Event uses the launcher form instead.
+rather than a convention — `.volume` for the Set Volume prompt, `.snippetArguments` for a snippet's
+`{argument}` values and `.clipboardText` for Edit Entry. Text fields take `dialogTextField()`;
+inline enumerated arguments are `DialogChip`s. `DialogPanel.handlesArrowKeys` is set from
+`DialogAccessory.claimsArrowKeys`, so the slider steps on ←/→ while snippet argument text fields
+keep their caret, and `acceptsLineBreaks` from the accessory of the same name, so only Edit Entry's
+`dialogTextHeight` text area takes ↵. Create Event uses the launcher form instead.
 
-The first text field takes focus from `DialogController.windowDidBecomeKey`, never from the view.
-When the panel turns key AppKit picks its own first responder — the Cancel button with Keyboard
-navigation on — and over another app that happens only after `show` returns, so focus a SwiftUI view
-asks for loses to it. The panel can also turn key inside `makeKeyAndOrderFront`, before SwiftUI has
-built the field, so `DialogPanel.focusFirstTextField` lays the content out first.
+The first text field or text view takes focus from `DialogController.windowDidBecomeKey`, never from
+the view. When the panel turns key AppKit picks its own first responder — the Cancel button with
+Keyboard navigation on — and over another app that happens only after `show` returns, so focus a
+SwiftUI view asks for loses to it. The panel can also turn key inside `makeKeyAndOrderFront`, before
+SwiftUI has built the field, so `DialogPanel.focusFirstTextField` lays the content out first.
 
 ## Settings
 
@@ -934,7 +942,8 @@ system-drawn and a pane reads exactly as macOS System Settings does.
   which that window still uses.
 - **A Settings editor borrows the dialog language, not its job.** `SettingsEditorPresenter` hosts the
   existing form in an activating, transparent child `NSPanel`, with the same `panel 26` Liquid Glass
-  surface, 3pt/8% entrance and matte action buttons. A blocking child covers and dims the whole parent,
+  surface, native `.documentWindow` entrance and matte action buttons. AppKit gives this activating
+  panel no close animation, so it leaves at once. A blocking child covers and dims the whole parent,
   including its titlebar, so a press on it drags the parent; nested editors form one stack owned by the
   Settings-window session. As with a sheet, a drag on an editor's empty space moves the Settings window:
   the surface puts `WindowDragBackground` behind its content, and the panel hands `performDrag(with:)`
@@ -1049,7 +1058,7 @@ See [features/window-layouts.md](features/window-layouts.md#the-editor).
 `ShortcutRecorder` is a **120pt** field showing only the binding. A single modifier binding puts a small
 L/R beside its glyph inside the same cap; double presses show only the two glyphs. The side follows
 the modifier identity macOS reports after remapping. Ordinary combos have no side label. Recording is
-narrated by `ShortcutRecorderPopover`, a small **132 × 82** callout above it: caps, one label line, an
+narrated by `ShortcutRecorderPopover`, a small **176 × 96** callout above it: caps, up to two centred label lines, an
 `esc` cap in the top-left corner. Its fixed frame shows the prompt (`⌥ A` at half opacity, "Type a
 shortcut"), live held keys with their reported side, a pending second modifier tap, or a conflict
 (rejected caps + owner, orange).

@@ -7,7 +7,7 @@ struct AboutView: View {
     private static var version: String {
         let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
-        return "Version \(short) (\(build))"
+        return String(localized: "Version \(short) (\(build))")
     }
 
     // Cached, and read from the bundle: the app icon is generic until LaunchServices registers.
@@ -129,7 +129,6 @@ struct AboutView: View {
     }
 }
 
-/// One external destination in the About "Links" card.
 private struct AboutLink: Identifiable {
     enum Glyph {
         case symbol(String)
@@ -145,7 +144,7 @@ private struct AboutLink: Identifiable {
 
     static let all: [AboutLink] = [
         AboutLink(
-            id: "website", glyph: .symbol("globe"), title: "Website",
+            id: "website", glyph: .symbol("globe"), title: String(localized: "Website"),
             detail: "arthur-fontaine.github.io/smallcast",
             url: URL(string: "https://arthur-fontaine.github.io/smallcast/")!),
         AboutLink(
@@ -154,18 +153,17 @@ private struct AboutLink: Identifiable {
             url: URL(string: "https://github.com/arthur-fontaine/smallcast")!),
         AboutLink(
             id: "discord", glyph: .brand("BrandDiscord"), title: "Discord",
-            detail: "Join the Smallcast community",
+            detail: String(localized: "Join the Smallcast community"),
             url: URL(string: "https://discord.gg/v2Eeb4QQy3")!),
         AboutLink(
             id: "x", glyph: .brand("BrandX"), title: "X", detail: "@abue_ammar",
             url: URL(string: "https://x.com/abue_ammar")!),
         AboutLink(
-            id: "email", glyph: .symbol("envelope"), title: "Email",
+            id: "email", glyph: .symbol("envelope"), title: String(localized: "Email"),
             detail: "iabueammar@gmail.com", url: URL(string: "mailto:iabueammar@gmail.com")!)
     ]
 }
 
-/// A row in the About "Links" card: glyph, title, destination and the arrow.
 private struct AboutLinkRow: View {
     let link: AboutLink
 

@@ -74,7 +74,7 @@ struct AppGridScreen: PaletteScreen {
 
     var rows: [AppEntry] { sections.flatMap(\.apps) }
 
-    var primaryActionTitle: String { AppEntry.Kind.application.descriptor.openVerb }
+    var primaryActionTitle: String { String(localized: AppEntry.Kind.application.descriptor.openVerb) }
 
     private func app(at selection: Int) -> AppEntry? {
         let rows = rows
