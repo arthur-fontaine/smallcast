@@ -47,6 +47,7 @@ struct SettingsBackup: Codable {
         var showFavoritesInCompactMode: Bool?
         var searchScopes: [String]?
         var launcherShowsSuggestions: Bool?
+        var launcherSectionOrder: [String]?
         var rootSearchSensitivity: String?
         var openOnCursorScreen: Bool?
         // Safe to carry: it grants no permission class, just repositions the window.
@@ -168,6 +169,7 @@ extension SettingsBackup {
             showFavoritesInCompactMode: s.showFavoritesInCompactMode,
             searchScopes: s.searchScopes,
             launcherShowsSuggestions: s.launcherShowsSuggestions,
+            launcherSectionOrder: s.launcherSectionOrder.map(\.rawValue),
             rootSearchSensitivity: s.rootSearchSensitivity.rawValue,
             openOnCursorScreen: s.openOnCursorScreen,
             paletteDraggable: s.paletteDraggable,
@@ -423,6 +425,10 @@ extension SettingsBackup {
         }
         if let scopes = s.searchScopes {
             settings.searchScopes = SearchScopes.normalize(scopes)
+            count += 1
+        }
+        if let raw = s.launcherSectionOrder {
+            settings.launcherSectionOrder = raw.compactMap(LauncherSection.init)
             count += 1
         }
         if let flag = s.launcherShowsSuggestions {

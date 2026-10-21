@@ -280,7 +280,10 @@ enum SettingsSearchCatalog {
     private static let search: [SettingsSearchEntry] = [
         .init(
             pane: .search,
-            keywords: ["ranking", "learned", "frecency", "forget", "reset", "recent", "history"])
+            keywords: ["ranking", "learned", "frecency", "forget", "reset", "recent", "history"]),
+        .init(
+            group: .searchSections, "Section order",
+            keywords: ["order", "files", "fallbacks", "results", "first", "after", "arrange", "layout"])
     ]
 
     private static let miscellaneous: [SettingsSearchEntry] = [

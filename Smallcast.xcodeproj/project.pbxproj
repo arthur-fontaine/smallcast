@@ -232,6 +232,7 @@
 		3BA11AE524244B568A4757D4 /* DictationSpectrum.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203E71AC521CB3BF940450DB /* DictationSpectrum.swift */; };
 		3BDA787BC97B01ADBA3939A9 /* MenuSnapshotPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A24057633A95F6769DF98222 /* MenuSnapshotPolicy.swift */; };
 		3C32AB50FC160EB6003B77C5 /* PalettePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBAD013D72387D509D04EB6F /* PalettePanel.swift */; };
+		3C356DC7989DE51931245146 /* LauncherSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 270A0BE1D0D6581270D8B553 /* LauncherSection.swift */; };
 		3C5F5B69E589D4F3A2796158 /* CalcUnitExpression.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B88B4C5F8FB4544B68E3A5 /* CalcUnitExpression.swift */; };
 		3C6DCD05A5DF056D25CFD70C /* DictionaryScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF07A925C874B94FB9609743 /* DictionaryScreen.swift */; };
 		3C958E2C893DA49D73D7E201 /* BarButtonsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6D4402B3F64C27EE5263D46 /* BarButtonsSettingsView.swift */; };
@@ -1082,6 +1083,7 @@
 		251CB44641EBA8FBC83ED04A /* AppDisplayName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDisplayName.swift; sourceTree = "<group>"; };
 		25D61ABFA981679585E0CF68 /* FileIndexSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileIndexSnapshot.swift; sourceTree = "<group>"; };
 		262F959987F65A9D0CF5BC2F /* ShortcutRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRecorder.swift; sourceTree = "<group>"; };
+		270A0BE1D0D6581270D8B553 /* LauncherSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherSection.swift; sourceTree = "<group>"; };
 		275E96CA1AFC95C19EA6D1C9 /* RoomPickerList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomPickerList.swift; sourceTree = "<group>"; };
 		2780FC7CB8C2116AB917FDE8 /* ExtensionGitHubPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionGitHubPanel.swift; sourceTree = "<group>"; };
 		2785F6572AF99F5A77ED5783 /* SettingsSearchCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSearchCatalog.swift; sourceTree = "<group>"; };
@@ -2156,6 +2158,7 @@
 				8397C554E04DE067D1401FB6 /* LauncherMatch.swift */,
 				BD81B63D0D8ECE59DF859E8E /* LauncherOrder.swift */,
 				0BFAC6D43BB3101D1C077675 /* LauncherRankingStore.swift */,
+				270A0BE1D0D6581270D8B553 /* LauncherSection.swift */,
 				F85B2FA2829693A7351F88CA /* LauncherSuggestions.swift */,
 				78E211FE6A47BA1786334D55 /* LaunchHistoryStore.swift */,
 				ED86F2DE98DA69B6895716ED /* ScriptRomanization.swift */,
@@ -4616,6 +4619,7 @@
 				B7AD8CB9830547A224A29BAB /* LauncherOrder.swift in Sources */,
 				72D23D549C743C388E9F6001 /* LauncherRankingStore.swift in Sources */,
 				5908AD2243762DE96EE0B4D8 /* LauncherScreen.swift in Sources */,
+				3C356DC7989DE51931245146 /* LauncherSection.swift in Sources */,
 				CAAC0C7D6A5338E99D2A4083 /* LauncherSettingsFile.swift in Sources */,
 				29CB4C237A0A89C430D07EE5 /* LauncherSuggestions.swift in Sources */,
 				FB0A76A2D6E26FA7636EFFE3 /* LeadCard.swift in Sources */,

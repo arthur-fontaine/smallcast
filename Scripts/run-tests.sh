@@ -126,6 +126,7 @@ run ranking-test           $L/SearchRelevance.swift $L/ScriptRomanization.swift 
                            $L/LauncherMatch.swift $L/LauncherRankingStore.swift
 run launch-history-test    $L/LaunchHistoryStore.swift
 run scopes-test            $L/SearchScopes.swift
+run launcher-section-test  $L/LauncherSection.swift
 run app-name-test          Smallcast/Platform/AppDisplayName.swift \
                            Smallcast/Platform/BundleLocalization.swift \
                            $L/SearchRelevance.swift

@@ -31,6 +31,7 @@ struct LauncherScreen: PaletteScreen {
     private let suggestionCount: Int
     private let matchCount: Int
     private let files: [FileSearchResult]
+    private let sectionOrder: [LauncherSection]
     /// The `Use "…" with` section, below every result; empty unless something is typed.
     private let fallbacks: [(fallback: Fallback, entry: AppEntry)]
     /// Resolved in `init`: the palette indexes this several times per event, so it can't recompute.
@@ -76,19 +77,28 @@ struct LauncherScreen: PaletteScreen {
             ? CalcMemo.evaluate(vm.query, rates: currencyRates.rates, format: core.calcNumberFormat) : nil
         // After the calculator: `#FF5733` is never arithmetic, so the two can't both answer.
         let color = calc == nil && pinned == nil ? ColorValue.parse(vm.query) : nil
+        let pinsFavorites = vm.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        // At most one of them leads, so the flat index keeps a single-row offset.
+        let meeting = pinsFavorites ? meeting : nil
+        let sectionOrder = core.settings.launcherSectionOrder
+        let fallbacks = core.fallbackCoordinator.entries(for: vm.query)
+        let lead = calc != nil || color != nil || meeting != nil ? 1 : 0
         let files =
             pinned == nil
             ? core.fileSearchCoordinator.launcherFiles(
                 for: vm.query, selection: vm.selection,
-                firstRow: results.count + (calc != nil || color != nil ? 1 : 0))
+                firstRow: LauncherSection.start(of: .files, in: sectionOrder, lead: lead) {
+                    $0 == .results ? results.count : $0 == .fallbacks ? fallbacks.count : 0
+                })
             : []
-        let fallbacks = core.fallbackCoordinator.entries(for: vm.query)
-        let entries =
-            results.map(Row.entry) + files.map(Row.file)
-            + fallbacks.map { Row.fallback($0.fallback, $0.entry) }
-        let pinsFavorites = vm.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        // At most one of them leads, so the flat index keeps a single-row offset.
-        let meeting = pinsFavorites ? meeting : nil
+        let entries = sectionOrder.flatMap { section -> [Row] in
+            switch section {
+            case .results: return results.map(Row.entry)
+            case .files: return files.map(Row.file)
+            case .fallbacks: return fallbacks.map { Row.fallback($0.fallback, $0.entry) }
+            }
+        }
+        self.sectionOrder = sectionOrder
         self.meeting = meeting
         self.results = results
         self.calc = calc
@@ -551,7 +561,8 @@ struct LauncherScreen: PaletteScreen {
             },
             onDropped: { core.paletteCoordinator.dragLanded() },
             files: fileSection,
-            fallbacks: fallbackSection
+            fallbacks: fallbackSection,
+            sectionOrder: sectionOrder
         )
     }
 
@@ -566,7 +577,19 @@ struct LauncherScreen: PaletteScreen {
             })
     }
 
-    private func fileRow(at index: Int) -> Int { rows.count - fallbacks.count - files.count + index }
+    private func fileRow(at index: Int) -> Int { start(of: .files) + index }
+
+    /// Where a section's first row sits in `rows`, after the lead card and the sections ordered above.
+    private func start(of section: LauncherSection) -> Int {
+        let lead = rows.count - results.count - files.count - fallbacks.count
+        return LauncherSection.start(of: section, in: sectionOrder, lead: lead) {
+            switch $0 {
+            case .results: return results.count
+            case .files: return files.count
+            case .fallbacks: return fallbacks.count
+            }
+        }
+    }
 
     /// Nil when nothing is typed, which is the one state the section has no input for.
     private var fallbackSection: LauncherList.FallbackSection? {
@@ -582,6 +605,5 @@ struct LauncherScreen: PaletteScreen {
             onConfigure: core.fallbackCoordinator.showSettings)
     }
 
-    /// Fallbacks are the tail of `rows`, so a click maps to its flat index without a search.
-    private func fallbackRow(at index: Int) -> Int { rows.count - fallbacks.count + index }
+    private func fallbackRow(at index: Int) -> Int { start(of: .fallbacks) + index }
 }

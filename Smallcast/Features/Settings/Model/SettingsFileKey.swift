@@ -26,6 +26,7 @@ enum SettingsFileKey: String, CaseIterable, Sendable {
     case hyperKeySecureInputCompatibility = "hyperKey.secureInputCompatibility"
     case calcNumberStyle = "calculator.numberStyle"
     case launcherShowsSuggestions = "search.showsSuggestions"
+    case launcherSectionOrder = "search.sectionOrder"
     case rootSearchSensitivity = "search.sensitivity"
     case applicationsEnabled = "applications.enabled"
     case searchScopes = "applications.searchScopes"

@@ -55,6 +55,8 @@ enum SettingsFileSchema {
             return bind(settings, \.hyperKeySecureInputCompatibility)
         case .calcNumberStyle: return bind(settings, \.calcNumberStyle)
         case .launcherShowsSuggestions: return bind(settings, \.launcherShowsSuggestions)
+        case .launcherSectionOrder:
+            return bind(settings, \.launcherSectionOrder) { LauncherSection.normalize($0) }
         case .rootSearchSensitivity: return bind(settings, \.rootSearchSensitivity)
         case .applicationsEnabled: return launcher.kindBinding(for: key, kind: .application)
         case .searchScopes: return bind(settings, \.searchScopes) { SearchScopes.normalize($0) }
@@ -176,6 +178,7 @@ extension FileSearchEngine: SettingsFileRawValue {}
 extension AppAppearance: SettingsFileRawValue {}
 extension PaletteTheme: SettingsFileRawValue {}
 extension SpotlightButton: SettingsFileRawValue {}
+extension LauncherSection: SettingsFileRawValue {}
 extension AppLanguage: SettingsFileRawValue {}
 extension InterfaceSize: SettingsFileRawValue {}
 extension HyperKeyPhysicalKey: SettingsFileRawValue {}
