@@ -6,6 +6,8 @@ struct FileSearchList: View {
     let title: String
     let results: [FileSearchResult]
     var isSearchingContent = false
+    /// Rows set apart above the rest as the best of names and contents; 0 sets none apart.
+    var bestCount = 0
     let selectedID: FileSearchResult.ID?
     let scroll: ScrollIntent
     let onSelect: (FileSearchResult) -> Void
@@ -17,20 +19,35 @@ struct FileSearchList: View {
         selectedID != nil && selectedID == results.first?.id
     }
 
+    private var splitsBest: Bool { bestCount > 0 && bestCount < results.count }
+
+    private func rows(_ slice: ArraySlice<FileSearchResult>) -> some View {
+        ForEach(slice) { result in
+            FileSearchRow(result: result, selected: result.id == selectedID)
+                .selectionFrame(result.id == selectedID)
+                .contentShape(Rectangle())
+                .onRowClick(
+                    select: { onSelect(result) }, activate: { onActivate(result) },
+                    drag: result.rowDrag(dropped: onDropped)
+                )
+                .onRightClick { onActions(result) }
+        }
+    }
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ContentSearchHeader(title: title, isFirst: true, isSearching: isSearchingContent)
-                    ForEach(results) { result in
-                        FileSearchRow(result: result, selected: result.id == selectedID)
-                            .selectionFrame(result.id == selectedID)
-                            .contentShape(Rectangle())
-                            .onRowClick(
-                                select: { onSelect(result) }, activate: { onActivate(result) },
-                                drag: result.rowDrag(dropped: onDropped)
-                            )
-                            .onRightClick { onActions(result) }
+                    if splitsBest {
+                        ContentSearchHeader(
+                            title: String(localized: "Best Matches"), isFirst: true,
+                            isSearching: isSearchingContent)
+                        rows(results.prefix(bestCount))
+                        SectionHeader(title: String(localized: "Other Results"))
+                        rows(results.dropFirst(bestCount))
+                    } else {
+                        ContentSearchHeader(title: title, isFirst: true, isSearching: isSearchingContent)
+                        rows(results[...])
                     }
                 }
                 .padding(.horizontal, metrics.spacing.md)
@@ -111,7 +128,7 @@ struct FileSearchRow: View {
             }
             Spacer(minLength: 0)
             if showsLocation {
-                Text(result.isDirectory ? "Folder" : "File")
+                Text(result.excerpt != nil ? "Contents" : result.isDirectory ? "Folder" : "File")
                     .font(metrics.typography.rowTrailing)
                     .foregroundStyle(.secondary)
             }

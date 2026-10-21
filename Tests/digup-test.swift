@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 /// A stand-in for `digup search-service`: records every request and answers each by its id.
 struct StubService {
@@ -59,6 +60,27 @@ struct StubService {
     }
 }
 
+/// Counts how often a session's rows change, the way a list redraws.
+@MainActor
+final class DrawCounter {
+    private(set) var count = 0
+    private let session: FileSearchSession
+
+    init(_ session: FileSearchSession) {
+        self.session = session
+        observe()
+    }
+
+    private func observe() {
+        withObservationTracking { _ = session.results } onChange: { [weak self] in
+            Task { @MainActor in
+                self?.count += 1
+                self?.observe()
+            }
+        }
+    }
+}
+
 @main
 @MainActor
 struct DigUpTests {
@@ -77,6 +99,7 @@ struct DigUpTests {
         scopes()
         excerpts()
         merging()
+        ranking()
         do {
             let stub = try StubService()
             defer { try? FileManager.default.removeItem(at: stub.directory) }
@@ -84,6 +107,8 @@ struct DigUpTests {
             try await serviceSurvivesCancellationAndCrashes(stub)
             try await sessionPublishesNamesFirst(stub)
             try await sessionCoalescesAWarmAnswer(stub)
+            try await sessionWaitsWhenNamesAreUnsure(stub)
+            try await sessionHoldsWhatIsDrawn(stub)
             try await coldEncoderAsksKeywordsFirst(stub)
             let old = try StubService()
             defer { try? FileManager.default.removeItem(at: old.directory) }
@@ -207,15 +232,6 @@ struct DigUpTests {
         func result(_ name: String) -> FileSearchResult {
             FileSearchResult(url: home.appending(path: name), isDirectory: false, homeDirectory: home)
         }
-        let merged = DigUpSearchPolicy.merged(
-            content: DigUpMatches(strong: [result("b.pdf"), result("a.png")], weak: [result("w.pdf"), result("c.txt")]),
-            names: [result("a.png"), result("c.txt")])
-        expect(
-            merged.map(\.name) == ["b.pdf", "a.png", "c.txt", "w.pdf"],
-            "strong matches lead, then names, then the weaker tail, and a file shows once")
-        expect(
-            DigUpSearchPolicy.merged(content: DigUpMatches(), names: [result("c.txt")]).map(\.name) == ["c.txt"],
-            "no content match leaves the name search as it was")
         let policy = FileSearchPolicy(scopes: ["~/Documents"], ignorePatterns: [], homeDirectory: home)
         let split = DigUpSearchPolicy.matches(
             from: ["Documents/a.pdf", "Pictures/b.png", "Documents/c.pdf"].map {
@@ -229,6 +245,66 @@ struct DigUpTests {
             DigUpSearchPolicy.matches(from: [DigUpHit(path: "/Users/test/Documents/a.pdf", kind: "pdf")], strong: 9, policy: policy)
                 .strong.count == 1,
             "a strong count past the end keeps every hit strong")
+    }
+
+    static func ranking() {
+        let home = URL(fileURLWithPath: "/Users/test")
+        func result(_ name: String, excerpt: String? = nil) -> FileSearchResult {
+            FileSearchResult(url: home.appending(path: name), isDirectory: false, homeDirectory: home, excerpt: excerpt)
+        }
+        func ranked(_ names: [String], strong: [String] = [], weak: [String] = [], _ query: String)
+            -> FileSearchRanking.Ranked
+        {
+            FileSearchRanking.ranked(
+                names: names.map { result($0) },
+                content: DigUpMatches(strong: strong.map { result($0) }, weak: weak.map { result($0) }),
+                query: query)
+        }
+
+        expect(
+            ranked(["lease.pdf", "Release notes.md"], strong: ["clause.pdf", "deed.pdf"], weak: ["w.pdf"], "lease")
+                .results.map(\.name) == ["lease.pdf", "clause.pdf", "deed.pdf", "Release notes.md", "w.pdf"],
+            "a file named what was typed leads, then DigUp's strong matches, then a name matched mid-word")
+        expect(
+            ranked(["Release notes.md"], strong: ["a.pdf", "b.pdf"], "lease").results.map(\.name)
+                == ["a.pdf", "b.pdf", "Release notes.md"],
+            "with no name starting a word there, contents lead")
+        let both = FileSearchRanking.ranked(
+            names: [result("lease agreement.pdf"), result("old lease.pdf")],
+            content: DigUpMatches(strong: [result("x.pdf"), result("old lease.pdf", excerpt: "the «lease»")]),
+            query: "lease")
+        expect(
+            both.results.map(\.name) == ["lease agreement.pdf", "old lease.pdf", "x.pdf"],
+            "a file found both ways moves up, and shows once")
+        expect(both.results[1].excerpt == "the «lease»", "the row found both ways keeps DigUp's passage")
+        expect(
+            ranked(["notes lease.txt", "lease.pdf"], strong: ["c.pdf"], "lease").results.map(\.name)
+                == ["notes lease.txt", "lease.pdf", "c.pdf"],
+            "names keep the index's order, which also weighs where they live")
+        let crowded = ranked((1...6).map { "lease \($0).pdf" }, strong: ["scan.pdf"], "lease")
+        expect(
+            crowded.results.count == 7 && crowded.results[4].name == "scan.pdf" && crowded.bestCount == 5,
+            "a crowd of names still leaves DigUp's best a place among the best five")
+        let alone = ranked(["a.pdf", "b.pdf"], "lease")
+        expect(
+            alone.results.map(\.name) == ["a.pdf", "b.pdf"] && alone.bestCount == 0,
+            "with no content match the index's list is left as it was, with nothing set apart")
+        expect(ranked(["lease.pdf"], strong: ["c.pdf"], "lease").bestCount == 0, "a short list sets nothing apart")
+
+        let held = FileSearchRanking.holding(
+            [result("a"), result("b"), result("c")],
+            against: [result("d"), result("c", excerpt: "x"), result("a")])
+        expect(
+            held.map(\.name) == ["a", "b", "c", "d"] && held[2].excerpt == "x",
+            "held rows keep their places, a dropped one included, and new rows join after them")
+
+        func confident(_ name: String, _ query: String) -> Bool {
+            FileSearchRanking.isConfident([result(name)], query: query)
+        }
+        expect(confident("lease.pdf", "lease") && confident("myLease.pdf", "lease"), "a word-start name is sure")
+        expect(confident("Résumé 2024.pdf", "resume"), "a name is compared folded, as the index folds it")
+        expect(!confident("mylease.pdf", "lease") && !confident("Untitled.txt", "lease"), "a mid-word name is not")
+        expect(!FileSearchRanking.isConfident([], query: "lease"), "no name is not sure of anything")
     }
 
     static func service(_ stub: StubService, roots: [String] = []) -> DigUpSearchService {
@@ -324,8 +400,6 @@ struct DigUpTests {
         service.prewarm()
         await waitUntil(seconds: 2) { service.isEncoderReady }
         let session = FileSearchSession(searchOperation: names(["slow notes.txt", "clause.pdf"]))
-        var republished: [[String]] = []
-        session.onRepublish = { _, new in republished.append(new.map(\.name)) }
         session.digUp = digUp(service)
 
         session.search("slow")
@@ -335,10 +409,9 @@ struct DigUpTests {
             "names show while DigUp is still reading, past the grace")
         await waitUntil(seconds: 3) { !session.isSearchingContent }
         expect(
-            session.results.map(\.name) == ["clause.pdf", "slow notes.txt"],
-            "DigUp's file then leads, and a file found both ways shows once")
-        expect(session.results.first?.excerpt == "a «slow» here", "the content row carries its excerpt")
-        expect(republished == [["clause.pdf", "slow notes.txt"]], "the late rows are reported for the selection")
+            session.results.map(\.name) == ["slow notes.txt", "clause.pdf"],
+            "the typed name keeps the top row, and a file found both ways shows once")
+        expect(session.results.last?.excerpt == "a «slow» here", "the content row carries its excerpt")
 
         session.digUp = nil
         expect(session.results.isEmpty && session.state == .idle, "switching engine drops the rows")
@@ -356,20 +429,61 @@ struct DigUpTests {
         service.prewarm()
         await waitUntil(seconds: 2) { service.isEncoderReady }
         let session = FileSearchSession(searchOperation: names(["deed notes.txt"]))
-        var republished = 0
-        session.onRepublish = { _, _ in republished += 1 }
         session.digUp = digUp(service)
+        let drawn = DrawCounter(session)
         session.search("deed")
         await waitUntil(seconds: 2) { session.state == .ready && !session.isSearchingContent }
         expect(
-            session.results.map(\.name) == ["deed.pdf", "deed notes.txt"] && republished == 0,
-            "a warm DigUp answers within the grace, so the list is drawn once")
+            session.results.map(\.name) == ["deed.pdf", "deed notes.txt"] && drawn.count == 1,
+            "a warm DigUp answers within the grace, so the list is drawn once, its exact name first")
 
         session.search("crash")
         await waitUntil(seconds: 2) { session.state == .ready && !session.isSearchingContent }
         expect(
             session.results.map(\.name) == ["deed notes.txt"],
             "a failing DigUp still leaves the name search")
+    }
+
+    static func sessionWaitsWhenNamesAreUnsure(_ stub: StubService) async throws {
+        try stub.answer("slow", with: ["/Users/t/clause.pdf"])
+        let service = service(stub)
+        defer { service.stop() }
+        service.prewarm()
+        await waitUntil(seconds: 2) { service.isEncoderReady }
+        let session = FileSearchSession(searchOperation: names(["Untitled.txt"]))
+        session.digUp = digUp(service)
+        session.search("slow")
+        try? await Task.sleep(for: .milliseconds(200))
+        expect(session.state == .searching, "a name that only contains the query waits past the grace")
+        await waitUntil(seconds: 1) { session.state == .ready }
+        expect(
+            session.results.map(\.name) == ["Untitled.txt"] && session.isSearchingContent,
+            "past the patience the names show anyway")
+        await waitUntil(seconds: 3) { !session.isSearchingContent }
+        expect(session.results.map(\.name) == ["clause.pdf", "Untitled.txt"], "and DigUp's answer then leads")
+    }
+
+    static func sessionHoldsWhatIsDrawn(_ stub: StubService) async throws {
+        try stub.answer("slow", with: ["/Users/t/clause.pdf"])
+        let service = service(stub)
+        defer { service.stop() }
+        service.prewarm()
+        await waitUntil(seconds: 2) { service.isEncoderReady }
+        let session = FileSearchSession(searchOperation: names(["Untitled.txt", "zeta.txt"]))
+        var moved = false
+        session.holdsOrder = { moved }
+        session.digUp = digUp(service)
+        session.search("slow")
+        await waitUntil(seconds: 1) { session.state == .ready }
+        moved = true
+        await waitUntil(seconds: 3) { !session.isSearchingContent }
+        expect(
+            session.results.map(\.name) == ["Untitled.txt", "zeta.txt", "clause.pdf"] && session.heldCount == 2,
+            "off the first row the drawn rows keep their places, and DigUp's file joins below them")
+        moved = false
+        session.search("slower")
+        await waitUntil(seconds: 1) { session.state == .ready }
+        expect(session.heldCount == nil, "a new query holds nothing")
     }
 
     static func coldEncoderAsksKeywordsFirst(_ stub: StubService) async throws {

@@ -15,6 +15,10 @@ final class FileSearchSession {
     private(set) var state: State = .idle
     /// DigUp is still out for the current query: names land in milliseconds, contents after them.
     private(set) var isSearchingContent = false
+    /// The leading rows that are the best of names and contents; 0 when only one source answered.
+    private(set) var bestCount = 0
+    /// How many rows were drawn when the reader moved off the first one; nil while nothing is held.
+    private(set) var heldCount: Int?
     /// The published search: the filter belongs to it, so narrowing re-runs the same words.
     private var request: Request?
     private var revision = 0
@@ -29,9 +33,9 @@ final class FileSearchSession {
     @ObservationIgnored private var content = DigUpMatches()
     @ObservationIgnored private var contentTask: Task<Void, Never>?
     @ObservationIgnored private var graceTask: Task<Void, Never>?
-    @ObservationIgnored private var publishedRevision: Int?
-    /// Rows changed under the same query as DigUp's arrived, so the selection can follow its file.
-    @ObservationIgnored var onRepublish: ((_ old: [FileSearchResult], _ new: [FileSearchResult]) -> Void)?
+    @ObservationIgnored private var publishedRequest: Request?
+    /// The reader is moving through the rows, so what is drawn must not move under them.
+    @ObservationIgnored var holdsOrder: () -> Bool = { false }
 
     /// DigUp's matches ahead of the index's while set: the Name and content engine.
     @ObservationIgnored var digUp: DigUpSearch? {
@@ -69,6 +73,9 @@ final class FileSearchSession {
         enqueue(request, askingDigUp: true)
         guard request == .recent, let recent else { return }
         results = recent
+        bestCount = 0
+        heldCount = nil
+        publishedRequest = request
         state = .ready
     }
 
@@ -93,6 +100,9 @@ final class FileSearchSession {
         stopContent()
         names = nil
         results = []
+        bestCount = 0
+        heldCount = nil
+        publishedRequest = nil
         state = .idle
     }
 
@@ -132,12 +142,15 @@ final class FileSearchSession {
         workerTask = nil
     }
 
-    /// DigUp usually answers within the grace, and then the list is drawn once with both halves.
+    /// DigUp usually answers within the wait, and then the list is drawn once with both halves.
     private func namesArrived() {
         guard isSearchingContent, content.isEmpty else { return publish() }
-        guard graceTask == nil else { return }
+        guard graceTask == nil, let names else { return }
+        let wait =
+            FileSearchRanking.isConfident(names, query: request?.query ?? "")
+            ? DigUpSearchPolicy.contentGrace : DigUpSearchPolicy.contentPatience
         graceTask = Task { [weak self] in
-            try? await Task.sleep(for: DigUpSearchPolicy.contentGrace)
+            try? await Task.sleep(for: wait)
             guard !Task.isCancelled, let self else { return }
             graceTask = nil
             publish()
@@ -179,13 +192,15 @@ final class FileSearchSession {
 
     private func publish() {
         guard let names else { return }
-        let merged = DigUpSearchPolicy.merged(content: content, names: names)
-        let old = results
-        if old != merged { results = merged }
+        let ranked = FileSearchRanking.ranked(names: names, content: content, query: request?.query ?? "")
+        let holds = publishedRequest == request && holdsOrder()
+        if holds, heldCount == nil { heldCount = results.count }
+        if !holds, heldCount != nil { heldCount = nil }
+        let next = holds ? FileSearchRanking.holding(results, against: ranked.results) : ranked.results
+        if results != next { results = next }
+        if !holds, bestCount != ranked.bestCount { bestCount = ranked.bestCount }
         state = .ready
-        let republished = publishedRevision == revision
-        publishedRevision = revision
-        if republished, old != merged { onRepublish?(old, merged) }
+        publishedRequest = request
     }
 
     /// Recent's rows are kept whoever asked; stamped, so a late finisher never replaces newer rows.

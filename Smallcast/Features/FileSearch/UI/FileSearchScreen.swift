@@ -77,6 +77,7 @@ struct FileSearchScreen: PaletteScreen {
                     title: isShowingRecents ? String(localized: "Recent") : String(localized: "Results"),
                     results: rows,
                     isSearchingContent: session.isSearchingContent,
+                    bestCount: isShowingRecents ? 0 : session.bestCount,
                     selectedID: selected?.id,
                     scroll: scroll,
                     onSelect: { result in vm.selection = rows.firstIndex(of: result) ?? 0 },

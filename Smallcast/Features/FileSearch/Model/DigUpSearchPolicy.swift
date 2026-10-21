@@ -66,8 +66,10 @@ struct DigUpFolders: Equatable, Sendable {
 enum DigUpSearchPolicy {
     /// DigUp returns only matches that stand out, so this caps a long tail rather than paging it.
     static let panelLimit = 500
-    /// Names wait this long for DigUp's answer, so a warm search redraws the list once, not twice.
+    /// A name content can't outrank waits this long for DigUp, so a warm search draws once.
     static let contentGrace: Duration = .milliseconds(80)
+    /// Any other answer waits up to the Doherty threshold: the order is DigUp's to settle.
+    static let contentPatience: Duration = .milliseconds(400)
     /// A wait shorter than this goes unremarked, so a warm search never flashes a spinner.
     static let progressDelay: Duration = .milliseconds(300)
 
@@ -108,12 +110,6 @@ enum DigUpSearchPolicy {
 
     static func message(fromLine line: String) -> DigUpServiceMessage? {
         try? JSONDecoder().decode(DigUpServiceMessage.self, from: Data(line.utf8))
-    }
-
-    /// DigUp's strong matches, the names, then its weaker ones: a long tail never buries a name.
-    static func merged(content: DigUpMatches, names: [FileSearchResult]) -> [FileSearchResult] {
-        var seen = Set<String>()
-        return (content.strong + names + content.weak).filter { seen.insert($0.id).inserted }
     }
 
     /// Kept in DigUp's order, minus what File Search's own scopes and ignore rules leave out.
