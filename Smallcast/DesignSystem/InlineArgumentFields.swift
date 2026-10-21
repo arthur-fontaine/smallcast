@@ -74,7 +74,7 @@ struct InlineArgumentFields: View {
     ) -> CGFloat {
         let fields = arguments.reduce(0) { $0 + fieldWidth(for: $1, metrics: metrics) }
         let labels = arguments.compactMap(\.leadingText)
-        let labelWidth = labels.reduce(0) { $0 + labelWidth(for: $1, metrics: metrics) }
+        let labelWidth = labels.reduce(0) { $0 + Self.labelWidth(for: $1, metrics: metrics) }
         let gaps = CGFloat(arguments.count + labels.count + (hasIcon ? 0 : -1)) * metrics.spacing.xs
         return fields + labelWidth + gaps + (hasIcon ? height(metrics) : 0)
     }
